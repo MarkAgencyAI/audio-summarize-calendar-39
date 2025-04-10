@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -45,19 +44,16 @@ export function LiveTranscriptionSheet({
     }
   };
 
-  // Auto-open the sheet when transcription begins, but only if user hasn't explicitly closed it
   useEffect(() => {
     if (isTranscribing && !isOpen && !userClosed) {
       handleOpenChange(true);
     }
 
-    // Reset userClosed flag when transcription stops
     if (!isTranscribing) {
       setUserClosed(false);
     }
   }, [isTranscribing, isOpen, userClosed]);
 
-  // Process webhook response whenever it changes
   useEffect(() => {
     if (webhookResponse) {
       const extracted = extractWebhookOutput(webhookResponse);
@@ -65,18 +61,14 @@ export function LiveTranscriptionSheet({
     }
   }, [webhookResponse]);
 
-  // Listen for complete transcription events to ensure panel shows final transcription
   useEffect(() => {
     const handleTranscriptionComplete = (event: CustomEvent) => {
       if (event.detail?.data && !userClosed) {
-        // Keep the sheet open to show the final results
         handleOpenChange(true);
         
-        // Si hay respuesta del webhook, cambiar a esa pestaña
         if (event.detail.data.webhookResponse) {
           setActiveTab("webhook");
           
-          // Process the webhook response
           const extracted = extractWebhookOutput(event.detail.data.webhookResponse);
           setProcessedWebhookResponse(extracted);
         }
@@ -98,7 +90,6 @@ export function LiveTranscriptionSheet({
     setUserClosed(true);
   };
   
-  // Ensure the output is safe to render by normalizing it to a string format
   const safeOutput = (() => {
     try {
       if (output === null || output === undefined) {
@@ -124,7 +115,6 @@ export function LiveTranscriptionSheet({
     }
   })();
   
-  // Procesar webhook response para mostrarlo
   const hasWebhookResponse = processedWebhookResponse || 
     (typeof output === 'object' && output && 'webhookResponse' in output);
   
@@ -191,7 +181,7 @@ export function LiveTranscriptionSheet({
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="transcription" className="flex-1 overflow-hidden mt-0 px-0">
+            <TabsContent value="transcription" className="flex-1 overflow-hidden mt-0">
               <div className="px-4 pb-2">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs text-muted-foreground">Progreso de transcripción</span>
@@ -201,20 +191,18 @@ export function LiveTranscriptionSheet({
                   <div className="bg-blue-600 h-2.5 rounded-full" style={{width: `${progress}%`}}></div>
                 </div>
               </div>
-            
-              <ScrollArea className="h-[calc(100vh-220px)] pb-4">
-                <div className="px-4 pb-16">
-                  <TranscriptionPanel 
-                    output={safeOutput}
-                    isLoading={isTranscribing && !output}
-                    progress={progress}
-                    showProgress={false}
-                  />
-                </div>
-              </ScrollArea>
+              
+              <div className="px-4 h-[calc(100vh-220px)]">
+                <TranscriptionPanel 
+                  output={safeOutput}
+                  isLoading={isTranscribing && !output}
+                  progress={progress}
+                  showProgress={false}
+                />
+              </div>
             </TabsContent>
             
-            <TabsContent value="webhook" className="flex-1 overflow-hidden mt-0 px-0">
+            <TabsContent value="webhook" className="flex-1 overflow-hidden mt-0">
               <div className="p-4 pb-2">
                 <div className="text-sm text-muted-foreground mb-2">
                   {hasWebhookResponse ? 
@@ -223,15 +211,13 @@ export function LiveTranscriptionSheet({
                 </div>
               </div>
               
-              <ScrollArea className="h-[calc(100vh-220px)] pb-4">
-                <div className="px-4 pb-16">
-                  <TranscriptionPanel 
-                    output={webhookContent}
-                    isLoading={isTranscribing && !hasWebhookResponse}
-                    showProgress={false}
-                  />
-                </div>
-              </ScrollArea>
+              <div className="px-4 h-[calc(100vh-220px)]">
+                <TranscriptionPanel 
+                  output={webhookContent}
+                  isLoading={isTranscribing && !hasWebhookResponse}
+                  showProgress={false}
+                />
+              </div>
             </TabsContent>
           </Tabs>
         </div>

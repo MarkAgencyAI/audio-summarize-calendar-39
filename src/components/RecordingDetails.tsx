@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { FileText, Edit, Trash2, Save, X, Globe, Folder, MessageSquare, Sparkles, Search, PaintBucket } from "lucide-react";
+import { FileText, Edit, Trash2, Save, X, Globe, Folder, MessageSquare, Sparkles, Search, PaintBucket, Bookmark, Clock, Plus } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,8 @@ import { extractWebhookOutput } from "@/lib/transcription-service";
 import { AudioPlayer } from "@/components/AudioPlayer";
 import { loadAudioFromStorage, saveAudioToStorage } from "@/lib/storage";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { AudioChapter, AudioChaptersList, AudioChaptersTimeline } from "./AudioChapter";
+import { v4 as uuidv4 } from "uuid";
 
 interface RecordingDetailsProps {
   recording: Recording;
@@ -33,9 +35,15 @@ interface TextHighlight {
   endPosition: number;
 }
 
-const WEBHOOK_URL = "https://ssn8nss.maettiai.tech/webhook-test/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
+const chapterColors = [
+  "#FEF7CD", // Amarillo
+  "#F2FCE2", // Verde
+  "#FEC6A1", // Naranja
+  "#D3E4FD", // Azul
+  "#FFDEE2", // Rosa
+  "#E5DEFF", // Morado
+];
 
-// Highlight color options
 const highlightColors = [
   { label: "Amarillo", value: "#FEF7CD" },
   { label: "Verde", value: "#F2FCE2" },
@@ -44,6 +52,8 @@ const highlightColors = [
   { label: "Rosa", value: "#FFDEE2" },
   { label: "Morado", value: "#E5DEFF" },
 ];
+
+const WEBHOOK_URL = "https://ssn8nss.maettiai.tech/webhook-test/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
 export function RecordingDetails({
   recording,
@@ -68,13 +78,11 @@ export function RecordingDetails({
   const [activeTab, setActiveTab] = useState("webhook");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   
-  // Search functionality
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<number[]>([]);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
   const transcriptionRef = useRef<HTMLPreElement>(null);
   
-  // Highlighting functionality
   const [highlights, setHighlights] = useState<TextHighlight[]>(recording.highlights || []);
   const [selectedText, setSelectedText] = useState("");
   const [selectedColor, setSelectedColor] = useState(highlightColors[0].value);
@@ -82,13 +90,21 @@ export function RecordingDetails({
   const [showHighlightMenu, setShowHighlightMenu] = useState(false);
   const [highlightMenuPosition, setHighlightMenuPosition] = useState({ x: 0, y: 0 });
   const selectionRef = useRef<Selection | null>(null);
-
+  
+  const [chapters, setChapters] = useState<AudioChapter[]>(recording.chapters || []);
+  const [showChapterDialog, setShowChapterDialog] = useState(false);
+  const [currentChapter, setCurrentChapter] = useState<AudioChapter | null>(null);
+  const [newChapterTitle, setNewChapterTitle] = useState("");
+  const [newChapterColor, setNewChapterColor] = useState(chapterColors[0]);
+  const [currentAudioTime, setCurrentAudioTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(recording.duration || 0);
+  const [activeChapterId, setActiveChapterId] = useState<string | undefined>(undefined);
+  
   const dialogOpen = propIsOpen !== undefined ? propIsOpen : isOpen;
   const setDialogOpen = onOpenChange || setIsOpenState;
   
   const folder = folders.find(f => f.id === recording.folderId) || folders[0];
   
-  // Load audio blob from storage when component mounts
   useEffect(() => {
     const loadAudio = async () => {
       try {
@@ -104,7 +120,6 @@ export function RecordingDetails({
     loadAudio();
   }, [recording.id]);
   
-  // Save audio blob to storage if it's available from URL
   useEffect(() => {
     const saveAudio = async () => {
       if (recording.audioUrl && !audioBlob) {
@@ -124,7 +139,6 @@ export function RecordingDetails({
     saveAudio();
   }, [recording.audioUrl, recording.id, audioBlob]);
   
-  // Search functionality
   const handleSearch = () => {
     if (!searchQuery.trim() || !recording.output) return;
     
@@ -143,7 +157,7 @@ export function RecordingDetails({
     if (results.length === 0) {
       toast.info("No se encontraron resultados");
     } else {
-      setTimeout(() => scrollToHighlight(results[0]), 100);
+      setTimeout(() => scrollToHighlight(results[0], false), 100);
     }
   };
   
@@ -158,20 +172,18 @@ export function RecordingDetails({
     }
     
     setCurrentSearchIndex(newIndex);
-    setTimeout(() => scrollToHighlight(searchResults[newIndex]), 100);
+    setTimeout(() => scrollToHighlight(searchResults[newIndex], false), 100);
   };
   
-  const scrollToHighlight = (position: number) => {
+  const scrollToHighlight = (position: number, shouldScroll = true) => {
     if (!transcriptionRef.current) return;
     
-    // Create a range to highlight and scroll to
     const range = document.createRange();
     const textNodes = getTextNodesIn(transcriptionRef.current);
     let currentPosition = 0;
     let targetNode = null;
     let targetOffset = 0;
     
-    // Find the text node containing the position
     for (const node of textNodes) {
       if (currentPosition + node.textContent!.length > position) {
         targetNode = node;
@@ -182,40 +194,34 @@ export function RecordingDetails({
     }
     
     if (targetNode) {
-      // Set the range
       range.setStart(targetNode, targetOffset);
       range.setEnd(targetNode, targetOffset + searchQuery.length);
       
-      // Clear any existing selection
       const selection = window.getSelection();
       if (selection) {
         selection.removeAllRanges();
         selection.addRange(range);
       }
       
-      // Improved scroll to the matched text with better positioning
-      const parentElement = targetNode.parentElement;
-      if (parentElement) {
-        const container = transcriptionRef.current.closest('.overflow-y-auto');
-        if (container) {
-          const nodeRect = parentElement.getBoundingClientRect();
-          const containerRect = container.getBoundingClientRect();
-          
-          // Calculate center position to scroll to
-          const scrollTop = parentElement.offsetTop - (container.clientHeight / 2) + (nodeRect.height / 2);
-          container.scrollTo({
-            top: scrollTop,
-            behavior: 'smooth'
-          });
-        } else {
-          // No hacer scroll si no encontramos el contenedor
-          console.log("No se encontró el contenedor de scroll");
+      if (shouldScroll) {
+        const parentElement = targetNode.parentElement;
+        if (parentElement) {
+          const container = transcriptionRef.current.closest('.overflow-y-auto');
+          if (container) {
+            const nodeRect = parentElement.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            
+            const scrollTop = parentElement.offsetTop - (container.clientHeight / 2) + (nodeRect.height / 2);
+            container.scrollTo({
+              top: scrollTop,
+              behavior: 'smooth'
+            });
+          }
         }
       }
     }
   };
   
-  // Helper function to get all text nodes in an element
   const getTextNodesIn = (node: Node): Text[] => {
     const textNodes: Text[] = [];
     const walker = document.createTreeWalker(
@@ -232,7 +238,6 @@ export function RecordingDetails({
     return textNodes;
   };
   
-  // Highlight functionality
   const handleTextSelection = () => {
     const selection = window.getSelection();
     if (!selection || selection.toString().trim() === "") {
@@ -248,11 +253,9 @@ export function RecordingDetails({
         return;
       }
       
-      // Get selected text
       const text = selection.toString().trim();
       setSelectedText(text);
       
-      // Calculate selection position relative to the transcript text
       const textContent = recording.output || "";
       const preSelectionRange = range.cloneRange();
       preSelectionRange.selectNodeContents(transcriptionRef.current);
@@ -264,10 +267,8 @@ export function RecordingDetails({
         end: startPosition + text.length
       });
       
-      // Store selection for later use
       selectionRef.current = selection;
       
-      // Show highlight menu
       const rect = range.getBoundingClientRect();
       setHighlightMenuPosition({
         x: rect.left + (rect.width / 2),
@@ -291,12 +292,10 @@ export function RecordingDetails({
     const updatedHighlights = [...highlights, newHighlight];
     setHighlights(updatedHighlights);
     
-    // Save highlights to recording
     updateRecording(recording.id, {
       highlights: updatedHighlights
     });
     
-    // Clear selection
     setSelectedText("");
     setSelectionRange(null);
     setShowHighlightMenu(false);
@@ -309,7 +308,6 @@ export function RecordingDetails({
     const updatedHighlights = highlights.filter(h => h.id !== highlightId);
     setHighlights(updatedHighlights);
     
-    // Save updated highlights to recording
     updateRecording(recording.id, {
       highlights: updatedHighlights
     });
@@ -317,7 +315,6 @@ export function RecordingDetails({
     toast.success("Resaltado eliminado");
   };
   
-  // Render transcription with highlights
   const renderHighlightedText = () => {
     if (!recording.output) return null;
     
@@ -327,9 +324,7 @@ export function RecordingDetails({
     const segments: JSX.Element[] = [];
     let currentPosition = 0;
     
-    // Process each highlight in order
     for (const highlight of sortedHighlights) {
-      // Add unhighlighted text before this highlight
       if (highlight.startPosition > currentPosition) {
         segments.push(
           <span key={`text-${currentPosition}`}>
@@ -338,7 +333,6 @@ export function RecordingDetails({
         );
       }
       
-      // Add the highlighted text
       segments.push(
         <mark 
           key={highlight.id}
@@ -353,7 +347,6 @@ export function RecordingDetails({
       currentPosition = highlight.endPosition;
     }
     
-    // Add remaining text
     if (currentPosition < text.length) {
       segments.push(
         <span key={`text-end`}>
@@ -530,7 +523,6 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
   const hasWebhookData = !!recording.webhookData;
 
   const toggleHighlightMode = () => {
-    // If there's already a selection, use it
     const selection = window.getSelection();
     if (selection && selection.toString().trim() !== "") {
       handleTextSelection();
@@ -539,9 +531,102 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
     }
   };
 
+  const handleTimeUpdate = (time: number) => {
+    setCurrentAudioTime(time);
+    
+    const activeChapter = chapters.find(
+      chapter => time >= chapter.startTime && (!chapter.endTime || time <= chapter.endTime)
+    );
+    
+    if (activeChapter && activeChapter.id !== activeChapterId) {
+      setActiveChapterId(activeChapter.id);
+    } else if (!activeChapter && activeChapterId) {
+      setActiveChapterId(undefined);
+    }
+  };
+
+  const handleCreateChapter = () => {
+    setNewChapterTitle(`Capítulo ${chapters.length + 1}`);
+    setNewChapterColor(chapterColors[chapters.length % chapterColors.length]);
+    setCurrentChapter(null);
+    setShowChapterDialog(true);
+  };
+
+  const handleEditChapter = (chapter: AudioChapter) => {
+    setCurrentChapter(chapter);
+    setNewChapterTitle(chapter.title);
+    setNewChapterColor(chapter.color);
+    setShowChapterDialog(true);
+  };
+
+  const handleDeleteChapter = (id: string) => {
+    const updatedChapters = chapters.filter(chapter => chapter.id !== id);
+    setChapters(updatedChapters);
+    
+    updateRecording(recording.id, {
+      chapters: updatedChapters
+    });
+    
+    toast.success("Capítulo eliminado");
+  };
+
+  const handleSaveChapter = () => {
+    if (!newChapterTitle.trim()) {
+      toast.error("El título no puede estar vacío");
+      return;
+    }
+    
+    let updatedChapters: AudioChapter[];
+    
+    if (currentChapter) {
+      updatedChapters = chapters.map(chapter => 
+        chapter.id === currentChapter.id 
+          ? { ...chapter, title: newChapterTitle, color: newChapterColor }
+          : chapter
+      );
+    } else {
+      const newChapter: AudioChapter = {
+        id: uuidv4(),
+        title: newChapterTitle,
+        startTime: currentAudioTime,
+        color: newChapterColor
+      };
+      
+      if (chapters.length > 0) {
+        updatedChapters = [...chapters];
+        const lastChapterIndex = chapters.length - 1;
+        updatedChapters[lastChapterIndex] = {
+          ...updatedChapters[lastChapterIndex],
+          endTime: currentAudioTime
+        };
+        updatedChapters.push(newChapter);
+      } else {
+        updatedChapters = [newChapter];
+      }
+    }
+    
+    updatedChapters.sort((a, b) => a.startTime - b.startTime);
+    
+    setChapters(updatedChapters);
+    
+    updateRecording(recording.id, {
+      chapters: updatedChapters
+    });
+    
+    setShowChapterDialog(false);
+    toast.success(currentChapter ? "Capítulo actualizado" : "Capítulo creado");
+  };
+
+  const handleChapterClick = (chapter: AudioChapter) => {
+    if (audioPlayerRef.current && audioPlayerRef.current.seekTo) {
+      audioPlayerRef.current.seekTo(chapter.startTime);
+      setActiveChapterId(chapter.id);
+    }
+  };
+
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <DialogContent className="max-w-3xl w-[95vw] md:w-auto max-h-[90vh] flex flex-col dark:bg-[#001A29] dark:border-custom-secondary">
+      <DialogContent className="max-w-4xl w-[95vw] md:w-auto max-h-[90vh] flex flex-col dark:bg-[#001A29] dark:border-custom-secondary">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <div className="flex-1 max-w-[calc(100%-40px)]">
@@ -645,12 +730,21 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
         
         <Separator className="my-2 dark:bg-custom-secondary/40" />
         
-        {/* Audio Player Section */}
         <div className="my-2">
           <AudioPlayer 
             audioUrl={recording.audioUrl} 
             audioBlob={audioBlob || undefined}
             initialDuration={recording.duration}
+            onTimeUpdate={handleTimeUpdate}
+            ref={audioPlayerRef}
+            onDurationChange={setAudioDuration}
+          />
+          
+          <AudioChaptersTimeline 
+            chapters={chapters}
+            duration={audioDuration}
+            currentTime={currentAudioTime}
+            onChapterClick={handleChapterClick}
           />
         </div>
         
@@ -668,6 +762,13 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                 <MessageSquare className="h-4 w-4" />
                 <span>Transcripción</span>
               </TabsTrigger>
+              <TabsTrigger value="chapters" className="flex items-center gap-1">
+                <Bookmark className="h-4 w-4" />
+                <span>Capítulos</span>
+                <span className="bg-blue-500 text-xs text-white rounded-full h-5 w-5 flex items-center justify-center ml-1">
+                  {chapters.length}
+                </span>
+              </TabsTrigger>
             </TabsList>
             
             <div className="flex-1 overflow-hidden">
@@ -681,9 +782,9 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                       
                       <div className="prose prose-sm dark:prose-invert max-w-none">
                         {hasWebhookData ? (
-                          <div className="bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 h-[40vh] overflow-y-auto">
+                          <ScrollArea className="bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 h-[40vh]">
                             <pre className="whitespace-pre-wrap text-sm">{formatWebhookResponse()}</pre>
-                          </div>
+                          </ScrollArea>
                         ) : (
                           <div className="bg-amber-50 text-amber-800 p-4 rounded-md text-sm">
                             <p>No hay resumen y puntos fuertes disponibles para esta grabación.</p>
@@ -695,14 +796,16 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                     {recording.suggestedEvents && recording.suggestedEvents.length > 0 && (
                       <div className="mb-4">
                         <h3 className="font-medium mb-2 dark:text-custom-accent">Eventos sugeridos</h3>
-                        <ul className="space-y-1 ml-5 list-disc dark:text-white/90 overflow-y-auto max-h-[15vh]">
-                          {recording.suggestedEvents.map((event, index) => (
-                            <li key={index}>
-                              <strong>{event.title}</strong>: {event.description}
-                              {event.date && <span className="text-sm text-muted-foreground ml-2">({event.date})</span>}
-                            </li>
-                          ))}
-                        </ul>
+                        <ScrollArea className="max-h-[15vh]">
+                          <ul className="space-y-1 ml-5 list-disc dark:text-white/90">
+                            {recording.suggestedEvents.map((event, index) => (
+                              <li key={index}>
+                                <strong>{event.title}</strong>: {event.description}
+                                {event.date && <span className="text-sm text-muted-foreground ml-2">({event.date})</span>}
+                              </li>
+                            ))}
+                          </ul>
+                        </ScrollArea>
                       </div>
                     )}
                   </div>
@@ -749,9 +852,7 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                         </div>
                       </div>
                       
-                      {/* Search and Highlight section - now with highlighting tool visible */}
                       <div className="mb-3">
-                        {/* Search tools */}
                         <div className="flex items-center space-x-2 bg-muted/20 p-2 rounded-md mb-2">
                           <Search className="h-4 w-4 text-muted-foreground" />
                           <Input
@@ -791,7 +892,6 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                           )}
                         </div>
                         
-                        {/* Highlighting tools - now visible alongside search */}
                         <div className="flex items-center space-x-2 bg-muted/20 p-2 rounded-md">
                           <div className="flex items-center gap-1">
                             <PaintBucket className="h-4 w-4 text-muted-foreground" />
@@ -819,10 +919,10 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                           <Textarea 
                             value={editedOutput} 
                             onChange={e => setEditedOutput(e.target.value)}
-                            className="min-h-[250px] max-h-[40vh] whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 overflow-y-auto"
+                            className="min-h-[250px] max-h-[40vh] whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90"
                           />
                         ) : (
-                          <div className="bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 max-h-[40vh] overflow-y-auto">
+                          <ScrollArea className="bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 max-h-[40vh]">
                             <pre 
                               ref={transcriptionRef}
                               className="whitespace-pre-wrap text-sm"
@@ -831,10 +931,9 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                             >
                               {recording.output ? renderHighlightedText() : "No hay transcripción disponible. Edita o genera contenido con IA."}
                             </pre>
-                          </div>
+                          </ScrollArea>
                         )}
                         
-                        {/* Color picker for highlighting - keep existing code but improve positioning */}
                         {showHighlightMenu && selectionRange && (
                           <div 
                             className="fixed z-50 bg-white dark:bg-gray-800 shadow-lg rounded-md border border-gray-200 dark:border-gray-700 p-2"
@@ -862,6 +961,60 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                     </div>
                   </div>
                 </TabsContent>
+                
+                <TabsContent value="chapters" className="h-full mt-0 overflow-hidden">
+                  <div className="h-full overflow-hidden">
+                    <div className="mb-2 flex items-center justify-between">
+                      <h3 className="font-medium dark:text-custom-accent text-[#005c5f] dark:text-[#f1f2f6]">
+                        Capítulos del Audio
+                      </h3>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleCreateChapter}
+                        className="flex items-center gap-1"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Nuevo capítulo</span>
+                      </Button>
+                    </div>
+                    
+                    <div className="text-xs text-muted-foreground mb-2">
+                      Divide tu audio en secciones para facilitar la navegación
+                    </div>
+                    
+                    <ScrollArea className="max-h-[40vh] pr-2">
+                      <AudioChaptersList 
+                        chapters={chapters}
+                        currentTime={currentAudioTime}
+                        duration={audioDuration}
+                        onChapterClick={handleChapterClick}
+                        onChapterDelete={handleDeleteChapter}
+                        onChapterEdit={handleEditChapter}
+                        activeChapterId={activeChapterId}
+                      />
+                    </ScrollArea>
+                    
+                    {chapters.length === 0 && (
+                      <div className="flex flex-col items-center justify-center p-6 text-center text-muted-foreground">
+                        <Bookmark className="h-12 w-12 mb-2 opacity-50" />
+                        <p>No hay capítulos creados</p>
+                        <p className="text-xs mt-1">
+                          Los capítulos te permiten dividir el audio en secciones para facilitar la navegación
+                        </p>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={handleCreateChapter}
+                          className="mt-4"
+                        >
+                          Crear primer capítulo en posición actual
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
               </div>
             </div>
           </Tabs>
@@ -873,6 +1026,58 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
           </Button>
         </DialogFooter>
       </DialogContent>
+      
+      <Dialog open={showChapterDialog} onOpenChange={setShowChapterDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {currentChapter ? "Editar capítulo" : "Nuevo capítulo"}
+            </DialogTitle>
+            <DialogDescription>
+              {currentChapter 
+                ? "Modifica el título y color del capítulo"
+                : `Crear un nuevo capítulo a partir de ${new Date(currentAudioTime * 1000).toISOString().substring(14, 19)}`}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="chapter-title">Título del capítulo</Label>
+              <Input
+                id="chapter-title"
+                value={newChapterTitle}
+                onChange={(e) => setNewChapterTitle(e.target.value)}
+                placeholder="Ej: Introducción"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Color del capítulo</Label>
+              <div className="flex flex-wrap gap-2">
+                {chapterColors.map((color) => (
+                  <button
+                    key={color}
+                    className={`w-8 h-8 rounded-full border-2 transition-all ${
+                      newChapterColor === color ? 'ring-2 ring-blue-500 scale-110' : 'ring-0'
+                    }`}
+                    style={{ backgroundColor: color, borderColor: 'transparent' }}
+                    onClick={() => setNewChapterColor(color)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowChapterDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveChapter}>
+              {currentChapter ? "Actualizar" : "Crear"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
