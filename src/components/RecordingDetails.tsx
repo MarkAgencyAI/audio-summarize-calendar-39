@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { FileText, Edit, Trash2, Save, X, Globe, Folder, MessageSquare, Sparkles } from "lucide-react";
+import { FileText, Edit, Trash2, Save, X, Globe, Folder, MessageSquare, Sparkles, Search, PaintBucket } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ import { sendToWebhook } from "@/lib/webhook";
 import { extractWebhookOutput } from "@/lib/transcription-service";
 import { AudioPlayer } from "@/components/AudioPlayer";
 import { loadAudioFromStorage, saveAudioToStorage } from "@/lib/storage";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface RecordingDetailsProps {
   recording: Recording;
@@ -25,7 +26,25 @@ interface RecordingDetailsProps {
   onOpenChange?: (open: boolean) => void;
 }
 
+interface TextHighlight {
+  id: string;
+  text: string;
+  color: string;
+  startPosition: number;
+  endPosition: number;
+}
+
 const WEBHOOK_URL = "https://ssn8nss.maettiai.tech/webhook-test/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
+
+// Highlight color options
+const highlightColors = [
+  { label: "Amarillo", value: "#FEF7CD" },
+  { label: "Verde", value: "#F2FCE2" },
+  { label: "Naranja", value: "#FEC6A1" },
+  { label: "Azul", value: "#D3E4FD" },
+  { label: "Rosa", value: "#FFDEE2" },
+  { label: "Morado", value: "#E5DEFF" },
+];
 
 export function RecordingDetails({
   recording,
@@ -49,6 +68,21 @@ export function RecordingDetails({
   const [isGeneratingOutput, setIsGeneratingOutput] = useState(false);
   const [activeTab, setActiveTab] = useState("webhook");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  
+  // Search functionality
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<number[]>([]);
+  const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
+  const transcriptionRef = useRef<HTMLPreElement>(null);
+  
+  // Highlighting functionality
+  const [highlights, setHighlights] = useState<TextHighlight[]>(recording.highlights || []);
+  const [selectedText, setSelectedText] = useState("");
+  const [selectedColor, setSelectedColor] = useState(highlightColors[0].value);
+  const [selectionRange, setSelectionRange] = useState<{start: number, end: number} | null>(null);
+  const [showHighlightMenu, setShowHighlightMenu] = useState(false);
+  const [highlightMenuPosition, setHighlightMenuPosition] = useState({ x: 0, y: 0 });
+  const selectionRef = useRef<Selection | null>(null);
 
   const dialogOpen = propIsOpen !== undefined ? propIsOpen : isOpen;
   const setDialogOpen = onOpenChange || setIsOpenState;
@@ -90,6 +124,233 @@ export function RecordingDetails({
     
     saveAudio();
   }, [recording.audioUrl, recording.id, audioBlob]);
+  
+  // Search functionality
+  const handleSearch = () => {
+    if (!searchQuery.trim() || !recording.output) return;
+    
+    const query = searchQuery.toLowerCase();
+    const text = recording.output.toLowerCase();
+    const results: number[] = [];
+    let position = -1;
+    
+    while ((position = text.indexOf(query, position + 1)) !== -1) {
+      results.push(position);
+    }
+    
+    setSearchResults(results);
+    setCurrentSearchIndex(results.length > 0 ? 0 : -1);
+    
+    if (results.length === 0) {
+      toast.info("No se encontraron resultados");
+    } else {
+      scrollToHighlight(results[0]);
+    }
+  };
+  
+  const navigateSearch = (direction: 'next' | 'prev') => {
+    if (searchResults.length === 0) return;
+    
+    let newIndex;
+    if (direction === 'next') {
+      newIndex = (currentSearchIndex + 1) % searchResults.length;
+    } else {
+      newIndex = (currentSearchIndex - 1 + searchResults.length) % searchResults.length;
+    }
+    
+    setCurrentSearchIndex(newIndex);
+    scrollToHighlight(searchResults[newIndex]);
+  };
+  
+  const scrollToHighlight = (position: number) => {
+    if (!transcriptionRef.current) return;
+    
+    // Create a range to highlight and scroll to
+    const range = document.createRange();
+    const textNodes = getTextNodesIn(transcriptionRef.current);
+    let currentPosition = 0;
+    let targetNode = null;
+    let targetOffset = 0;
+    
+    // Find the text node containing the position
+    for (const node of textNodes) {
+      if (currentPosition + node.textContent!.length > position) {
+        targetNode = node;
+        targetOffset = position - currentPosition;
+        break;
+      }
+      currentPosition += node.textContent!.length;
+    }
+    
+    if (targetNode) {
+      // Set the range
+      range.setStart(targetNode, targetOffset);
+      range.setEnd(targetNode, targetOffset + searchQuery.length);
+      
+      // Clear any existing selection
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      
+      // Scroll to the position
+      targetNode.parentElement?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+  };
+  
+  // Helper function to get all text nodes in an element
+  const getTextNodesIn = (node: Node): Text[] => {
+    const textNodes: Text[] = [];
+    const walker = document.createTreeWalker(
+      node, 
+      NodeFilter.SHOW_TEXT, 
+      null
+    );
+    
+    let n: Node | null;
+    while(n = walker.nextNode()) {
+      textNodes.push(n as Text);
+    }
+    
+    return textNodes;
+  };
+  
+  // Highlight functionality
+  const handleTextSelection = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.toString().trim() === "") {
+      setSelectedText("");
+      setSelectionRange(null);
+      setShowHighlightMenu(false);
+      return;
+    }
+    
+    if (transcriptionRef.current && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      if (!transcriptionRef.current.contains(range.commonAncestorContainer)) {
+        return;
+      }
+      
+      // Get selected text
+      const text = selection.toString().trim();
+      setSelectedText(text);
+      
+      // Calculate selection position relative to the transcript text
+      const textContent = recording.output || "";
+      const preSelectionRange = range.cloneRange();
+      preSelectionRange.selectNodeContents(transcriptionRef.current);
+      preSelectionRange.setEnd(range.startContainer, range.startOffset);
+      const startPosition = preSelectionRange.toString().length;
+      
+      setSelectionRange({
+        start: startPosition,
+        end: startPosition + text.length
+      });
+      
+      // Store selection for later use
+      selectionRef.current = selection;
+      
+      // Show highlight menu
+      const rect = range.getBoundingClientRect();
+      setHighlightMenuPosition({
+        x: rect.left + (rect.width / 2),
+        y: rect.top - 10
+      });
+      setShowHighlightMenu(true);
+    }
+  };
+  
+  const applyHighlight = (color: string) => {
+    if (!selectionRange || !selectedText) return;
+    
+    const newHighlight: TextHighlight = {
+      id: crypto.randomUUID(),
+      text: selectedText,
+      color,
+      startPosition: selectionRange.start,
+      endPosition: selectionRange.end
+    };
+    
+    const updatedHighlights = [...highlights, newHighlight];
+    setHighlights(updatedHighlights);
+    
+    // Save highlights to recording
+    updateRecording(recording.id, {
+      highlights: updatedHighlights
+    });
+    
+    // Clear selection
+    setSelectedText("");
+    setSelectionRange(null);
+    setShowHighlightMenu(false);
+    window.getSelection()?.removeAllRanges();
+    
+    toast.success("Texto resaltado guardado");
+  };
+  
+  const removeHighlight = (highlightId: string) => {
+    const updatedHighlights = highlights.filter(h => h.id !== highlightId);
+    setHighlights(updatedHighlights);
+    
+    // Save updated highlights to recording
+    updateRecording(recording.id, {
+      highlights: updatedHighlights
+    });
+    
+    toast.success("Resaltado eliminado");
+  };
+  
+  // Render transcription with highlights
+  const renderHighlightedText = () => {
+    if (!recording.output) return null;
+    
+    const text = recording.output;
+    const sortedHighlights = [...highlights].sort((a, b) => a.startPosition - b.startPosition);
+    
+    const segments: JSX.Element[] = [];
+    let currentPosition = 0;
+    
+    // Process each highlight in order
+    for (const highlight of sortedHighlights) {
+      // Add unhighlighted text before this highlight
+      if (highlight.startPosition > currentPosition) {
+        segments.push(
+          <span key={`text-${currentPosition}`}>
+            {text.substring(currentPosition, highlight.startPosition)}
+          </span>
+        );
+      }
+      
+      // Add the highlighted text
+      segments.push(
+        <mark 
+          key={highlight.id}
+          style={{ backgroundColor: highlight.color, position: 'relative', borderRadius: '2px' }}
+          onDoubleClick={() => removeHighlight(highlight.id)}
+          title="Doble clic para eliminar el resaltado"
+        >
+          {text.substring(highlight.startPosition, highlight.endPosition)}
+        </mark>
+      );
+      
+      currentPosition = highlight.endPosition;
+    }
+    
+    // Add remaining text
+    if (currentPosition < text.length) {
+      segments.push(
+        <span key={`text-end`}>
+          {text.substring(currentPosition)}
+        </span>
+      );
+    }
+    
+    return segments;
+  };
   
   const getLanguageDisplay = (code?: string) => {
     const languages: Record<string, string> = {
@@ -462,7 +723,45 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                       </div>
                     </div>
                     
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                    {/* Search functionality */}
+                    <div className="flex items-center space-x-2 bg-muted/20 p-2 rounded-md mb-3">
+                      <Search className="h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="search"
+                        placeholder="Buscar en la transcripción..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="h-8 flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                      <Button size="sm" onClick={handleSearch} className="h-7 py-0 px-2">
+                        Buscar
+                      </Button>
+                      {searchResults.length > 0 && (
+                        <>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => navigateSearch('prev')} 
+                            className="h-7 w-7 p-0"
+                          >
+                            &#8593;
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => navigateSearch('next')} 
+                            className="h-7 w-7 p-0"
+                          >
+                            &#8595;
+                          </Button>
+                          <span className="text-xs text-muted-foreground">
+                            {currentSearchIndex + 1} de {searchResults.length}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    
+                    <div className="prose prose-sm dark:prose-invert max-w-none relative">
                       {isEditingOutput ? (
                         <Textarea 
                           value={editedOutput} 
@@ -470,9 +769,39 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                           className="min-h-[250px] whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90"
                         />
                       ) : (
-                        <pre className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 overflow-x-auto max-h-[50vh] overflow-y-auto">
-                          {recording.output || "No hay transcripción disponible. Edita o genera contenido con IA."}
+                        <pre 
+                          ref={transcriptionRef}
+                          className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 overflow-x-auto max-h-[50vh] overflow-y-auto"
+                          onMouseUp={handleTextSelection}
+                          onDoubleClick={handleTextSelection}
+                        >
+                          {recording.output ? renderHighlightedText() : "No hay transcripción disponible. Edita o genera contenido con IA."}
                         </pre>
+                      )}
+                      
+                      {/* Color picker for highlighting */}
+                      {showHighlightMenu && selectionRange && (
+                        <div 
+                          className="absolute z-50 bg-white dark:bg-gray-800 shadow-lg rounded-md border border-gray-200 dark:border-gray-700 p-2"
+                          style={{
+                            top: `${highlightMenuPosition.y}px`,
+                            left: `${highlightMenuPosition.x}px`,
+                            transform: 'translate(-50%, -100%)'
+                          }}
+                        >
+                          <div className="text-xs mb-1 font-medium text-center">Resaltar texto</div>
+                          <div className="flex gap-1 justify-center">
+                            {highlightColors.map(color => (
+                              <button
+                                key={color.value}
+                                className="w-6 h-6 rounded-full border border-gray-300 hover:scale-110 transition-transform"
+                                style={{ backgroundColor: color.value }}
+                                onClick={() => applyHighlight(color.value)}
+                                title={color.label}
+                              />
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
