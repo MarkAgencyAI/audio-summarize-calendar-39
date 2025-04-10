@@ -209,6 +209,11 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("transcriptions");
   const [understandingFilter, setUnderstandingFilter] = useState<"all" | "understood" | "not-understood">("all");
 
+  const handleAddToCalendar = (recording: any) => {
+    console.log("Add to calendar:", recording);
+    toast.info("Funcionalidad en desarrollo");
+  };
+
   useEffect(() => {
     const loadEvents = () => {
       const storedEvents = loadFromStorage<CalendarEvent[]>("calendarEvents") || [];
