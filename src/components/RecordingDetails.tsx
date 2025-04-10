@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
 import { Button } from "@/components/ui/button";
@@ -144,7 +143,7 @@ export function RecordingDetails({
     if (results.length === 0) {
       toast.info("No se encontraron resultados");
     } else {
-      scrollToHighlight(results[0]);
+      setTimeout(() => scrollToHighlight(results[0]), 100);
     }
   };
   
@@ -159,7 +158,7 @@ export function RecordingDetails({
     }
     
     setCurrentSearchIndex(newIndex);
-    scrollToHighlight(searchResults[newIndex]);
+    setTimeout(() => scrollToHighlight(searchResults[newIndex]), 100);
   };
   
   const scrollToHighlight = (position: number) => {
@@ -194,11 +193,28 @@ export function RecordingDetails({
         selection.addRange(range);
       }
       
-      // Scroll to the position
-      targetNode.parentElement?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
-      });
+      // Improved scroll to the matched text with better positioning
+      const parentElement = targetNode.parentElement;
+      if (parentElement) {
+        const container = transcriptionRef.current.closest('.overflow-y-auto');
+        if (container) {
+          const nodeRect = parentElement.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+          
+          // Calculate center position to scroll to
+          const scrollTop = parentElement.offsetTop - (container.clientHeight / 2) + (nodeRect.height / 2);
+          container.scrollTo({
+            top: scrollTop,
+            behavior: 'smooth'
+          });
+        } else {
+          // Fallback to standard scrolling if container not found
+          parentElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          });
+        }
+      }
     }
   };
   
@@ -516,6 +532,16 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
 
   const hasWebhookData = !!recording.webhookData;
 
+  const toggleHighlightMode = () => {
+    // If there's already a selection, use it
+    const selection = window.getSelection();
+    if (selection && selection.toString().trim() !== "") {
+      handleTextSelection();
+    } else {
+      toast.info("Selecciona texto para resaltar");
+    }
+  };
+
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogContent className="max-w-3xl w-[95vw] md:w-auto max-h-[90vh] flex flex-col dark:bg-[#001A29] dark:border-custom-secondary">
@@ -723,42 +749,69 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                       </div>
                     </div>
                     
-                    {/* Search functionality */}
-                    <div className="flex items-center space-x-2 bg-muted/20 p-2 rounded-md mb-3">
-                      <Search className="h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="search"
-                        placeholder="Buscar en la transcripción..."
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        className="h-8 flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                      />
-                      <Button size="sm" onClick={handleSearch} className="h-7 py-0 px-2">
-                        Buscar
-                      </Button>
-                      {searchResults.length > 0 && (
-                        <>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => navigateSearch('prev')} 
-                            className="h-7 w-7 p-0"
-                          >
-                            &#8593;
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => navigateSearch('next')} 
-                            className="h-7 w-7 p-0"
-                          >
-                            &#8595;
-                          </Button>
-                          <span className="text-xs text-muted-foreground">
-                            {currentSearchIndex + 1} de {searchResults.length}
-                          </span>
-                        </>
-                      )}
+                    {/* Search and Highlight section - now with highlighting tool visible */}
+                    <div className="mb-3">
+                      {/* Search tools */}
+                      <div className="flex items-center space-x-2 bg-muted/20 p-2 rounded-md mb-2">
+                        <Search className="h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="search"
+                          placeholder="Buscar en la transcripción..."
+                          value={searchQuery}
+                          onChange={e => setSearchQuery(e.target.value)}
+                          className="h-8 flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                        />
+                        <Button size="sm" onClick={handleSearch} className="h-7 py-0 px-2">
+                          Buscar
+                        </Button>
+                        {searchResults.length > 0 && (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => navigateSearch('prev')} 
+                              className="h-7 w-7 p-0"
+                              title="Resultado anterior"
+                            >
+                              &#8593;
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => navigateSearch('next')} 
+                              className="h-7 w-7 p-0"
+                              title="Siguiente resultado"
+                            >
+                              &#8595;
+                            </Button>
+                            <span className="text-xs text-muted-foreground">
+                              {currentSearchIndex + 1} de {searchResults.length}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      
+                      {/* Highlighting tools - now visible alongside search */}
+                      <div className="flex items-center space-x-2 bg-muted/20 p-2 rounded-md">
+                        <div className="flex items-center gap-1">
+                          <PaintBucket className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">Resaltador:</span>
+                        </div>
+                        <div className="flex gap-1">
+                          {highlightColors.map(color => (
+                            <button
+                              key={color.value}
+                              className="w-6 h-6 rounded-full border border-gray-300 hover:scale-110 transition-transform"
+                              style={{ backgroundColor: color.value }}
+                              onClick={() => setSelectedColor(color.value)}
+                              title={color.label}
+                            />
+                          ))}
+                        </div>
+                        <div className="text-xs text-muted-foreground ml-auto">
+                          Selecciona texto para resaltar
+                        </div>
+                      </div>
                     </div>
                     
                     <div className="prose prose-sm dark:prose-invert max-w-none relative">
@@ -779,10 +832,10 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                         </pre>
                       )}
                       
-                      {/* Color picker for highlighting */}
+                      {/* Color picker for highlighting - keep existing code but improve positioning */}
                       {showHighlightMenu && selectionRange && (
                         <div 
-                          className="absolute z-50 bg-white dark:bg-gray-800 shadow-lg rounded-md border border-gray-200 dark:border-gray-700 p-2"
+                          className="fixed z-50 bg-white dark:bg-gray-800 shadow-lg rounded-md border border-gray-200 dark:border-gray-700 p-2"
                           style={{
                             top: `${highlightMenuPosition.y}px`,
                             left: `${highlightMenuPosition.x}px`,

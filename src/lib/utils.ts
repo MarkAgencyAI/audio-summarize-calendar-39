@@ -26,8 +26,8 @@ export function formatDuration(durationInSeconds: number): string {
   return `${hours}:${remainingMinutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
-// Add a formatDate function with safety checks
-export function formatDate(date: Date | string | number): string {
+// Add a formatDate function with safety checks and flexibility for arguments
+export function formatDate(date: Date | string | number, options?: Intl.DateTimeFormatOptions): string {
   // If the input is null, undefined, or invalid, return a fallback string
   if (!date) return "Fecha desconocida";
   
@@ -40,11 +40,16 @@ export function formatDate(date: Date | string | number): string {
       return "Fecha inválida";
     }
     
-    return new Intl.DateTimeFormat('es', {
+    const defaultOptions = {
       day: '2-digit',
       month: 'short',
       year: 'numeric'
-    }).format(validDate);
+    } as Intl.DateTimeFormatOptions;
+    
+    // Use provided options or defaults
+    const formatOptions = options || defaultOptions;
+    
+    return new Intl.DateTimeFormat('es', formatOptions).format(validDate);
   } catch (error) {
     console.error("Error formatting date:", error);
     return "Fecha inválida";
