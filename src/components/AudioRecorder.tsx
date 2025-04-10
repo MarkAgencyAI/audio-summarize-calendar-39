@@ -97,7 +97,8 @@ export function AudioRecorder() {
       duration: recordingDuration,
       subject: subjectRef.current || "Sin materia especificada",
       speakerMode: speakerModeRef.current,
-      suggestedEvents: []
+      suggestedEvents: [],
+      createdAt: new Date().toISOString()
     });
     
     setIsProcessing(false);

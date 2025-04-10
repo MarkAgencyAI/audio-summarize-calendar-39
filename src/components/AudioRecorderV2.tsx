@@ -15,7 +15,6 @@ import { saveAudioToStorage } from "@/lib/storage";
 type RecordingState = "idle" | "recording" | "paused";
 type SpeakerMode = "single" | "multiple";
 
-// URL fija del webhook
 const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
 export function AudioRecorderV2() {
@@ -219,7 +218,6 @@ export function AudioRecorderV2() {
     
     try {
       toast.info("Procesando grabación...");
-      // Mostrar la ventana de transcripción en tiempo real
       setShowTranscriptionSheet(true);
       
       if (audioUrlRef.current) {
@@ -240,11 +238,9 @@ export function AudioRecorderV2() {
       
       const result = await transcribeAudio(audioBlob);
       
-      // Extraer la salida del webhook usando la función auxiliar
       const { extractWebhookOutput } = await import('@/lib/transcription-service');
       const webhookOutput = extractWebhookOutput(result.webhookResponse);
       
-      // Verificar explícitamente la respuesta del webhook
       if (!webhookOutput) {
         toast.error("No se recibió respuesta del servicio de procesamiento. No se puede guardar la grabación.");
         return;
@@ -252,7 +248,6 @@ export function AudioRecorderV2() {
       
       toast.success("Resumen y puntos fuertes recibidos y guardados");
       
-      // Extraer eventos sugeridos si existen en la respuesta del webhook
       let suggestedEvents = [];
       
       if (result.webhookResponse && typeof result.webhookResponse === 'object') {
@@ -266,7 +261,6 @@ export function AudioRecorderV2() {
         }
       }
       
-      // Notificar al usuario si no hay texto transcrito pero sí hay respuesta del webhook
       if (!result.transcript) {
         toast.warning("No se obtuvo texto de la transcripción, pero se guardarán los puntos fuertes");
       }
@@ -276,10 +270,8 @@ export function AudioRecorderV2() {
         console.error("Errores durante la transcripción:", result.errors);
       }
       
-      // Generar un ID único para la grabación
       const recordingId = crypto.randomUUID();
       
-      // Guardar el blob de audio en IndexedDB
       try {
         await saveAudioToStorage(recordingId, audioBlob);
         console.log("Audio guardado en IndexedDB correctamente");
@@ -288,20 +280,17 @@ export function AudioRecorderV2() {
         toast.warning("No se pudo guardar el audio localmente. La reproducción podría no estar disponible sin conexión.");
       }
       
-      // Crear objeto de grabación priorizando la respuesta del webhook
       const recordingData = {
         id: recordingId,
         name: recordingName || `Grabación ${formatDate(new Date())}`,
         audioUrl: audioUrlRef.current,
         audioData: audioUrlRef.current,
-        // La transcripción se guarda como referencia
         output: result.transcript,
         folderId: selectedFolder,
         duration: recordingDuration,
         subject: subject,
         speakerMode: speakerMode,
         suggestedEvents: suggestedEvents,
-        // IMPORTANTE: Guardar solo la variable output
         webhookData: webhookOutput,
         createdAt: new Date().toISOString()
       };
@@ -310,7 +299,6 @@ export function AudioRecorderV2() {
         ? { ...recordingData, errors: result.errors }
         : recordingData;
       
-      // Guardar la grabación con la respuesta del webhook
       addRecording(finalRecordingData);
       
       setAudioBlob(null);
@@ -321,7 +309,6 @@ export function AudioRecorderV2() {
       
       toast.success('Grabación guardada correctamente con resumen y puntos fuertes');
       
-      // Notificar que se completó la transcripción
       window.dispatchEvent(new CustomEvent('audioRecorderMessage', {
         detail: { 
           type: 'transcriptionComplete',
@@ -553,7 +540,6 @@ export function AudioRecorderV2() {
         </div>
       </div>
       
-      {/* Ventana de transcripción en tiempo real */}
       <LiveTranscriptionSheet
         isTranscribing={isTranscribing}
         output={transcript}

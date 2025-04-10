@@ -11,7 +11,7 @@ export interface Recording {
   folderId: string;
   duration: number;
   subject?: string;
-  speakerMode?: "single" | "multi";
+  speakerMode?: "single" | "multiple";  // Changed from "multi" to "multiple"
   suggestedEvents?: {
     title: string;
     description: string;

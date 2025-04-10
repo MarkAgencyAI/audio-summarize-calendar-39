@@ -28,11 +28,9 @@ export default function CalendarPage() {
     endDate: format(addHours(new Date(), 1), "yyyy-MM-dd'T'HH:mm"),
     folderId: "",
     eventType: "",
+    type: "other" as "exam" | "assignment" | "study" | "class" | "meeting" | "other",
     repeat: "none" as "none" | "daily" | "weekly" | "monthly"
   });
-  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
-  const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(null);
-  const [deleteAllRecurring, setDeleteAllRecurring] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -115,7 +113,7 @@ export default function CalendarPage() {
                 title: recording.keyPoints[index],
                 description: `Evento basado en la grabación: ${recording.name}`,
                 date: eventDate.toISOString(),
-                folderId: recording.folderId // Associate with the recording's folder
+                folderId: recording.folderId
               };
               newEvents.push(newEvent);
             });
@@ -213,7 +211,8 @@ export default function CalendarPage() {
         endDate: newEvent.endDate || undefined,
         folderId: newEvent.folderId || undefined,
         eventType: newEvent.eventType || undefined,
-        repeat: newEvent.repeat
+        repeat: newEvent.repeat,
+        type: newEvent.type
       });
       toast.success("Evento agregado");
     } else {
@@ -227,6 +226,7 @@ export default function CalendarPage() {
       endDate: format(addHours(new Date(), 1), "yyyy-MM-dd'T'HH:mm"),
       folderId: "",
       eventType: "",
+      type: "other",
       repeat: "none"
     });
     
@@ -239,7 +239,8 @@ export default function CalendarPage() {
       description: newEvent.description,
       folderId: newEvent.folderId || undefined,
       eventType: newEvent.eventType || undefined,
-      repeat: newEvent.repeat
+      repeat: newEvent.repeat,
+      type: newEvent.type
     };
     
     handleAddEvent({
@@ -297,7 +298,8 @@ export default function CalendarPage() {
           <div className="w-full overflow-x-auto">
             <Calendar 
               events={events} 
-              onAddEvent={handleAddEvent} 
+              onAddEvent={() => setShowAddEventDialog(true)}
+              onEditEvent={(event) => {}}
               onDeleteEvent={handleDeleteEvent}
               activeFilter={activeFilter}
               onFilterChange={handleFilterChange}

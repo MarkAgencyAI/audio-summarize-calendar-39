@@ -15,31 +15,40 @@ import { useRecordings } from "@/context/RecordingsContext";
 
 interface WeeklyScheduleProps {
   date: Date;
-  onSave: (events: Omit<CalendarEvent, "id">[]) => void;
+  events: CalendarEvent[];
+  onEdit?: (event: CalendarEvent) => void;
+  onDelete?: (eventId: string) => void;
   onCancel: () => void;
   hasExistingSchedule: boolean;
   existingEvents: CalendarEvent[];
+  onSave: (events: Omit<CalendarEvent, "id">[]) => void;
 }
+
+type WeeklyEventWithTemp = Omit<CalendarEvent, "id"> & { tempId: string };
 
 export function WeeklySchedule({
   date,
   onSave,
   onCancel,
   hasExistingSchedule,
-  existingEvents
+  existingEvents,
+  onEdit,
+  onDelete,
+  events
 }: WeeklyScheduleProps) {
   const { folders } = useRecordings();
-  const [scheduleEvents, setScheduleEvents] = useState<Array<Omit<CalendarEvent, "id"> & { tempId: string }>>([]);
+  const [scheduleEvents, setScheduleEvents] = useState<WeeklyEventWithTemp[]>([]);
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [selectedDay, setSelectedDay] = useState<number>(0);
   const [selectedTime, setSelectedTime] = useState<string>("");
-  const [newEvent, setNewEvent] = useState({
+  const [newEvent, setNewEvent] = useState<WeeklyEventWithTemp>({
     title: "",
     description: "",
     date: "",
     endDate: "",
-    folderId: "",
-    tempId: ""
+    type: "class", // Set default type
+    tempId: "",
+    folderId: ""
   });
   
   // Days of the week
@@ -63,7 +72,7 @@ export function WeeklySchedule({
       const uniqueByDayAndTime: Record<string, CalendarEvent> = {};
       
       scheduleItems.forEach(event => {
-        const eventDate = parseISO(event.date);
+        const eventDate = new Date(event.date);
         const dayOfWeek = eventDate.getDay();
         const timeKey = format(eventDate, "HH:mm");
         const key = `${dayOfWeek}-${timeKey}`;
@@ -75,8 +84,8 @@ export function WeeklySchedule({
       
       // Convert to array format needed for the schedule
       const loadedEvents = Object.values(uniqueByDayAndTime).map(event => {
-        const eventDate = parseISO(event.date);
-        const eventEnd = event.endDate ? parseISO(event.endDate) : addMinutes(eventDate, 60);
+        const eventDate = new Date(event.date);
+        const eventEnd = event.endDate ? new Date(event.endDate) : addMinutes(eventDate, 60);
         
         return {
           title: event.title,
@@ -84,6 +93,7 @@ export function WeeklySchedule({
           date: event.date,
           endDate: event.endDate || format(eventEnd, "yyyy-MM-dd'T'HH:mm"),
           folderId: event.folderId || "",
+          type: event.type,
           tempId: crypto.randomUUID()
         };
       });
@@ -107,6 +117,7 @@ export function WeeklySchedule({
       date: format(startTime, "yyyy-MM-dd'T'HH:mm"),
       endDate: format(endTime, "yyyy-MM-dd'T'HH:mm"),
       folderId: "",
+      type: "class", // Default type
       tempId: crypto.randomUUID()
     });
     
@@ -128,7 +139,10 @@ export function WeeklySchedule({
   
   const handleSaveSchedule = () => {
     // Convert schedule events to calendar events
-    const calendarEvents = scheduleEvents.map(({ tempId, ...event }) => event);
+    const calendarEvents = scheduleEvents.map(({ tempId, ...event }) => ({
+      ...event,
+      type: event.type || "class" // Ensure type is set
+    }));
     onSave(calendarEvents);
   };
   

@@ -33,7 +33,7 @@ export function DailyView({
     : events.filter(event => event.eventType === activeFilter || (!event.eventType && activeFilter === "otro"));
   
   const dayEvents = filteredEvents.filter(event => 
-    format(parseISO(event.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
+    format(new Date(event.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
   );
   
   // Generate time slots from 7:00 AM to 9:00 PM
@@ -48,8 +48,8 @@ export function DailyView({
   // Process events for proper positioning in time slots with collision detection
   const processedEvents = (() => {
     const events = dayEvents.map(event => {
-      const eventStart = parseISO(event.date);
-      const eventEnd = event.endDate ? parseISO(event.endDate) : addHours(eventStart, 1);
+      const eventStart = new Date(event.date);
+      const eventEnd = event.endDate ? new Date(event.endDate) : addHours(eventStart, 1);
       
       // Calculate position relative to the timeline
       const hourHeight = 64; // height of each hour slot in pixels
@@ -65,7 +65,7 @@ export function DailyView({
       
       // Get event color based on event type
       const eventColor = event.eventType 
-        ? eventTypeColors[event.eventType] || "#6b7280" 
+        ? eventTypeColors[event.eventType as keyof typeof eventTypeColors] || "#6b7280" 
         : "#6b7280";
       
       return {

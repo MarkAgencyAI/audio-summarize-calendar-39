@@ -13,11 +13,16 @@ export interface CalendarEvent {
   id: string;
   title: string;
   description?: string;
-  date: Date;
+  date: string;  // Changed from Date to string for compatibility
   startTime?: string;
   endTime?: string;
   type: 'exam' | 'assignment' | 'study' | 'class' | 'meeting' | 'other';
   completed?: boolean;
+  // Add the missing properties used in various components
+  eventType?: string;
+  repeat?: "none" | "daily" | "weekly" | "monthly";
+  endDate?: string;
+  folderId?: string;
 }
 
 export const eventTypeColors = {
@@ -33,6 +38,7 @@ interface DayProps {
   date: Date;
   events: CalendarEvent[];
   onClick?: (date: Date) => void;
+  day?: number; // Add the missing property
 }
 
 const Day: React.FC<DayProps> = ({ date, events, onClick }) => {
@@ -73,13 +79,17 @@ interface CalendarProps {
   onAddEvent?: () => void;
   onEditEvent?: (event: CalendarEvent) => void;
   onDeleteEvent?: (eventId: string) => void;
+  activeFilter?: string;
+  onFilterChange?: (filter: string) => void;
 }
 
 export const Calendar: React.FC<CalendarProps> = ({
   events,
   onAddEvent,
   onEditEvent,
-  onDeleteEvent
+  onDeleteEvent,
+  activeFilter = "all",
+  onFilterChange
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
@@ -196,10 +206,14 @@ export const Calendar: React.FC<CalendarProps> = ({
           
           <TabsContent value="week" className="mt-2">
             <WeeklySchedule 
-              selectedDate={selectedDate}
+              date={selectedDate}
               events={getWeeklyEvents()}
-              onEditEvent={onEditEvent}
-              onDeleteEvent={onDeleteEvent}
+              onEdit={onEditEvent}
+              onDelete={onDeleteEvent}
+              onCancel={() => setActiveView('month')}
+              hasExistingSchedule={true}
+              existingEvents={events}
+              onSave={() => {}}
             />
           </TabsContent>
           
@@ -207,8 +221,10 @@ export const Calendar: React.FC<CalendarProps> = ({
             <DailyView 
               date={selectedDate}
               events={getDailyEvents(selectedDate)}
-              onEditEvent={onEditEvent}
-              onDeleteEvent={onDeleteEvent}
+              onBack={() => setActiveView('month')}
+              onTimeSelect={() => {}}
+              onEventClick={onEditEvent || (() => {})}
+              activeFilter={activeFilter}
             />
           </TabsContent>
         </Tabs>
