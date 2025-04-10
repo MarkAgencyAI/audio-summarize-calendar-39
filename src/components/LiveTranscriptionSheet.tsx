@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -201,7 +202,7 @@ export function LiveTranscriptionSheet({
                 </div>
               </div>
             
-              <ScrollArea className="h-[calc(100vh-220px)]">
+              <ScrollArea className="h-[calc(100vh-220px)] pb-4">
                 <div className="px-4 pb-16">
                   <TranscriptionPanel 
                     output={safeOutput}
@@ -222,7 +223,7 @@ export function LiveTranscriptionSheet({
                 </div>
               </div>
               
-              <ScrollArea className="h-[calc(100vh-220px)]">
+              <ScrollArea className="h-[calc(100vh-220px)] pb-4">
                 <div className="px-4 pb-16">
                   <TranscriptionPanel 
                     output={webhookContent}

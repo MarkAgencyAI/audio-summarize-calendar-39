@@ -76,8 +76,8 @@ export function DailyView({
         ...event,
         topPosition,
         height,
-        startTime: eventStart,
-        endTime: eventEnd,
+        startTimeDate: eventStart, // Renamed to avoid type conflict
+        endTimeDate: eventEnd, // Renamed to avoid type conflict
         color: eventColor,
         columnPosition: 0, // Will be set during collision detection
         columnSpan: 1, // Will be set during collision detection
@@ -86,7 +86,7 @@ export function DailyView({
     });
 
     // Sort events by start time
-    events.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+    events.sort((a, b) => a.startTimeDate.getTime() - b.startTimeDate.getTime());
 
     // Handle overlapping events
     const timeSlotMap: Record<number, Array<{
@@ -96,8 +96,8 @@ export function DailyView({
 
     // Group events by overlapping time
     events.forEach(event => {
-      const startMinute = event.startTime.getHours() * 60 + event.startTime.getMinutes();
-      const endMinute = event.endTime.getHours() * 60 + event.endTime.getMinutes();
+      const startMinute = event.startTimeDate.getHours() * 60 + event.startTimeDate.getMinutes();
+      const endMinute = event.endTimeDate.getHours() * 60 + event.endTimeDate.getMinutes();
       
       // Check all minutes between start and end to find overlaps
       for (let minute = startMinute; minute < endMinute; minute++) {
@@ -110,8 +110,8 @@ export function DailyView({
 
     // Assign column positions based on overlaps
     events.forEach(event => {
-      const startMinute = event.startTime.getHours() * 60 + event.startTime.getMinutes();
-      const endMinute = event.endTime.getHours() * 60 + event.endTime.getMinutes();
+      const startMinute = event.startTimeDate.getHours() * 60 + event.startTimeDate.getMinutes();
+      const endMinute = event.endTimeDate.getHours() * 60 + event.endTimeDate.getMinutes();
       
       // Find all events that overlap with this one
       const overlappingEvents = new Set<typeof events[0]>();
@@ -155,8 +155,8 @@ export function DailyView({
 
     // Set column spans for each event
     events.forEach(event => {
-      const startMinute = event.startTime.getHours() * 60 + event.startTime.getMinutes();
-      const endMinute = event.endTime.getHours() * 60 + event.endTime.getMinutes();
+      const startMinute = event.startTimeDate.getHours() * 60 + event.startTimeDate.getMinutes();
+      const endMinute = event.endTimeDate.getHours() * 60 + event.endTimeDate.getMinutes();
       
       let maxColumns = 1;
       for (let minute = startMinute; minute < endMinute; minute++) {
@@ -243,7 +243,7 @@ export function DailyView({
                     <p className="font-medium truncate">{event.title}</p>
                   </div>
                   <p className="text-xs truncate">
-                    {format(event.startTime, "HH:mm")} - {format(event.endTime, "HH:mm")}
+                    {format(event.startTimeDate, "HH:mm")} - {format(event.endTimeDate, "HH:mm")}
                   </p>
                   {event.description && event.height > 80 && (
                     <p className="text-xs mt-1 line-clamp-2">{event.description}</p>

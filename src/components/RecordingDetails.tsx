@@ -208,11 +208,8 @@ export function RecordingDetails({
             behavior: 'smooth'
           });
         } else {
-          // Fallback to standard scrolling if container not found
-          parentElement.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center'
-          });
+          // No hacer scroll si no encontramos el contenedor
+          console.log("No se encontró el contenedor de scroll");
         }
       }
     }
@@ -673,194 +670,200 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
               </TabsTrigger>
             </TabsList>
             
-            <ScrollArea className="flex-1 h-[60vh] md:h-[50vh] pr-2 overflow-y-auto">
-              <div className="px-4 pb-16">
-                <TabsContent value="webhook" className="h-full mt-0">
-                  <div className="mb-4">
-                    <h3 className="font-medium mb-2 dark:text-custom-accent text-[#005c5f] dark:text-[#f1f2f6]">
-                      Resumen y puntos fuertes
-                    </h3>
-                    
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                      {hasWebhookData ? (
-                        <pre className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 overflow-x-auto max-h-[50vh] overflow-y-auto">
-                          {formatWebhookResponse()}
-                        </pre>
-                      ) : (
-                        <div className="bg-amber-50 text-amber-800 p-4 rounded-md text-sm">
-                          <p>No hay resumen y puntos fuertes disponibles para esta grabación.</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {recording.suggestedEvents && recording.suggestedEvents.length > 0 && (
+            <div className="flex-1 overflow-hidden">
+              <div className="h-[60vh] md:h-[50vh] overflow-hidden">
+                <TabsContent value="webhook" className="h-full mt-0 overflow-hidden">
+                  <div className="h-full overflow-hidden">
                     <div className="mb-4">
-                      <h3 className="font-medium mb-2 dark:text-custom-accent">Eventos sugeridos</h3>
-                      <ul className="space-y-1 ml-5 list-disc dark:text-white/90">
-                        {recording.suggestedEvents.map((event, index) => (
-                          <li key={index}>
-                            <strong>{event.title}</strong>: {event.description}
-                            {event.date && <span className="text-sm text-muted-foreground ml-2">({event.date})</span>}
-                          </li>
-                        ))}
-                      </ul>
+                      <h3 className="font-medium mb-2 dark:text-custom-accent text-[#005c5f] dark:text-[#f1f2f6]">
+                        Resumen y puntos fuertes
+                      </h3>
+                      
+                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                        {hasWebhookData ? (
+                          <div className="bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 h-[40vh] overflow-y-auto">
+                            <pre className="whitespace-pre-wrap text-sm">{formatWebhookResponse()}</pre>
+                          </div>
+                        ) : (
+                          <div className="bg-amber-50 text-amber-800 p-4 rounded-md text-sm">
+                            <p>No hay resumen y puntos fuertes disponibles para esta grabación.</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
+                    
+                    {recording.suggestedEvents && recording.suggestedEvents.length > 0 && (
+                      <div className="mb-4">
+                        <h3 className="font-medium mb-2 dark:text-custom-accent">Eventos sugeridos</h3>
+                        <ul className="space-y-1 ml-5 list-disc dark:text-white/90 overflow-y-auto max-h-[15vh]">
+                          {recording.suggestedEvents.map((event, index) => (
+                            <li key={index}>
+                              <strong>{event.title}</strong>: {event.description}
+                              {event.date && <span className="text-sm text-muted-foreground ml-2">({event.date})</span>}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
                 </TabsContent>
                 
-                <TabsContent value="transcription" className="h-full mt-0">
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <h3 className="font-medium mb-2 dark:text-custom-accent text-[#005c5f] dark:text-[#f1f2f6]">
-                        Transcripción del Audio
-                      </h3>
-                      <div className="flex gap-1 flex-wrap">
-                        {isEditingOutput ? (
-                          <>
-                            <Button variant="ghost" size="sm" onClick={handleSaveOutput} className="h-7 py-0">
-                              <Save className="h-3.5 w-3.5 mr-1" /> Guardar
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={handleCancelOutputEdit} className="h-7 py-0">
-                              <X className="h-3.5 w-3.5 mr-1" /> Cancelar
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => setIsEditingOutput(true)} 
-                              className="h-7 py-0"
-                            >
-                              <Edit className="h-3.5 w-3.5 mr-1" /> Editar
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={generateOutputWithGroq}
-                              disabled={isGeneratingOutput || isGroqLoading}
-                              className="h-7 py-0"
-                            >
-                              {isGeneratingOutput ? 'Generando...' : 'Generar con IA'}
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Search and Highlight section - now with highlighting tool visible */}
-                    <div className="mb-3">
-                      {/* Search tools */}
-                      <div className="flex items-center space-x-2 bg-muted/20 p-2 rounded-md mb-2">
-                        <Search className="h-4 w-4 text-muted-foreground" />
-                        <Input
-                          type="search"
-                          placeholder="Buscar en la transcripción..."
-                          value={searchQuery}
-                          onChange={e => setSearchQuery(e.target.value)}
-                          className="h-8 flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                        />
-                        <Button size="sm" onClick={handleSearch} className="h-7 py-0 px-2">
-                          Buscar
-                        </Button>
-                        {searchResults.length > 0 && (
-                          <>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => navigateSearch('prev')} 
-                              className="h-7 w-7 p-0"
-                              title="Resultado anterior"
-                            >
-                              &#8593;
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => navigateSearch('next')} 
-                              className="h-7 w-7 p-0"
-                              title="Siguiente resultado"
-                            >
-                              &#8595;
-                            </Button>
-                            <span className="text-xs text-muted-foreground">
-                              {currentSearchIndex + 1} de {searchResults.length}
-                            </span>
-                          </>
-                        )}
+                <TabsContent value="transcription" className="h-full mt-0 overflow-hidden">
+                  <div className="h-full overflow-hidden">
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <h3 className="font-medium mb-2 dark:text-custom-accent text-[#005c5f] dark:text-[#f1f2f6]">
+                          Transcripción del Audio
+                        </h3>
+                        <div className="flex gap-1 flex-wrap">
+                          {isEditingOutput ? (
+                            <>
+                              <Button variant="ghost" size="sm" onClick={handleSaveOutput} className="h-7 py-0">
+                                <Save className="h-3.5 w-3.5 mr-1" /> Guardar
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={handleCancelOutputEdit} className="h-7 py-0">
+                                <X className="h-3.5 w-3.5 mr-1" /> Cancelar
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => setIsEditingOutput(true)} 
+                                className="h-7 py-0"
+                              >
+                                <Edit className="h-3.5 w-3.5 mr-1" /> Editar
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={generateOutputWithGroq}
+                                disabled={isGeneratingOutput || isGroqLoading}
+                                className="h-7 py-0"
+                              >
+                                {isGeneratingOutput ? 'Generando...' : 'Generar con IA'}
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </div>
                       
-                      {/* Highlighting tools - now visible alongside search */}
-                      <div className="flex items-center space-x-2 bg-muted/20 p-2 rounded-md">
-                        <div className="flex items-center gap-1">
-                          <PaintBucket className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">Resaltador:</span>
+                      {/* Search and Highlight section - now with highlighting tool visible */}
+                      <div className="mb-3">
+                        {/* Search tools */}
+                        <div className="flex items-center space-x-2 bg-muted/20 p-2 rounded-md mb-2">
+                          <Search className="h-4 w-4 text-muted-foreground" />
+                          <Input
+                            type="search"
+                            placeholder="Buscar en la transcripción..."
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            className="h-8 flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                          />
+                          <Button size="sm" onClick={handleSearch} className="h-7 py-0 px-2">
+                            Buscar
+                          </Button>
+                          {searchResults.length > 0 && (
+                            <>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => navigateSearch('prev')} 
+                                className="h-7 w-7 p-0"
+                                title="Resultado anterior"
+                              >
+                                &#8593;
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => navigateSearch('next')} 
+                                className="h-7 w-7 p-0"
+                                title="Siguiente resultado"
+                              >
+                                &#8595;
+                              </Button>
+                              <span className="text-xs text-muted-foreground">
+                                {currentSearchIndex + 1} de {searchResults.length}
+                              </span>
+                            </>
+                          )}
                         </div>
-                        <div className="flex gap-1">
-                          {highlightColors.map(color => (
-                            <button
-                              key={color.value}
-                              className="w-6 h-6 rounded-full border border-gray-300 hover:scale-110 transition-transform"
-                              style={{ backgroundColor: color.value }}
-                              onClick={() => setSelectedColor(color.value)}
-                              title={color.label}
-                            />
-                          ))}
-                        </div>
-                        <div className="text-xs text-muted-foreground ml-auto">
-                          Selecciona texto para resaltar
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="prose prose-sm dark:prose-invert max-w-none relative">
-                      {isEditingOutput ? (
-                        <Textarea 
-                          value={editedOutput} 
-                          onChange={e => setEditedOutput(e.target.value)}
-                          className="min-h-[250px] whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90"
-                        />
-                      ) : (
-                        <pre 
-                          ref={transcriptionRef}
-                          className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 overflow-x-auto max-h-[50vh] overflow-y-auto"
-                          onMouseUp={handleTextSelection}
-                          onDoubleClick={handleTextSelection}
-                        >
-                          {recording.output ? renderHighlightedText() : "No hay transcripción disponible. Edita o genera contenido con IA."}
-                        </pre>
-                      )}
-                      
-                      {/* Color picker for highlighting - keep existing code but improve positioning */}
-                      {showHighlightMenu && selectionRange && (
-                        <div 
-                          className="fixed z-50 bg-white dark:bg-gray-800 shadow-lg rounded-md border border-gray-200 dark:border-gray-700 p-2"
-                          style={{
-                            top: `${highlightMenuPosition.y}px`,
-                            left: `${highlightMenuPosition.x}px`,
-                            transform: 'translate(-50%, -100%)'
-                          }}
-                        >
-                          <div className="text-xs mb-1 font-medium text-center">Resaltar texto</div>
-                          <div className="flex gap-1 justify-center">
+                        
+                        {/* Highlighting tools - now visible alongside search */}
+                        <div className="flex items-center space-x-2 bg-muted/20 p-2 rounded-md">
+                          <div className="flex items-center gap-1">
+                            <PaintBucket className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">Resaltador:</span>
+                          </div>
+                          <div className="flex gap-1">
                             {highlightColors.map(color => (
                               <button
                                 key={color.value}
                                 className="w-6 h-6 rounded-full border border-gray-300 hover:scale-110 transition-transform"
                                 style={{ backgroundColor: color.value }}
-                                onClick={() => applyHighlight(color.value)}
+                                onClick={() => setSelectedColor(color.value)}
                                 title={color.label}
                               />
                             ))}
                           </div>
+                          <div className="text-xs text-muted-foreground ml-auto">
+                            Selecciona texto para resaltar
+                          </div>
                         </div>
-                      )}
+                      </div>
+                      
+                      <div className="prose prose-sm dark:prose-invert max-w-none relative">
+                        {isEditingOutput ? (
+                          <Textarea 
+                            value={editedOutput} 
+                            onChange={e => setEditedOutput(e.target.value)}
+                            className="min-h-[250px] max-h-[40vh] whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 overflow-y-auto"
+                          />
+                        ) : (
+                          <div className="bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 max-h-[40vh] overflow-y-auto">
+                            <pre 
+                              ref={transcriptionRef}
+                              className="whitespace-pre-wrap text-sm"
+                              onMouseUp={handleTextSelection}
+                              onDoubleClick={handleTextSelection}
+                            >
+                              {recording.output ? renderHighlightedText() : "No hay transcripción disponible. Edita o genera contenido con IA."}
+                            </pre>
+                          </div>
+                        )}
+                        
+                        {/* Color picker for highlighting - keep existing code but improve positioning */}
+                        {showHighlightMenu && selectionRange && (
+                          <div 
+                            className="fixed z-50 bg-white dark:bg-gray-800 shadow-lg rounded-md border border-gray-200 dark:border-gray-700 p-2"
+                            style={{
+                              top: `${highlightMenuPosition.y}px`,
+                              left: `${highlightMenuPosition.x}px`,
+                              transform: 'translate(-50%, -100%)'
+                            }}
+                          >
+                            <div className="text-xs mb-1 font-medium text-center">Resaltar texto</div>
+                            <div className="flex gap-1 justify-center">
+                              {highlightColors.map(color => (
+                                <button
+                                  key={color.value}
+                                  className="w-6 h-6 rounded-full border border-gray-300 hover:scale-110 transition-transform"
+                                  style={{ backgroundColor: color.value }}
+                                  onClick={() => applyHighlight(color.value)}
+                                  title={color.label}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </TabsContent>
               </div>
-            </ScrollArea>
+            </div>
           </Tabs>
         </div>
         
