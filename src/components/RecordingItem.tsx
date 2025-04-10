@@ -101,6 +101,11 @@ export function RecordingItem({ recording, onAddToCalendar }) {
     ? "Múltiples oradores" 
     : "Un orador";
 
+  // Safely format the date (recording.date or recording.createdAt might be undefined or invalid)
+  const formattedDate = recording.date 
+    ? formatDate(recording.date) 
+    : (recording.createdAt ? formatDate(recording.createdAt) : "Fecha desconocida");
+
   return (
     <div className="border-b last:border-b-0 dark:border-gray-700">
       <div 
@@ -115,7 +120,7 @@ export function RecordingItem({ recording, onAddToCalendar }) {
             </div>
             
             <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-              <span>{formatDate(new Date(recording.createdAt))}</span>
+              <span>{formattedDate}</span>
               <span>•</span>
               <span>{formatTime(recording.duration || 0)}</span>
               <span>•</span>

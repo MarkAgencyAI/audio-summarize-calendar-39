@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { useRecordings, Note } from "@/context/RecordingsContext";
+import { useRecordings } from "@/context/RecordingsContext";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
+// Define the Note interface directly here to avoid import issues
 interface NoteItemProps {
-  note: Note;
+  note: {
+    id: string;
+    title: string;
+    content: string;
+    folderId: string;
+    imageUrl?: string;
+    createdAt: number;
+    updatedAt: number;
+  };
 }
 
 export function NoteItem({ note }: NoteItemProps) {

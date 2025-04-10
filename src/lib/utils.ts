@@ -26,13 +26,29 @@ export function formatDuration(durationInSeconds: number): string {
   return `${hours}:${remainingMinutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
-// Add a formatDate function
-export function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat('es', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  }).format(date);
+// Add a formatDate function with safety checks
+export function formatDate(date: Date | string | number): string {
+  // If the input is null, undefined, or invalid, return a fallback string
+  if (!date) return "Fecha desconocida";
+  
+  try {
+    // Create a valid Date object
+    const validDate = new Date(date);
+    
+    // Check if the date is valid
+    if (isNaN(validDate.getTime())) {
+      return "Fecha inválida";
+    }
+    
+    return new Intl.DateTimeFormat('es', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }).format(validDate);
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return "Fecha inválida";
+  }
 }
 
 // Add the cn utility function used by UI components
