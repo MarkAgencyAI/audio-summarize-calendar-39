@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatDate } from "@/lib/utils";
@@ -55,7 +56,11 @@ export function RecordingItem({ recording, onAddToCalendar }) {
 
   const handleAddToCalendar = (e) => {
     e.stopPropagation();
-    onAddToCalendar(recording);
+    if (onAddToCalendar) {
+      onAddToCalendar(recording);
+    } else {
+      toast.info("Funcionalidad de calendario no disponible");
+    }
   };
 
   const toggleAudioPlayer = async (e) => {
@@ -164,10 +169,12 @@ export function RecordingItem({ recording, onAddToCalendar }) {
                   <FileText className="h-4 w-4 mr-2" />
                   Ver detalles
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleAddToCalendar}>
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Añadir al calendario
-                </DropdownMenuItem>
+                {onAddToCalendar && (
+                  <DropdownMenuItem onClick={handleAddToCalendar}>
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Añadir al calendario
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={handleDownload}>
                   <Download className="h-4 w-4 mr-2" />
                   Descargar audio

@@ -398,6 +398,7 @@ export default function Dashboard() {
               <RecordingItem 
                 key={recording.id}
                 recording={recording}
+                onAddToCalendar={handleAddToCalendar}
               />
             </div>
           ))}
