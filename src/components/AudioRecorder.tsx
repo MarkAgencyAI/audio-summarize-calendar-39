@@ -98,6 +98,7 @@ export function AudioRecorder() {
       subject: subjectRef.current || "Sin materia especificada",
       speakerMode: speakerModeRef.current,
       suggestedEvents: [],
+      date: new Date().toISOString(),
       createdAt: new Date().toISOString()
     });
     

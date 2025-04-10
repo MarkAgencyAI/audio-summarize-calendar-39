@@ -43,10 +43,11 @@ export function PdfUploader() {
       addRecording({
         name: file.name.replace('.pdf', ''),
         audioUrl: audioUrl,
-        audioData: audioUrl,
+        audioData: audioUrl, // Now this is a string as per our updated type
         output: extractedText,
         folderId: selectedFolder,
         duration: 0,
+        date: new Date().toISOString(), // Add date property to fix type error
         suggestedEvents: [],
         createdAt: new Date().toISOString()
       });

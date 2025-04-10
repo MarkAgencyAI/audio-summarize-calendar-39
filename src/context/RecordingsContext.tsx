@@ -31,7 +31,7 @@ export interface Recording {
   date: string;
   duration: number;
   audioUrl?: string;
-  audioData: Uint8Array;
+  audioData: string; // Change from Uint8Array to string for compatibility
   output?: string;
   folderId: string;
   language?: string;
@@ -40,6 +40,8 @@ export interface Recording {
   highlights?: TextHighlight[];
   suggestedEvents?: SuggestedEvent[];
   chapters?: AudioChapter[];
+  speakerMode?: 'single' | 'multiple';
+  createdAt?: string;
 }
 
 export interface Folder {
@@ -145,7 +147,8 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const addRecording = (recording: Omit<Recording, "id">) => {
     const newRecording: Recording = {
       ...recording,
-      id: uuidv4()
+      id: uuidv4(),
+      date: recording.date || recording.createdAt || new Date().toISOString()
     };
     setRecordings(prev => [...prev, newRecording]);
   };
@@ -278,3 +281,5 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     </RecordingsContext.Provider>
   );
 };
+
+export { RecordingsProvider };

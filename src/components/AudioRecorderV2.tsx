@@ -292,6 +292,7 @@ export function AudioRecorderV2() {
         speakerMode: speakerMode,
         suggestedEvents: suggestedEvents,
         webhookData: webhookOutput,
+        date: new Date().toISOString(),
         createdAt: new Date().toISOString()
       };
       
