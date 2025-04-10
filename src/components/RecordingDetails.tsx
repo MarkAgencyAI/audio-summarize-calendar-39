@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Recording, useRecordings, TextHighlight } from "@/context/RecordingsContext";
+import { Recording, useRecordings, AudioChapter, TextHighlight } from "@/context/RecordingsContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
@@ -18,21 +18,13 @@ import { extractWebhookOutput } from "@/lib/transcription-service";
 import { AudioPlayer, AudioPlayerHandle } from "@/components/AudioPlayer";
 import { loadAudioFromStorage, saveAudioToStorage } from "@/lib/storage";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { AudioChapter, AudioChaptersList, AudioChaptersTimeline } from "./AudioChapter";
+import { AudioChaptersList, AudioChaptersTimeline } from "./AudioChapter";
 import { v4 as uuidv4 } from "uuid";
 
 interface RecordingDetailsProps {
   recording: Recording;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
-}
-
-interface TextHighlight {
-  id: string;
-  text: string;
-  color: string;
-  startPosition: number;
-  endPosition: number;
 }
 
 const chapterColors = [
