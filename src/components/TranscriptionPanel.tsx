@@ -5,20 +5,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
-import { Globe, BookOpen, Clock, AlertCircle, Loader2, Sparkles } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Globe, BookOpen, Clock, AlertCircle, Loader2, Sparkles, Check, X } from "lucide-react";
 
 interface TranscriptionPanelProps {
   output: string | object | null | undefined;
   isLoading?: boolean;
   progress?: number;
   showProgress?: boolean;
+  understood?: boolean;
+  onUnderstoodChange?: (understood: boolean) => void;
 }
 
 export function TranscriptionPanel({
   output,
   isLoading = false,
   progress = 0,
-  showProgress = false
+  showProgress = false,
+  understood = false,
+  onUnderstoodChange
 }: TranscriptionPanelProps) {
   // Process output to ensure it's always a safe string for rendering
   const displayOutput = React.useMemo(() => {
@@ -63,6 +68,33 @@ export function TranscriptionPanel({
       <Tabs defaultValue="output" className="w-full h-full flex flex-col">
         <div className="border-b px-4 py-2 bg-muted/40 flex items-center justify-between">
           <h3 className="text-lg font-semibold">Información recibida</h3>
+          
+          {onUnderstoodChange && (
+            <div className="flex items-center gap-2">
+              <Checkbox 
+                id="understood-checkbox"
+                checked={understood}
+                onCheckedChange={(checked) => onUnderstoodChange(checked as boolean)}
+                className="data-[state=checked]:bg-green-600 h-5 w-5"
+              />
+              <label 
+                htmlFor="understood-checkbox" 
+                className="text-sm flex items-center cursor-pointer select-none"
+              >
+                {understood ? (
+                  <span className="text-green-600 flex items-center gap-1">
+                    <Check className="h-4 w-4" />
+                    Entendida
+                  </span>
+                ) : (
+                  <span className="text-amber-600 flex items-center gap-1">
+                    <X className="h-4 w-4" />
+                    No entendida
+                  </span>
+                )}
+              </label>
+            </div>
+          )}
         </div>
         
         <TabsList className="bg-muted/30 p-1 mx-4 my-2 grid grid-cols-1">

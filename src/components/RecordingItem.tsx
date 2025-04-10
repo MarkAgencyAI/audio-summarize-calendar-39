@@ -1,13 +1,14 @@
 
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Calendar, MoreVertical, Trash2, Edit, Check, X } from "lucide-react";
+import { FileText, Calendar, MoreVertical, Trash2, Edit, Check, X, Filter, BookOpen } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { es } from "date-fns/locale";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,9 +73,33 @@ export function RecordingItem({ recording, onAddToCalendar, showActions = true }
               <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="space-y-1">
-              <h3 className="font-medium text-sm truncate max-w-[150px] md:max-w-xs">
-                {recording.name}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-medium text-sm truncate max-w-[150px] md:max-w-xs">
+                  {recording.name}
+                </h3>
+                <Checkbox 
+                  id={`understood-${recording.id}`}
+                  checked={recording.understood || false}
+                  onCheckedChange={() => {
+                    const newValue = !recording.understood;
+                    updateRecording(recording.id, { understood: newValue });
+                    toast.success(newValue ? "Marcada como entendida" : "Marcada como no entendida");
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="data-[state=checked]:bg-green-600 data-[state=checked]:text-white h-5 w-5"
+                />
+                <label
+                  htmlFor={`understood-${recording.id}`}
+                  className="text-xs font-medium cursor-pointer select-none"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {recording.understood ? (
+                    <span className="text-green-600">Entendida</span>
+                  ) : (
+                    <span className="text-amber-600">No entendida</span>
+                  )}
+                </label>
+              </div>
               <div className="text-xs text-muted-foreground">
                 {formatDistanceToNow(new Date(recording.date), {
                   addSuffix: true,
@@ -89,27 +114,20 @@ export function RecordingItem({ recording, onAddToCalendar, showActions = true }
                     {recording.language === "es" ? "Español" : recording.language}
                   </Badge>
                 )}
-                {recording.understood !== undefined && (
-                  <Badge 
-                    variant="outline" 
-                    className={`text-xs flex items-center gap-1 ${
-                      recording.understood 
-                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" 
-                        : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
-                    }`}
-                    onClick={toggleUnderstood}
-                  >
-                    {recording.understood ? (
-                      <>
-                        <Check className="h-3 w-3" /> Entendida
-                      </>
-                    ) : (
-                      <>
-                        <X className="h-3 w-3" /> Sin entender
-                      </>
-                    )}
-                  </Badge>
-                )}
+                <Badge 
+                  variant={recording.understood ? "success" : "warning"} 
+                  className="text-xs flex items-center gap-1"
+                >
+                  {recording.understood ? (
+                    <>
+                      <Check className="h-3 w-3" /> Entendida
+                    </>
+                  ) : (
+                    <>
+                      <X className="h-3 w-3" /> Sin entender
+                    </>
+                  )}
+                </Badge>
               </div>
             </div>
           </div>

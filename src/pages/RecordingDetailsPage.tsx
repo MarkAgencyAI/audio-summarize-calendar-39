@@ -96,10 +96,11 @@ export default function RecordingDetailsPage() {
                 id="understood" 
                 checked={recording.understood || false}
                 onCheckedChange={(checked) => handleUnderstoodChange(checked as boolean)}
+                className="h-5 w-5 data-[state=checked]:bg-green-600 data-[state=checked]:text-white"
               />
               <label
                 htmlFor="understood"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2 cursor-pointer"
               >
                 {recording.understood ? (
                   <>
