@@ -1,234 +1,446 @@
 
-import React, { useState } from 'react';
-import { Calendar as CalendarPrimitive } from '@/components/ui/calendar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
-import { DailyView } from './DailyView';
-import { WeeklySchedule } from './WeeklySchedule';
+import { Card, CardContent } from '@/components/ui/card';
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Plus, 
+  Calendar as CalendarIcon,
+  Search
+} from 'lucide-react';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter 
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { useRecordings } from '@/context/RecordingsContext';
+import { DailyView } from '@/components/DailyView';
+import { WeeklySchedule } from '@/components/WeeklySchedule';
+import { v4 as uuidv4 } from 'uuid';
+import { saveToStorage, loadFromStorage } from '@/lib/storage';
 
 export interface CalendarEvent {
   id: string;
   title: string;
   description?: string;
-  date: string;  // Changed from Date to string for compatibility
-  startTime?: string;
-  endTime?: string;
+  date: string;
+  endDate?: string;
   type: 'exam' | 'assignment' | 'study' | 'class' | 'meeting' | 'other';
   completed?: boolean;
-  // Add the missing properties used in various components
-  eventType?: string;
-  repeat?: "none" | "daily" | "weekly" | "monthly";
-  endDate?: string;
   folderId?: string;
+  startTime?: string;
+  endTime?: string;
+  repeat?: {
+    frequency: 'daily' | 'weekly' | 'monthly';
+    interval: number;
+    until?: string;
+  };
 }
 
 export const eventTypeColors = {
-  exam: '#ef4444',
-  assignment: '#f97316',
-  study: '#3b82f6', 
-  class: '#10b981',
-  meeting: '#8b5cf6',
-  other: '#6b7280'
-};
-
-interface DayProps {
-  date: Date;
-  events: CalendarEvent[];
-  onClick?: (date: Date) => void;
-  day?: number; // Add the missing property
-}
-
-const Day: React.FC<DayProps> = ({ date, events, onClick }) => {
-  const handleClick = () => {
-    if (onClick) {
-      onClick(date);
-    }
-  };
-
-  return (
-    <div 
-      className="p-2 border rounded-md hover:bg-gray-50 cursor-pointer"
-      onClick={handleClick}
-    >
-      <div className="text-center font-medium">{date.getDate()}</div>
-      {events.length > 0 && (
-        <div className="mt-1 space-y-1">
-          {events.slice(0, 2).map((event) => (
-            <div 
-              key={event.id}
-              className="text-xs truncate px-1 py-0.5 rounded-sm"
-              style={{ backgroundColor: eventTypeColors[event.type] + '20', color: eventTypeColors[event.type] }}
-            >
-              {event.title}
-            </div>
-          ))}
-          {events.length > 2 && (
-            <div className="text-xs text-center text-gray-500">+{events.length - 2} más</div>
-          )}
-        </div>
-      )}
-    </div>
-  );
+  exam: 'bg-red-500',
+  assignment: 'bg-blue-500',
+  study: 'bg-green-500',
+  class: 'bg-purple-500',
+  meeting: 'bg-orange-500',
+  other: 'bg-gray-500'
 };
 
 interface CalendarProps {
-  events: CalendarEvent[];
-  onAddEvent?: () => void;
-  onEditEvent?: (event: CalendarEvent) => void;
-  onDeleteEvent?: (eventId: string) => void;
-  activeFilter?: string;
-  onFilterChange?: (filter: string) => void;
+  initialDate?: Date;
 }
 
-export const Calendar: React.FC<CalendarProps> = ({
-  events,
-  onAddEvent,
-  onEditEvent,
-  onDeleteEvent,
-  activeFilter = "all",
-  onFilterChange
-}) => {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
-  const [activeView, setActiveView] = useState<'month' | 'week' | 'day'>('month');
+export function Calendar({ initialDate = new Date() }: CalendarProps) {
+  const { folders } = useRecordings();
 
-  const handleDayClick = (date: Date) => {
-    setSelectedDate(date);
-    setActiveView('day');
+  const [currentDate, setCurrentDate] = useState(initialDate);
+  const [selectedDate, setSelectedDate] = useState(initialDate);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [showEventDialog, setShowEventDialog] = useState(false);
+  const [newEvent, setNewEvent] = useState<Omit<CalendarEvent, 'id'>>({
+    title: '',
+    description: '',
+    date: format(selectedDate, 'yyyy-MM-dd'),
+    type: 'other'
+  });
+  const [view, setView] = useState<'month' | 'day' | 'week'>('month');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(null);
+  const [deleteAllRecurring, setDeleteAllRecurring] = useState(false);
+
+  // Load events from storage
+  useEffect(() => {
+    const storedEvents = loadFromStorage<CalendarEvent[]>('calendarEvents') || [];
+    setEvents(storedEvents);
+  }, []);
+
+  // Save events to storage
+  useEffect(() => {
+    if (events.length > 0) {
+      saveToStorage('calendarEvents', events);
+    }
+  }, [events]);
+
+  // Filter events based on search query
+  const filteredEvents = events.filter(event => 
+    event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (event.description && event.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  // Events for the current month view
+  const currentMonthEvents = filteredEvents.filter(event => {
+    const eventDate = parseISO(event.date);
+    return isSameMonth(eventDate, currentDate);
+  });
+
+  // Events for the selected day
+  const selectedDayEvents = filteredEvents.filter(event => {
+    const eventDate = parseISO(event.date);
+    return isSameDay(eventDate, selectedDate);
+  });
+
+  const addEvent = (event: Omit<CalendarEvent, 'id'>) => {
+    const newEventWithId = {
+      ...event,
+      id: uuidv4()
+    };
+    setEvents(prev => [...prev, newEventWithId]);
+    setNewEvent({
+      title: '',
+      description: '',
+      date: format(selectedDate, 'yyyy-MM-dd'),
+      type: 'other'
+    });
   };
 
-  const handlePreviousMonth = () => {
-    setCurrentMonth(prev => {
-      const newDate = new Date(prev);
-      newDate.setMonth(newDate.getMonth() - 1);
-      return newDate;
-    });
+  const handleEditEvent = (event: CalendarEvent) => {
+    setEvents(prev => prev.map(e => e.id === event.id ? event : e));
+  };
+
+  const handleDeleteEvent = (eventId: string) => {
+    const event = events.find(e => e.id === eventId);
+    
+    if (event && event.repeat && event.repeat.frequency) {
+      setEventToDelete(event);
+      setShowDeleteConfirmDialog(true);
+    } else {
+      deleteEvent(eventId);
+    }
+  };
+
+  const confirmDelete = () => {
+    if (!eventToDelete) return;
+
+    if (deleteAllRecurring && eventToDelete.repeat && eventToDelete.repeat.frequency) {
+      // Delete all recurring events with the same pattern
+      const eventDate = eventToDelete.date;
+      const eventTitle = eventToDelete.title;
+      const eventType = eventToDelete.type;
+      
+      setEvents(prev => prev.filter(e => 
+        !(e.title === eventTitle && e.type === eventType && 
+          e.date.substring(0, 10) === eventDate.substring(0, 10) && 
+          e.repeat && e.repeat.frequency === eventToDelete.repeat?.frequency)
+      ));
+    } else {
+      // Delete just this event
+      deleteEvent(eventToDelete.id);
+    }
+    
+    setShowDeleteConfirmDialog(false);
+    setEventToDelete(null);
+    setDeleteAllRecurring(false);
+  };
+
+  const deleteEvent = (eventId: string) => {
+    setEvents(prev => prev.filter(e => e.id !== eventId));
+  };
+
+  const getDaysInMonth = () => {
+    const start = startOfMonth(currentDate);
+    const end = endOfMonth(currentDate);
+    return eachDayOfInterval({ start, end });
+  };
+
+  const handlePrevMonth = () => {
+    setCurrentDate(prev => subMonths(prev, 1));
   };
 
   const handleNextMonth = () => {
-    setCurrentMonth(prev => {
-      const newDate = new Date(prev);
-      newDate.setMonth(newDate.getMonth() + 1);
-      return newDate;
-    });
+    setCurrentDate(prev => addMonths(prev, 1));
   };
 
-  const getDailyEvents = (date: Date) => {
-    return events.filter(event => {
-      const eventDate = new Date(event.date);
-      return (
-        eventDate.getDate() === date.getDate() &&
-        eventDate.getMonth() === date.getMonth() &&
-        eventDate.getFullYear() === date.getFullYear()
-      );
-    });
+  const handleDateClick = (date: Date) => {
+    setSelectedDate(date);
+    if (view === 'month') {
+      setView('day');
+    }
   };
 
-  const getWeeklyEvents = () => {
-    const startOfWeek = new Date(selectedDate);
-    const day = startOfWeek.getDay();
-    startOfWeek.setDate(selectedDate.getDate() - day);
-    
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
-    
-    return events.filter(event => {
-      const eventDate = new Date(event.date);
-      return eventDate >= startOfWeek && eventDate <= endOfWeek;
-    });
+  const renderMonthView = () => {
+    const days = getDaysInMonth();
+    const dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-7 gap-1 text-center">
+          {dayNames.map(day => (
+            <div key={day} className="p-2 text-sm font-medium">
+              {day}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {days.map(day => {
+            const dayEvents = currentMonthEvents.filter(event => 
+              isSameDay(parseISO(event.date), day)
+            );
+            
+            return (
+              <Button
+                key={day.toString()}
+                variant="ghost"
+                className={`h-16 flex flex-col items-center justify-start p-1 hover:bg-accent relative ${
+                  isSameDay(day, new Date()) ? 'bg-secondary' : ''
+                } ${
+                  isSameDay(day, selectedDate) ? 'border-2 border-primary' : ''
+                }`}
+                onClick={() => handleDateClick(day)}
+              >
+                <span className="text-sm font-medium">
+                  {format(day, 'd')}
+                </span>
+                <div className="mt-1 flex flex-wrap justify-center gap-1">
+                  {dayEvents.slice(0, 3).map((event, index) => (
+                    <div 
+                      key={event.id} 
+                      className={`w-2 h-2 rounded-full ${eventTypeColors[event.type]}`}
+                      title={event.title}
+                    />
+                  ))}
+                  {dayEvents.length > 3 && (
+                    <span className="text-xs">+{dayEvents.length - 3}</span>
+                  )}
+                </div>
+              </Button>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle>Calendario Académico</CardTitle>
-          <Button onClick={onAddEvent} size="sm">
-            <Plus className="h-4 w-4 mr-1" />
-            Añadir evento
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setView('month')}
+          >
+            <CalendarIcon className="h-4 w-4 mr-2" />
+            Mes
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setView('week')}
+          >
+            <CalendarIcon className="h-4 w-4 mr-2" />
+            Semana
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setView('day')}
+          >
+            <CalendarIcon className="h-4 w-4 mr-2" />
+            Día
           </Button>
         </div>
-      </CardHeader>
-      <CardContent>
-        <Tabs value={activeView} onValueChange={(v) => setActiveView(v as 'month' | 'week' | 'day')}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="sm" onClick={handlePreviousMonth}>
+        
+        <div className="flex items-center space-x-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Buscar eventos..."
+              className="w-full rounded-md pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <Button onClick={() => setShowEventDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nuevo evento
+          </Button>
+        </div>
+      </div>
+      
+      {view === 'month' && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-4">
+              <Button variant="outline" size="sm" onClick={handlePrevMonth}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <h3 className="text-lg font-semibold">
-                {formatDate(currentMonth, { month: 'long', year: 'numeric' })}
-              </h3>
-              <Button variant="ghost" size="sm" onClick={handleNextMonth}>
+              <h2 className="text-xl font-bold capitalize">
+                {format(currentDate, 'MMMM yyyy', { locale: es })}
+              </h2>
+              <Button variant="outline" size="sm" onClick={handleNextMonth}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-            <TabsList>
-              <TabsTrigger value="month">Mes</TabsTrigger>
-              <TabsTrigger value="week">Semana</TabsTrigger>
-              <TabsTrigger value="day">Día</TabsTrigger>
-            </TabsList>
-          </div>
-          
-          <TabsContent value="month" className="mt-2">
-            <div className="grid grid-cols-7 gap-2">
-              {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(day => (
-                <div key={day} className="text-center font-medium text-sm py-1">
-                  {day}
-                </div>
-              ))}
-              {Array.from({ length: 35 }).map((_, i) => {
-                const date = new Date(currentMonth);
-                date.setDate(1);
-                const firstDayOfMonth = date.getDay();
-                date.setDate(i - firstDayOfMonth + 1);
-                
-                const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
-                const isToday = date.toDateString() === new Date().toDateString();
-                
-                if (!isCurrentMonth) {
-                  return <div key={i} className="opacity-30">
-                    <Day date={date} events={getDailyEvents(date)} onClick={handleDayClick} />
-                  </div>;
-                }
-                
-                return (
-                  <div key={i} className={isToday ? 'ring-2 ring-primary rounded-md' : ''}>
-                    <Day date={date} events={getDailyEvents(date)} onClick={handleDayClick} />
-                  </div>
-                );
-              })}
+            {renderMonthView()}
+          </CardContent>
+        </Card>
+      )}
+      
+      {view === 'week' && (
+        <WeeklySchedule
+          selectedDate={selectedDate}
+          events={filteredEvents}
+          onEditEvent={handleEditEvent}
+          onDeleteEvent={handleDeleteEvent}
+        />
+      )}
+      
+      {view === 'day' && (
+        <DailyView
+          date={selectedDate}
+          events={selectedDayEvents}
+          onEditEvent={handleEditEvent}
+          onDeleteEvent={handleDeleteEvent}
+        />
+      )}
+      
+      {/* New Event Dialog */}
+      <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Nuevo evento</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="title">Título</Label>
+              <Input
+                id="title"
+                value={newEvent.title}
+                onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
+                placeholder="Título del evento"
+              />
             </div>
-          </TabsContent>
-          
-          <TabsContent value="week" className="mt-2">
-            <WeeklySchedule 
-              date={selectedDate}
-              events={getWeeklyEvents()}
-              onEdit={onEditEvent}
-              onDelete={onDeleteEvent}
-              onCancel={() => setActiveView('month')}
-              hasExistingSchedule={true}
-              existingEvents={events}
-              onSave={() => {}}
-            />
-          </TabsContent>
-          
-          <TabsContent value="day" className="mt-2">
-            <DailyView 
-              date={selectedDate}
-              events={getDailyEvents(selectedDate)}
-              onBack={() => setActiveView('month')}
-              onTimeSelect={() => {}}
-              onEventClick={onEditEvent || (() => {})}
-              activeFilter={activeFilter}
-            />
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Descripción</Label>
+              <Input
+                id="description"
+                value={newEvent.description || ''}
+                onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
+                placeholder="Descripción (opcional)"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="date">Fecha</Label>
+              <Input
+                id="date"
+                type="date"
+                value={newEvent.date}
+                onChange={(e) => setNewEvent({...newEvent, date: e.target.value})}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="type">Tipo</Label>
+              <select
+                id="type"
+                value={newEvent.type}
+                onChange={(e) => setNewEvent({...newEvent, type: e.target.value as any})}
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="exam">Examen</option>
+                <option value="assignment">Tarea</option>
+                <option value="study">Estudio</option>
+                <option value="class">Clase</option>
+                <option value="meeting">Reunión</option>
+                <option value="other">Otro</option>
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="folder">Materia</Label>
+              <select
+                id="folder"
+                value={newEvent.folderId || ''}
+                onChange={(e) => setNewEvent({...newEvent, folderId: e.target.value || undefined})}
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">Sin materia</option>
+                {folders.map((folder) => (
+                  <option key={folder.id} value={folder.id}>{folder.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              onClick={() => {
+                addEvent(newEvent);
+                setShowEventDialog(false);
+              }}
+              disabled={!newEvent.title || !newEvent.date}
+            >
+              Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteConfirmDialog} onOpenChange={setShowDeleteConfirmDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Eliminar evento</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>¿Estás seguro de que deseas eliminar este evento?</p>
+            {eventToDelete?.repeat && eventToDelete.repeat.frequency && (
+              <div className="mt-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="delete-all"
+                    checked={deleteAllRecurring}
+                    onChange={(e) => setDeleteAllRecurring(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  <Label htmlFor="delete-all">
+                    Eliminar todos los eventos recurrentes de esta serie
+                  </Label>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowDeleteConfirmDialog(false);
+              setEventToDelete(null);
+              setDeleteAllRecurring(false);
+            }}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Eliminar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
-};
+}
