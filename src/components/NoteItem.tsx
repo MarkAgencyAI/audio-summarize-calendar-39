@@ -13,29 +13,38 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
-// Define the Note interface directly here to avoid import issues
-interface NoteItemProps {
-  note: {
-    id: string;
-    title: string;
-    content: string;
-    folderId: string;
-    imageUrl?: string;
-    createdAt: number;
-    updatedAt: number;
-  };
+export interface NoteItemProps {
+  id: string;
+  title: string;
+  content: string;
+  folderId: string;
+  imageUrl?: string;
+  createdAt: number;
+  updatedAt: number;
+  onEdit: () => void;
+  onDelete: () => void;
 }
 
-export function NoteItem({ note }: NoteItemProps) {
+export function NoteItem({ 
+  id, 
+  title, 
+  content, 
+  folderId, 
+  imageUrl, 
+  createdAt, 
+  updatedAt, 
+  onEdit, 
+  onDelete 
+}: NoteItemProps) {
   const { folders, updateNote, deleteNote } = useRecordings();
   const [isEditing, setIsEditing] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
-  const [editedTitle, setEditedTitle] = useState(note.title);
-  const [editedContent, setEditedContent] = useState(note.content);
-  const [selectedFolder, setSelectedFolder] = useState(note.folderId);
+  const [editedTitle, setEditedTitle] = useState(title);
+  const [editedContent, setEditedContent] = useState(content);
+  const [selectedFolder, setSelectedFolder] = useState(folderId);
   
-  const folderName = folders.find(f => f.id === note.folderId)?.name || "Sin materia";
-  const folderColor = folders.find(f => f.id === note.folderId)?.color || "#888888";
+  const folderName = folders.find(f => f.id === folderId)?.name || "Sin materia";
+  const folderColor = folders.find(f => f.id === folderId)?.color || "#888888";
   
   const handleSave = () => {
     if (!editedTitle.trim()) {
@@ -43,10 +52,11 @@ export function NoteItem({ note }: NoteItemProps) {
       return;
     }
     
-    updateNote(note.id, {
+    updateNote(id, {
       title: editedTitle,
       content: editedContent,
-      folderId: selectedFolder
+      folderId: selectedFolder,
+      updatedAt: new Date().toISOString()
     });
     
     setIsEditing(false);
@@ -54,15 +64,16 @@ export function NoteItem({ note }: NoteItemProps) {
   };
   
   const handleCancel = () => {
-    setEditedTitle(note.title);
-    setEditedContent(note.content);
-    setSelectedFolder(note.folderId);
+    setEditedTitle(title);
+    setEditedContent(content);
+    setSelectedFolder(folderId);
     setIsEditing(false);
   };
   
   const handleDelete = () => {
-    deleteNote(note.id);
+    deleteNote(id);
     setShowDetails(false);
+    onDelete();
     toast.success("Apunte eliminado");
   };
   
@@ -71,9 +82,9 @@ export function NoteItem({ note }: NoteItemProps) {
       <Card className="border-custom-primary/10 overflow-hidden hover:shadow-md transition-shadow bg-card">
         <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between gap-2">
           <div className="flex-1 overflow-hidden">
-            <CardTitle className="text-base truncate">{note.title}</CardTitle>
+            <CardTitle className="text-base truncate">{title}</CardTitle>
             <CardDescription className="flex items-center gap-1 text-xs">
-              {formatDate(new Date(note.updatedAt || Date.now()))}
+              {formatDate(new Date(updatedAt || Date.now()))}
             </CardDescription>
           </div>
           
@@ -97,14 +108,14 @@ export function NoteItem({ note }: NoteItemProps) {
           </div>
           
           <p className="text-xs line-clamp-2 text-muted-foreground mb-2">
-            {note.content || "Sin contenido"}
+            {content || "Sin contenido"}
           </p>
           
-          {note.imageUrl && (
+          {imageUrl && (
             <div className="mt-2 w-full">
               <img 
-                src={note.imageUrl} 
-                alt={note.title} 
+                src={imageUrl} 
+                alt={title} 
                 className="w-full h-32 object-cover rounded-md"
               />
             </div>
@@ -116,7 +127,7 @@ export function NoteItem({ note }: NoteItemProps) {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {isEditing ? "Editar apunte" : note.title}
+              {isEditing ? "Editar apunte" : title}
             </DialogTitle>
           </DialogHeader>
           
@@ -168,13 +179,13 @@ export function NoteItem({ note }: NoteItemProps) {
                 </Select>
               </div>
               
-              {note.imageUrl && (
+              {imageUrl && (
                 <div className="space-y-2">
                   <Label>Imagen</Label>
                   <div className="bg-muted/30 p-2 rounded-md">
                     <img 
-                      src={note.imageUrl} 
-                      alt={note.title} 
+                      src={imageUrl} 
+                      alt={title} 
                       className="w-full h-auto max-h-[200px] object-contain rounded-md" 
                     />
                   </div>
@@ -190,27 +201,27 @@ export function NoteItem({ note }: NoteItemProps) {
                 />
                 <span className="text-muted-foreground">{folderName}</span>
                 <span className="ml-auto text-xs text-muted-foreground">
-                  {formatDate(new Date(note.updatedAt || Date.now()))}
+                  {formatDate(new Date(updatedAt || Date.now()))}
                 </span>
               </div>
               
               <div className="space-y-2">
                 <div className="bg-muted/30 p-3 rounded-md">
                   <pre className="text-sm whitespace-pre-wrap overflow-auto max-h-[30vh]">
-                    {note.content || "Sin contenido"}
+                    {content || "Sin contenido"}
                   </pre>
                 </div>
               </div>
               
-              {note.imageUrl && (
+              {imageUrl && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-1">
                     <Image className="h-4 w-4" />
                     <h3 className="text-sm font-medium">Imagen adjunta:</h3>
                   </div>
                   <img 
-                    src={note.imageUrl} 
-                    alt={note.title} 
+                    src={imageUrl} 
+                    alt={title} 
                     className="w-full h-auto max-h-[200px] object-contain rounded-md" 
                   />
                 </div>
