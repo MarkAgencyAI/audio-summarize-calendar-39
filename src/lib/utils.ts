@@ -26,10 +26,10 @@ export function formatDuration(durationInSeconds: number): string {
   return `${hours}:${remainingMinutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
-// Add a formatDate function with safety checks and flexibility for arguments
-export function formatDate(date: Date | string | number, options?: Intl.DateTimeFormatOptions): string {
+// Add a formatDate function with robust safety checks and flexibility for arguments
+export function formatDate(date: Date | string | number | undefined | null, options?: Intl.DateTimeFormatOptions): string {
   // If the input is null, undefined, or invalid, return a fallback string
-  if (!date) return "Fecha desconocida";
+  if (date === null || date === undefined || date === "") return "Fecha desconocida";
   
   try {
     // Create a valid Date object

@@ -1,217 +1,204 @@
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { loadFromStorage, saveToStorage } from "@/lib/storage";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { saveToStorage, loadFromStorage } from '@/lib/storage';
-import { useAuth } from '@/context/AuthContext';
-import { v4 as uuidv4 } from 'uuid';
-
-// Define the Recording interface for TypeScript
 export interface Recording {
   id: string;
   name: string;
-  audioUrl?: string; // URL for the audio file
-  audioData?: string; // Base64 encoded audio data
-  output?: string; // Transcript or other output
+  audioUrl: string;
+  audioData: string;
+  output: string;
   folderId: string;
-  date?: string;
-  duration?: number;
+  duration: number;
   subject?: string;
-  language?: string;
-  speakerMode?: 'single' | 'multiple';
-  suggestedEvents?: any[];
-  webhookData?: any;
-  errors?: string[];
-  highlights?: {
-    id: string;
-    text: string;
-    color: string;
-    startPosition: number;
-    endPosition: number;
+  speakerMode?: "single" | "multi";
+  suggestedEvents?: {
+    title: string;
+    description: string;
+    date?: string;
   }[];
+  keyPoints?: string[];
+  createdAt: string;
 }
 
-// Define a folder interface
 export interface Folder {
   id: string;
   name: string;
   color: string;
-  icon?: string;
+  createdAt: string;
 }
 
-// Define Note interface
 export interface Note {
   id: string;
   title: string;
   content: string;
   folderId: string;
-  imageUrl?: string;
-  createdAt: number;
-  updatedAt: number;
+  createdAt: string;
 }
 
-// Define Grade interface
 export interface Grade {
   id: string;
   name: string;
   score: number;
   folderId: string;
-  createdAt: number;
+  createdAt: string;
 }
 
-// Context type definition
-interface RecordingsContextType {
+export interface RecordingsContextType {
   recordings: Recording[];
   folders: Folder[];
-  notes: Note[];
   addRecording: (recording: Omit<Recording, "id">) => void;
-  updateRecording: (id: string, updates: Partial<Recording>) => void;
-  deleteRecording: (id: string) => void;
-  addFolder: (folder: Folder) => void;
-  updateFolder: (id: string, updates: Partial<Folder>) => void;
+  addFolder: (folder: Omit<Folder, "id">) => void;
+  updateFolder: (id: string, data: Partial<Folder>) => void;
   deleteFolder: (id: string) => void;
-  // Note methods
-  addNote: (note: Omit<Note, "id" | "createdAt" | "updatedAt">) => void;
-  updateNote: (id: string, updates: Partial<Note>) => void;
+  updateRecording: (id: string, data: Partial<Recording>) => void;
+  deleteRecording: (id: string) => void;
+  notes: Note[];
+  addNote: (note: Omit<Note, "id" | "createdAt">) => void;
+  updateNote: (id: string, data: Partial<Note>) => void;
   deleteNote: (id: string) => void;
   getFolderNotes: (folderId: string) => Note[];
-  // Grade methods
   getFolderGrades: (folderId: string) => Grade[];
   calculateFolderAverage: (folderId: string) => number;
   addGrade: (folderId: string, name: string, score: number) => void;
   deleteGrade: (id: string) => void;
 }
 
-// Create the context
 const RecordingsContext = createContext<RecordingsContextType | undefined>(undefined);
 
-// Provider component
+export const useRecordings = () => {
+  const context = useContext(RecordingsContext);
+  if (!context) {
+    throw new Error("useRecordings must be used within a RecordingsProvider");
+  }
+  return context;
+};
+
 export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
   const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
-  const [folders, setFolders] = useState<Folder[]>([
-    { id: 'default', name: 'General', color: '#6E59A5' },
-    { id: 'important', name: 'Importante', color: '#F97316' },
-    { id: 'work', name: 'Trabajo', color: '#0EA5E9' },
-    { id: 'personal', name: 'Personal', color: '#D946EF' },
-  ]);
 
-  // Load data from local storage on mount and when user changes
+  // Load data from localStorage on initial render
   useEffect(() => {
-    const userId = user?.id || 'guest';
-    const savedRecordings = loadFromStorage<Recording[]>(`recordings-${userId}`) || [];
-    const savedFolders = loadFromStorage<Folder[]>(`folders-${userId}`);
-    const savedNotes = loadFromStorage<Note[]>(`notes-${userId}`) || [];
-    const savedGrades = loadFromStorage<Grade[]>(`grades-${userId}`) || [];
-    
-    setRecordings(savedRecordings);
-    setNotes(savedNotes);
-    setGrades(savedGrades);
-    
-    if (savedFolders) {
-      setFolders(savedFolders);
+    const loadedRecordings = loadFromStorage<Recording[]>("recordings") || [];
+    const loadedFolders = loadFromStorage<Folder[]>("folders") || [];
+    const loadedNotes = loadFromStorage<Note[]>("notes") || [];
+    const loadedGrades = loadFromStorage<Grade[]>("grades") || [];
+
+    // Ensure default folder exists
+    if (loadedFolders.length === 0) {
+      const defaultFolder: Folder = {
+        id: "default",
+        name: "General",
+        color: "#4f46e5",
+        createdAt: new Date().toISOString()
+      };
+      loadedFolders.push(defaultFolder);
+      saveToStorage("folders", loadedFolders);
     }
-  }, [user]);
 
-  // Save recordings to local storage whenever they change
+    setRecordings(loadedRecordings);
+    setFolders(loadedFolders);
+    setNotes(loadedNotes);
+    setGrades(loadedGrades);
+  }, []);
+
+  // Save recordings to localStorage whenever they change
   useEffect(() => {
-    const userId = user?.id || 'guest';
-    saveToStorage(`recordings-${userId}`, recordings);
-  }, [recordings, user]);
+    saveToStorage("recordings", recordings);
+  }, [recordings]);
 
-  // Save notes to local storage whenever they change
+  // Save folders to localStorage whenever they change
   useEffect(() => {
-    const userId = user?.id || 'guest';
-    saveToStorage(`notes-${userId}`, notes);
-  }, [notes, user]);
+    saveToStorage("folders", folders);
+  }, [folders]);
 
-  // Save grades to local storage whenever they change
+  // Save notes to localStorage whenever they change
   useEffect(() => {
-    const userId = user?.id || 'guest';
-    saveToStorage(`grades-${userId}`, grades);
-  }, [grades, user]);
+    saveToStorage("notes", notes);
+  }, [notes]);
 
-  // Save folders to local storage whenever they change
+  // Save grades to localStorage whenever they change
   useEffect(() => {
-    const userId = user?.id || 'guest';
-    saveToStorage(`folders-${userId}`, folders);
-  }, [folders, user]);
+    saveToStorage("grades", grades);
+  }, [grades]);
 
-  // Add a new recording
-  const addRecording = (recordingData: Omit<Recording, "id">) => {
+  const addRecording = (recording: Omit<Recording, "id">) => {
     const newRecording: Recording = {
-      id: uuidv4(),
-      ...recordingData
+      ...recording,
+      id: crypto.randomUUID()
     };
-    setRecordings(prev => [newRecording, ...prev]);
+    setRecordings(prev => [...prev, newRecording]);
   };
 
-  // Update an existing recording
-  const updateRecording = (id: string, updates: Partial<Recording>) => {
-    setRecordings(prev => 
-      prev.map(recording => 
-        recording.id === id ? { ...recording, ...updates } : recording
+  const updateRecording = (id: string, data: Partial<Recording>) => {
+    setRecordings(prev =>
+      prev.map(recording =>
+        recording.id === id ? { ...recording, ...data } : recording
       )
     );
   };
 
-  // Delete a recording
   const deleteRecording = (id: string) => {
     setRecordings(prev => prev.filter(recording => recording.id !== id));
   };
 
-  // Add a new folder
-  const addFolder = (folder: Folder) => {
-    setFolders(prev => [...prev, folder]);
+  const addFolder = (folder: Omit<Folder, "id">) => {
+    const newFolder: Folder = {
+      ...folder,
+      id: crypto.randomUUID()
+    };
+    setFolders(prev => [...prev, newFolder]);
   };
 
-  // Update an existing folder
-  const updateFolder = (id: string, updates: Partial<Folder>) => {
-    setFolders(prev => 
-      prev.map(folder => 
-        folder.id === id ? { ...folder, ...updates } : folder
+  const updateFolder = (id: string, data: Partial<Folder>) => {
+    setFolders(prev =>
+      prev.map(folder =>
+        folder.id === id ? { ...folder, ...data } : folder
       )
     );
   };
 
-  // Delete a folder and move its recordings to default
   const deleteFolder = (id: string) => {
-    if (id === 'default') return; // Prevent deleting the default folder
-    
-    // Move recordings in this folder to the default folder
-    setRecordings(prev => 
-      prev.map(recording => 
-        recording.folderId === id ? { ...recording, folderId: 'default' } : recording
+    // Move recordings to default folder
+    setRecordings(prev =>
+      prev.map(recording =>
+        recording.folderId === id
+          ? { ...recording, folderId: "default" }
+          : recording
       )
     );
-    
-    // Move notes in this folder to the default folder
-    setNotes(prev => 
-      prev.map(note => 
-        note.folderId === id ? { ...note, folderId: 'default' } : note
+
+    // Move notes to default folder
+    setNotes(prev =>
+      prev.map(note =>
+        note.folderId === id
+          ? { ...note, folderId: "default" }
+          : note
       )
     );
-    
-    // Remove the folder
+
+    // Delete grades associated with the folder
+    setGrades(prev => prev.filter(grade => grade.folderId !== id));
+
+    // Delete the folder
     setFolders(prev => prev.filter(folder => folder.id !== id));
   };
 
-  // Note functions
-  const addNote = (noteData: Omit<Note, "id" | "createdAt" | "updatedAt">) => {
-    const now = Date.now();
+  const addNote = (note: Omit<Note, "id" | "createdAt">) => {
     const newNote: Note = {
-      id: uuidv4(),
-      ...noteData,
-      createdAt: now,
-      updatedAt: now
+      ...note,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString()
     };
-    setNotes(prev => [newNote, ...prev]);
+    setNotes(prev => [...prev, newNote]);
   };
 
-  const updateNote = (id: string, updates: Partial<Note>) => {
-    setNotes(prev => 
-      prev.map(note => 
-        note.id === id ? { ...note, ...updates, updatedAt: Date.now() } : note
+  const updateNote = (id: string, data: Partial<Note>) => {
+    setNotes(prev =>
+      prev.map(note =>
+        note.id === id ? { ...note, ...data } : note
       )
     );
   };
@@ -224,7 +211,21 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return notes.filter(note => note.folderId === folderId);
   };
 
-  // Grade functions
+  const addGrade = (folderId: string, name: string, score: number) => {
+    const newGrade: Grade = {
+      id: crypto.randomUUID(),
+      name,
+      score,
+      folderId,
+      createdAt: new Date().toISOString()
+    };
+    setGrades(prev => [...prev, newGrade]);
+  };
+
+  const deleteGrade = (id: string) => {
+    setGrades(prev => prev.filter(grade => grade.id !== id));
+  };
+
   const getFolderGrades = (folderId: string) => {
     return grades.filter(grade => grade.folderId === folderId);
   };
@@ -237,51 +238,29 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return sum / folderGrades.length;
   };
 
-  const addGrade = (folderId: string, name: string, score: number) => {
-    const newGrade: Grade = {
-      id: uuidv4(),
-      name,
-      score,
-      folderId,
-      createdAt: Date.now()
-    };
-    setGrades(prev => [...prev, newGrade]);
-  };
-
-  const deleteGrade = (id: string) => {
-    setGrades(prev => prev.filter(grade => grade.id !== id));
+  const value = {
+    recordings,
+    folders,
+    addRecording,
+    updateRecording,
+    deleteRecording,
+    addFolder,
+    updateFolder,
+    deleteFolder,
+    notes,
+    addNote,
+    updateNote,
+    deleteNote,
+    getFolderNotes,
+    getFolderGrades,
+    calculateFolderAverage,
+    addGrade,
+    deleteGrade
   };
 
   return (
-    <RecordingsContext.Provider value={{
-      recordings,
-      folders,
-      notes,
-      addRecording,
-      updateRecording,
-      deleteRecording,
-      addFolder,
-      updateFolder,
-      deleteFolder,
-      addNote,
-      updateNote,
-      deleteNote,
-      getFolderNotes,
-      getFolderGrades,
-      calculateFolderAverage,
-      addGrade,
-      deleteGrade
-    }}>
+    <RecordingsContext.Provider value={value}>
       {children}
     </RecordingsContext.Provider>
   );
-};
-
-// Custom hook to use the recordings context
-export const useRecordings = () => {
-  const context = useContext(RecordingsContext);
-  if (context === undefined) {
-    throw new Error('useRecordings must be used within a RecordingsProvider');
-  }
-  return context;
 };
