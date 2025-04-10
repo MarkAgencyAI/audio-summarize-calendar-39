@@ -67,38 +67,40 @@ export function RecordingItem({ recording, onAddToCalendar, showActions = true }
       onClick={handleViewRecording}
     >
       <CardContent className="p-4">
-        <div className="flex justify-between items-start">
-          <div className="flex items-start space-x-3">
-            <div className="bg-blue-100 dark:bg-blue-950 p-2 rounded-md mt-1">
+        <div className="flex justify-between items-start gap-2">
+          <div className="flex items-start space-x-3 min-w-0">
+            <div className="bg-blue-100 dark:bg-blue-950 p-2 rounded-md mt-1 shrink-0">
               <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h3 className="font-medium text-sm truncate max-w-[150px] md:max-w-xs">
+            <div className="space-y-1 min-w-0 flex-grow">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-medium text-sm truncate">
                   {recording.name}
                 </h3>
-                <Checkbox 
-                  id={`understood-${recording.id}`}
-                  checked={recording.understood || false}
-                  onCheckedChange={() => {
-                    const newValue = !recording.understood;
-                    updateRecording(recording.id, { understood: newValue });
-                    toast.success(newValue ? "Marcada como entendida" : "Marcada como no entendida");
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="data-[state=checked]:bg-green-600 data-[state=checked]:text-white h-5 w-5"
-                />
-                <label
-                  htmlFor={`understood-${recording.id}`}
-                  className="text-xs font-medium cursor-pointer select-none"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {recording.understood ? (
-                    <span className="text-green-600">Entendida</span>
-                  ) : (
-                    <span className="text-amber-600">No entendida</span>
-                  )}
-                </label>
+                <div className="inline-flex items-center gap-2 shrink-0">
+                  <Checkbox 
+                    id={`understood-${recording.id}`}
+                    checked={recording.understood || false}
+                    onCheckedChange={() => {
+                      const newValue = !recording.understood;
+                      updateRecording(recording.id, { understood: newValue });
+                      toast.success(newValue ? "Marcada como entendida" : "Marcada como no entendida");
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="data-[state=checked]:bg-green-600 data-[state=checked]:text-white h-5 w-5"
+                  />
+                  <label
+                    htmlFor={`understood-${recording.id}`}
+                    className="text-xs font-medium cursor-pointer select-none whitespace-nowrap"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {recording.understood ? (
+                      <span className="text-green-600">Entendida</span>
+                    ) : (
+                      <span className="text-amber-600">No entendida</span>
+                    )}
+                  </label>
+                </div>
               </div>
               <div className="text-xs text-muted-foreground">
                 {formatDistanceToNow(new Date(recording.date), {
@@ -137,7 +139,7 @@ export function RecordingItem({ recording, onAddToCalendar, showActions = true }
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 shrink-0"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <span className="sr-only">Open menu</span>

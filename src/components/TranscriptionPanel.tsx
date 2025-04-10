@@ -66,7 +66,7 @@ export function TranscriptionPanel({
   return (
     <div className="w-full h-full flex flex-col bg-card rounded-lg border shadow-sm overflow-hidden">
       <Tabs defaultValue="output" className="w-full h-full flex flex-col">
-        <div className="border-b px-4 py-2 bg-muted/40 flex items-center justify-between">
+        <div className="border-b px-4 py-2 bg-muted/40 flex items-center justify-between flex-wrap gap-2">
           <h3 className="text-lg font-semibold">Información recibida</h3>
           
           {onUnderstoodChange && (
@@ -79,7 +79,7 @@ export function TranscriptionPanel({
               />
               <label 
                 htmlFor="understood-checkbox" 
-                className="text-sm flex items-center cursor-pointer select-none"
+                className="text-sm flex items-center cursor-pointer select-none whitespace-nowrap"
               >
                 {understood ? (
                   <span className="text-green-600 flex items-center gap-1">
@@ -128,7 +128,7 @@ export function TranscriptionPanel({
               <ScrollArea className="h-full max-h-[60vh] rounded-md overflow-y-auto">
                 <div className="bg-muted/20 rounded-md p-4">
                   {displayOutput ? (
-                    <pre className="whitespace-pre-wrap font-sans text-sm">{displayOutput}</pre>
+                    <pre className="whitespace-pre-wrap font-sans text-sm break-words overflow-x-hidden">{displayOutput}</pre>
                   ) : (
                     <div className="flex flex-col items-center justify-center h-[200px] text-center">
                       <AlertCircle className="h-8 w-8 text-muted-foreground/40 mb-2" />

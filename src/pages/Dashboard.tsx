@@ -85,11 +85,20 @@ function UpcomingEvents({ events }: { events: CalendarEvent[] }) {
 function Transcriptions() {
   const { recordings, deleteRecording } = useRecordings();
   const [searchQuery, setSearchQuery] = useState("");
+  const [understandingFilter, setUnderstandingFilter] = useState<"all" | "understood" | "not-understood">("all");
   const navigate = useNavigate();
 
-  const filteredRecordings = recordings.filter(recording =>
-    (recording.name || "").toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredRecordings = recordings.filter(recording => {
+    const matchesSearch = (recording.name || "").toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (understandingFilter === "all") {
+      return matchesSearch;
+    } else if (understandingFilter === "understood") {
+      return matchesSearch && recording.understood === true;
+    } else {
+      return matchesSearch && recording.understood !== true;
+    }
+  });
 
   const handleAddToCalendar = (recording: any) => {
     console.log("Add to calendar:", recording);
@@ -105,15 +114,44 @@ function Transcriptions() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center space-x-2">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Buscar transcripciones..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-          />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-3">
+          <div className="flex items-center flex-1 w-full">
+            <Search className="h-4 w-4 text-muted-foreground mr-2" />
+            <Input
+              type="search"
+              placeholder="Buscar transcripciones..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+          </div>
+          
+          <div className="flex items-center flex-wrap gap-2">
+            <span className="text-sm font-medium mr-1 whitespace-nowrap">Filtrar por:</span>
+            <RadioGroup 
+              value={understandingFilter} 
+              onValueChange={(value) => setUnderstandingFilter(value as "all" | "understood" | "not-understood")}
+              className="flex space-x-2"
+            >
+              <div className="flex items-center space-x-1">
+                <RadioGroupItem value="all" id="filter-all" className="h-4 w-4" />
+                <Label htmlFor="filter-all" className="text-xs cursor-pointer">Todas</Label>
+              </div>
+              <div className="flex items-center space-x-1">
+                <RadioGroupItem value="understood" id="filter-understood" className="h-4 w-4" />
+                <Label htmlFor="filter-understood" className="text-xs cursor-pointer flex items-center gap-1">
+                  Entendidas <Check className="h-3 w-3 text-green-600" />
+                </Label>
+              </div>
+              <div className="flex items-center space-x-1">
+                <RadioGroupItem value="not-understood" id="filter-not-understood" className="h-4 w-4" />
+                <Label htmlFor="filter-not-understood" className="text-xs cursor-pointer flex items-center gap-1">
+                  No entendidas <X className="h-3 w-3 text-amber-600" />
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
         </div>
+        
         <div className="divide-y divide-border">
           {filteredRecordings.map(recording => (
             <RecordingItem
@@ -207,7 +245,6 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("transcriptions");
-  const [understandingFilter, setUnderstandingFilter] = useState<"all" | "understood" | "not-understood">("all");
 
   const handleAddToCalendar = (recording: any) => {
     console.log("Add to calendar:", recording);
@@ -261,18 +298,6 @@ export default function Dashboard() {
       window.removeEventListener('webhookResponse', handleWebhookResponse);
     };
   }, []);
-
-  const filterRecordingsByUnderstanding = (recordings: any[]) => {
-    if (understandingFilter === "all") {
-      return recordings;
-    } else if (understandingFilter === "understood") {
-      return recordings.filter(rec => rec.understood === true);
-    } else {
-      return recordings.filter(rec => rec.understood !== true);
-    }
-  };
-
-  const filteredRecordings = filterRecordingsByUnderstanding(recordings);
 
   return (
     <Layout>
@@ -346,66 +371,6 @@ export default function Dashboard() {
             </div>
           </div>
         )}
-      </div>
-
-      <div className="container mx-auto px-4 py-6">
-        <div className="mb-6 bg-white dark:bg-[#001529] p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-800">
-          <h3 className="text-lg font-medium mb-3 flex items-center gap-2">
-            <Filter className="h-4 w-4" /> Filtros
-          </h3>
-          
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-sm font-medium mb-2">Estado de entendimiento</h4>
-              <RadioGroup 
-                value={understandingFilter} 
-                onValueChange={(value) => setUnderstandingFilter(value as "all" | "understood" | "not-understood")}
-                className="flex space-x-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="all" id="filter-all" />
-                  <Label htmlFor="filter-all">Todas</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="understood" id="filter-understood" />
-                  <Label htmlFor="filter-understood" className="flex items-center gap-1">
-                    Entendidas <Check className="h-3 w-3 text-green-600" />
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="not-understood" id="filter-not-understood" />
-                  <Label htmlFor="filter-not-understood" className="flex items-center gap-1">
-                    No entendidas <X className="h-3 w-3 text-amber-600" />
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredRecordings.map((recording) => (
-            <div key={recording.id} className="relative">
-              <div className="absolute top-2 right-2 z-10">
-                {recording.understood ? (
-                  <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 flex items-center gap-1">
-                    <Check className="h-3 w-3" /> Entendida
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 flex items-center gap-1">
-                    <X className="h-3 w-3" /> Sin entender
-                  </Badge>
-                )}
-              </div>
-              
-              <RecordingItem 
-                key={recording.id}
-                recording={recording}
-                onAddToCalendar={handleAddToCalendar}
-              />
-            </div>
-          ))}
-        </div>
       </div>
     </Layout>
   );
