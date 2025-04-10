@@ -1,206 +1,171 @@
 
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { formatDate } from "@/lib/utils";
-import { MoreVertical, Calendar, FileText, Download, Trash2, User, Users, Headphones } from "lucide-react";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
+import { FileText, Calendar, MoreVertical, Trash2, Edit, Check, X } from "lucide-react";
+import { formatDistanceToNow, format } from "date-fns";
+import { es } from "date-fns/locale";
+
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useRecordings } from "@/context/RecordingsContext";
 import { toast } from "sonner";
-import { formatTime } from "@/lib/audio-utils";
-import { AudioPlayer } from "@/components/AudioPlayer";
-import { loadAudioFromStorage } from "@/lib/storage";
 
-export function RecordingItem({ recording, onAddToCalendar }) {
+interface RecordingItemProps {
+  recording: any;
+  onAddToCalendar?: (recording: any) => void;
+  showActions?: boolean;
+}
+
+export function RecordingItem({ recording, onAddToCalendar, showActions = true }: RecordingItemProps) {
   const navigate = useNavigate();
-  const { deleteRecording } = useRecordings();
-  const [isOpen, setIsOpen] = useState(false);
-  const [showPlayer, setShowPlayer] = useState(false);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const { deleteRecording, updateRecording } = useRecordings();
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleOpenDetails = () => {
+  const handleViewRecording = () => {
     navigate(`/recordings/${recording.id}`);
   };
 
-  const handleDownload = (e) => {
+  const handleDeleteRecording = (e: React.MouseEvent) => {
     e.stopPropagation();
-    
-    try {
-      const link = document.createElement('a');
-      link.href = recording.audioUrl;
-      link.download = `${recording.name || 'recording'}.webm`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      toast.success('Grabación descargada correctamente');
-    } catch (error) {
-      console.error('Error downloading recording:', error);
-      toast.error('Error al descargar la grabación');
-    }
-  };
-
-  const handleDelete = (e) => {
-    e.stopPropagation();
-    if (confirm('¿Estás seguro de que quieres eliminar esta grabación?')) {
+    setIsDeleting(true);
+    setTimeout(() => {
       deleteRecording(recording.id);
-      toast.success('Grabación eliminada correctamente');
-    }
+      toast.success("Grabación eliminada");
+      setIsDeleting(false);
+    }, 500);
   };
 
-  const handleAddToCalendar = (e) => {
+  const handleAddToCalendar = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onAddToCalendar) {
       onAddToCalendar(recording);
-    } else {
-      toast.info("Funcionalidad de calendario no disponible");
     }
   };
 
-  const toggleAudioPlayer = async (e) => {
+  const toggleUnderstood = (e: React.MouseEvent) => {
     e.stopPropagation();
-    
-    if (!showPlayer) {
-      setIsLoadingAudio(true);
-      try {
-        const storedAudio = await loadAudioFromStorage(recording.id);
-        
-        if (storedAudio) {
-          setAudioBlob(storedAudio);
-        } else {
-          const response = await fetch(recording.audioUrl);
-          if (response.ok) {
-            const blob = await response.blob();
-            setAudioBlob(blob);
-          } else {
-            throw new Error("No se pudo cargar el audio");
-          }
-        }
-      } catch (error) {
-        console.error("Error loading audio:", error);
-        toast.error("Error al cargar el audio");
-      } finally {
-        setIsLoadingAudio(false);
-      }
-    }
-    
-    setShowPlayer(!showPlayer);
+    const newValue = !recording.understood;
+    updateRecording(recording.id, { understood: newValue });
+    toast.success(newValue ? "Marcada como entendida" : "Marcada como no entendida");
   };
-
-  const speakerIcon = recording.speakerMode === 'multiple' 
-    ? <Users className="h-4 w-4 text-blue-500" /> 
-    : <User className="h-4 w-4 text-green-500" />;
-  
-  const speakerLabel = recording.speakerMode === 'multiple' 
-    ? "Múltiples oradores" 
-    : "Un orador";
-
-  const formattedDate = recording.date 
-    ? formatDate(recording.date) 
-    : (recording.createdAt ? formatDate(recording.createdAt) : "Fecha desconocida");
 
   return (
-    <div className="border-b last:border-b-0 dark:border-gray-700">
-      <div 
-        className="py-3 hover:bg-secondary/10 transition-colors cursor-pointer"
-        onClick={handleOpenDetails}
-      >
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              {speakerIcon}
-              <h3 className="text-base font-medium truncate">{recording.name || "Sin nombre"}</h3>
+    <Card
+      className={`mb-2 hover:shadow-md transition-all cursor-pointer ${
+        isDeleting ? "opacity-50" : ""
+      }`}
+      onClick={handleViewRecording}
+    >
+      <CardContent className="p-4">
+        <div className="flex justify-between items-start">
+          <div className="flex items-start space-x-3">
+            <div className="bg-blue-100 dark:bg-blue-950 p-2 rounded-md mt-1">
+              <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
-            
-            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-              <span>{formattedDate}</span>
-              <span>•</span>
-              <span>{formatTime(recording.duration || 0)}</span>
-              <span>•</span>
-              <span>{recording.subject || "Sin materia"}</span>
-              <span>•</span>
-              <span>{speakerLabel}</span>
+            <div className="space-y-1">
+              <h3 className="font-medium text-sm truncate max-w-[150px] md:max-w-xs">
+                {recording.name}
+              </h3>
+              <div className="text-xs text-muted-foreground">
+                {formatDistanceToNow(new Date(recording.date), {
+                  addSuffix: true,
+                  locale: es,
+                })}
+                <span className="mx-1">•</span>
+                {format(new Date(recording.date), "d MMM, yyyy", { locale: es })}
+              </div>
+              <div className="flex flex-wrap gap-1 pt-1">
+                {recording.language && (
+                  <Badge variant="secondary" className="text-xs">
+                    {recording.language === "es" ? "Español" : recording.language}
+                  </Badge>
+                )}
+                {recording.understood !== undefined && (
+                  <Badge 
+                    variant="outline" 
+                    className={`text-xs flex items-center gap-1 ${
+                      recording.understood 
+                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" 
+                        : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                    }`}
+                    onClick={toggleUnderstood}
+                  >
+                    {recording.understood ? (
+                      <>
+                        <Check className="h-3 w-3" /> Entendida
+                      </>
+                    ) : (
+                      <>
+                        <X className="h-3 w-3" /> Sin entender
+                      </>
+                    )}
+                  </Badge>
+                )}
+              </div>
             </div>
-            
-            {recording.output && (
-              <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-                {recording.output}
-              </p>
-            )}
           </div>
 
-          <div className="flex items-center">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={toggleAudioPlayer}
-              aria-label={showPlayer ? "Ocultar reproductor" : "Mostrar reproductor"}
-              className="h-8 w-8"
-            >
-              {isLoadingAudio ? (
-                <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Headphones className="h-4 w-4" />
-              )}
-            </Button>
-            
-            <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+          {showActions && (
+            <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsOpen(!isOpen);
-                  }}
+                <Button
+                  variant="ghost"
+                  className="h-8 w-8 p-0"
+                  onClick={(e) => e.stopPropagation()}
                 >
+                  <span className="sr-only">Open menu</span>
                   <MoreVertical className="h-4 w-4" />
-                  <span className="sr-only">Opciones</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleOpenDetails}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Ver detalles
+              <DropdownMenuContent align="end" className="w-[160px]">
+                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleViewRecording}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  <span>Ver detalles</span>
                 </DropdownMenuItem>
-                {onAddToCalendar && (
-                  <DropdownMenuItem onClick={handleAddToCalendar}>
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Añadir al calendario
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onClick={handleDownload}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Descargar audio
+                <DropdownMenuItem onClick={handleAddToCalendar}>
+                  <Calendar className="mr-2 h-4 w-4" />
+                  <span>Añadir a calendario</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  className="text-destructive"
-                  onClick={handleDelete}
+                  onClick={toggleUnderstood}
+                  className="flex items-center gap-2"
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Eliminar
+                  {recording.understood ? (
+                    <>
+                      <X className="mr-2 h-4 w-4 text-amber-600" />
+                      <span>Marcar no entendida</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="mr-2 h-4 w-4 text-green-600" />
+                      <span>Marcar entendida</span>
+                    </>
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={handleDeleteRecording}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  <span>Eliminar</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
+          )}
         </div>
-      </div>
-      
-      {showPlayer && (
-        <div className="p-3 bg-secondary/5 rounded-b-md">
-          <AudioPlayer 
-            audioUrl={recording.audioUrl} 
-            audioBlob={audioBlob || undefined}
-            initialDuration={recording.duration}
-          />
-        </div>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }

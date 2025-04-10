@@ -42,7 +42,7 @@ export interface Recording {
   chapters?: AudioChapter[];
   speakerMode?: 'single' | 'multiple';
   createdAt?: string;
-  understood?: boolean; // Nuevo campo para marcar si fue entendida
+  understood?: boolean; // Field to mark if it was understood
 }
 
 export interface Folder {
@@ -150,7 +150,7 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       ...recording,
       id: uuidv4(),
       date: recording.date || recording.createdAt || new Date().toISOString(),
-      understood: recording.understood || false // Inicializar como no entendida por defecto
+      understood: recording.understood || false // Initialize as not understood by default
     };
     setRecordings(prev => [...prev, newRecording]);
   };

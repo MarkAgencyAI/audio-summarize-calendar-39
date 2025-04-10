@@ -262,7 +262,7 @@ export default function Dashboard() {
     };
   }, []);
 
-  const filterRecordingsByUnderstanding = (recordings) => {
+  const filterRecordingsByUnderstanding = (recordings: any[]) => {
     if (understandingFilter === "all") {
       return recordings;
     } else if (understandingFilter === "understood") {
@@ -272,9 +272,7 @@ export default function Dashboard() {
     }
   };
 
-  const filteredRecordings = filterRecordingsByUnderstanding(
-    recordings
-  );
+  const filteredRecordings = filterRecordingsByUnderstanding(recordings);
 
   return (
     <Layout>

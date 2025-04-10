@@ -834,7 +834,7 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                       
                       <div className="prose prose-sm dark:prose-invert max-w-none">
                         {hasWebhookData ? (
-                          <ScrollArea className="bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 h-[40vh]">
+                          <ScrollArea className="bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 h-[40vh] overflow-y-auto">
                             <pre className="whitespace-pre-wrap text-sm">{formatWebhookResponse()}</pre>
                           </ScrollArea>
                         ) : (
@@ -848,7 +848,7 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                     {recording.suggestedEvents && recording.suggestedEvents.length > 0 && (
                       <div className="mb-4">
                         <h3 className="font-medium mb-2 dark:text-custom-accent">Eventos sugeridos</h3>
-                        <ScrollArea className="max-h-[15vh]">
+                        <ScrollArea className="max-h-[15vh] overflow-y-auto">
                           <ul className="space-y-1 ml-5 list-disc dark:text-white/90">
                             {recording.suggestedEvents.map((event, index) => (
                               <li key={index}>
@@ -974,7 +974,7 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                             className="min-h-[250px] max-h-[40vh] whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90"
                           />
                         ) : (
-                          <ScrollArea className="bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 max-h-[40vh]">
+                          <ScrollArea className="bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 max-h-[40vh] overflow-y-auto">
                             <pre 
                               ref={transcriptionRef}
                               className="whitespace-pre-wrap text-sm"
@@ -1051,7 +1051,7 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                       Divide tu audio en secciones para facilitar la navegación
                     </div>
                     
-                    <ScrollArea className="max-h-[40vh] pr-2">
+                    <ScrollArea className="max-h-[40vh] overflow-y-auto pr-2">
                       <AudioChaptersList 
                         chapters={chapters}
                         currentTime={currentAudioTime}
