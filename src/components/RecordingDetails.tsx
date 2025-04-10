@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Recording, useRecordings } from "@/context/RecordingsContext";
+import { Recording, useRecordings, TextHighlight } from "@/context/RecordingsContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
@@ -239,6 +239,18 @@ export function RecordingDetails({
     return textNodes;
   };
   
+  const getHighlightAtPosition = (position: number): TextHighlight | null => {
+    return highlights.find(h => 
+      position >= h.startPosition && position <= h.endPosition
+    ) || null;
+  };
+  
+  const getOverlappingHighlights = (start: number, end: number): TextHighlight[] => {
+    return highlights.filter(h => 
+      (start <= h.endPosition && end >= h.startPosition)
+    );
+  };
+  
   const handleTextSelection = () => {
     const selection = window.getSelection();
     if (!selection || selection.toString().trim() === "") {
@@ -270,17 +282,29 @@ export function RecordingDetails({
       
       selectionRef.current = selection;
       
+      const existingHighlight = getHighlightAtPosition(startPosition);
+      
       const rect = range.getBoundingClientRect();
       setHighlightMenuPosition({
         x: rect.left + (rect.width / 2),
         y: rect.top - 10
       });
+      
       setShowHighlightMenu(true);
     }
   };
   
   const applyHighlight = (color: string) => {
     if (!selectionRange || !selectedText) return;
+    
+    const overlappingHighlights = getOverlappingHighlights(selectionRange.start, selectionRange.end);
+    let updatedHighlights = [...highlights];
+    
+    if (overlappingHighlights.length > 0) {
+      updatedHighlights = updatedHighlights.filter(
+        highlight => !overlappingHighlights.some(oh => oh.id === highlight.id)
+      );
+    }
     
     const newHighlight: TextHighlight = {
       id: crypto.randomUUID(),
@@ -290,7 +314,7 @@ export function RecordingDetails({
       endPosition: selectionRange.end
     };
     
-    const updatedHighlights = [...highlights, newHighlight];
+    updatedHighlights.push(newHighlight);
     setHighlights(updatedHighlights);
     
     updateRecording(recording.id, {
@@ -316,16 +340,51 @@ export function RecordingDetails({
     toast.success("Resaltado eliminado");
   };
   
+  const removeHighlightAtSelection = () => {
+    if (!selectionRange) return;
+    
+    const overlappingHighlights = getOverlappingHighlights(selectionRange.start, selectionRange.end);
+    
+    if (overlappingHighlights.length > 0) {
+      const updatedHighlights = highlights.filter(
+        highlight => !overlappingHighlights.some(oh => oh.id === highlight.id)
+      );
+      
+      setHighlights(updatedHighlights);
+      updateRecording(recording.id, {
+        highlights: updatedHighlights
+      });
+      
+      toast.success("Resaltado eliminado");
+    }
+    
+    setSelectedText("");
+    setSelectionRange(null);
+    setShowHighlightMenu(false);
+    window.getSelection()?.removeAllRanges();
+  };
+  
   const renderHighlightedText = () => {
     if (!recording.output) return null;
     
     const text = recording.output;
     const sortedHighlights = [...highlights].sort((a, b) => a.startPosition - b.startPosition);
     
+    const nonOverlappingHighlights = sortedHighlights.reduce((acc: TextHighlight[], highlight, index) => {
+      const overlapsWithPrevious = acc.some(h => 
+        (highlight.startPosition <= h.endPosition && highlight.endPosition >= h.startPosition)
+      );
+      
+      if (!overlapsWithPrevious) {
+        acc.push(highlight);
+      }
+      return acc;
+    }, []);
+    
     const segments: JSX.Element[] = [];
     let currentPosition = 0;
     
-    for (const highlight of sortedHighlights) {
+    for (const highlight of nonOverlappingHighlights) {
       if (highlight.startPosition > currentPosition) {
         segments.push(
           <span key={`text-${currentPosition}`}>
@@ -944,17 +1003,32 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                               transform: 'translate(-50%, -100%)'
                             }}
                           >
-                            <div className="text-xs mb-1 font-medium text-center">Resaltar texto</div>
-                            <div className="flex gap-1 justify-center">
-                              {highlightColors.map(color => (
-                                <button
-                                  key={color.value}
-                                  className="w-6 h-6 rounded-full border border-gray-300 hover:scale-110 transition-transform"
-                                  style={{ backgroundColor: color.value }}
-                                  onClick={() => applyHighlight(color.value)}
-                                  title={color.label}
-                                />
-                              ))}
+                            <div className="text-xs mb-1 font-medium text-center">
+                              {getOverlappingHighlights(selectionRange.start, selectionRange.end).length > 0 
+                                ? "Editar o eliminar resaltado" 
+                                : "Resaltar texto"}
+                            </div>
+                            
+                            <div className="flex flex-col gap-2">
+                              {getOverlappingHighlights(selectionRange.start, selectionRange.end).length > 0 && (
+                                <button 
+                                  className="text-xs bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 rounded px-2 py-1 w-full"
+                                  onClick={removeHighlightAtSelection}
+                                >
+                                  Eliminar resaltado
+                                </button>
+                              )}
+                              <div className="flex gap-1 justify-center">
+                                {highlightColors.map(color => (
+                                  <button
+                                    key={color.value}
+                                    className="w-6 h-6 rounded-full border border-gray-300 hover:scale-110 transition-transform"
+                                    style={{ backgroundColor: color.value }}
+                                    onClick={() => applyHighlight(color.value)}
+                                    title={color.label}
+                                  />
+                                ))}
+                              </div>
                             </div>
                           </div>
                         )}
