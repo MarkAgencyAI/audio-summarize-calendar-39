@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload, AlertCircle } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -304,6 +303,7 @@ export function AudioRecorderV2() {
         suggestedEvents: suggestedEvents,
         // IMPORTANTE: Guardar solo la variable output
         webhookData: webhookOutput,
+        createdAt: new Date().toISOString()
       };
       
       const finalRecordingData = result.errors && result.errors.length > 0

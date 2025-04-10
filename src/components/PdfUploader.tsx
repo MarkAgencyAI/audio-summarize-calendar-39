@@ -1,224 +1,253 @@
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Folder, useRecordings } from "@/context/RecordingsContext";
 import { toast } from "sonner";
-import { Loader2, Upload, FileText, BookOpenText, ListChecks } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { usePdfProcessor } from "@/hooks/use-pdf-processor";
-import { Progress } from "@/components/ui/progress";
+import { useRecordings } from "@/context/RecordingsContext";
+import { Upload, File, Loader2, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatDate } from "@/lib/utils";
+import { extractTextFromPdf } from "@/lib/pdf-utils";
+import { sendToWebhook } from "@/lib/webhook";
+
+const WEBHOOK_URL = "https://ssn8nss.maettiai.tech/webhook-test/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
 export function PdfUploader() {
-  // Estados del componente
-  const [file, setFile] = useState<File | null>(null);
-  const [summary, setSummary] = useState<string | null>(null);
-  const [lessonName, setLessonName] = useState("");
-  const [selectedFolder, setSelectedFolder] = useState<string>("default");
-  const [keyPoints, setKeyPoints] = useState<string[]>([]);
-  const [showAnalysis, setShowAnalysis] = useState(false);
+  const { addRecording, folders } = useRecordings();
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [recordingName, setRecordingName] = useState("");
+  const [transcriptionText, setTranscriptionText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedFolder, setSelectedFolder] = useState("default");
+  const [audioUrl, setAudioUrl] = useState("");
+  const [audioDuration, setAudioDuration] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  const {
-    folders,
-    addRecording
-  } = useRecordings();
-  
-  const {
-    processPdf,
-    loading,
-    progress
-  } = usePdfProcessor();
 
-  // Manejador para cambio de archivo
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      if (selectedFile.type !== "application/pdf") {
-        toast.error("Por favor, sube un archivo PDF");
-        return;
-      }
-      setFile(selectedFile);
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-      // Establecer nombre de lección basado en nombre del archivo
-      const fileName = selectedFile.name.replace(/\.pdf$/, "");
-      setLessonName(fileName);
-    }
-  };
-
-  // Función principal para procesar el PDF
-  const handleProcessPdf = async () => {
-    if (!file) {
-      toast.error("Por favor, selecciona un archivo PDF");
-      return;
-    }
-    if (!lessonName) {
-      toast.error("Por favor, ingresa un nombre para la lección");
-      return;
-    }
-    
-    setSummary(null);
-    setKeyPoints([]);
-    setShowAnalysis(false);
-    
-    try {
-      // Notificar inicio de procesamiento
-      toast.info("Procesando PDF...");
-
-      // Procesar el PDF
-      const result = await processPdf(file);
-
-      // Actualizar estados con resultados
-      setSummary(result.analysis.summary);
-      setKeyPoints(result.analysis.keyPoints);
-      setShowAnalysis(true);
-
-      // Guardar la grabación
-      addRecording({
-        name: lessonName,
-        audioUrl: "",
-        audioData: "",
-        output: result.transcript,
-        folderId: selectedFolder,
-        duration: 0,
-        suggestedEvents: result.analysis.suggestedEvents
-      });
-      
-      toast.success("PDF procesado correctamente");
-
-      // Limpiar el input de archivo
+    if (file.type !== 'application/pdf') {
+      toast.error("Por favor, sube solo archivos PDF");
       if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+        fileInputRef.current.value = '';
       }
-      setFile(null);
-      setLessonName("");
-    } catch (error: any) {
-      console.error("Error processing PDF:", error);
-      toast.error(error.message || "Error al procesar el PDF");
+      return;
+    }
+
+    setPdfFile(file);
+    setRecordingName(file.name.replace(/\.[^/.]+$/, ""));
+  };
+
+  const handleClearFile = () => {
+    setPdfFile(null);
+    setRecordingName("");
+    setTranscriptionText("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
-  // Interfaz de usuario
+  const handleExtractText = async () => {
+    if (!pdfFile) {
+      toast.error("Por favor, sube un archivo PDF primero");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const text = await extractTextFromPdf(pdfFile);
+      setTranscriptionText(text);
+      toast.success("Texto extraído exitosamente");
+    } catch (error) {
+      console.error("Error al extraer el texto:", error);
+      toast.error("Error al extraer el texto del PDF");
+      setTranscriptionText("");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAudioUrlChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setAudioUrl(event.target.value);
+  };
+
+  const handleAudioDurationChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const duration = parseInt(event.target.value, 10);
+    setAudioDuration(isNaN(duration) ? 0 : duration);
+  };
+
+  const handleSaveRecording = () => {
+    if (!recordingName.trim()) {
+      toast.error("El nombre de la grabación no puede estar vacío");
+      return;
+    }
+
+    if (!audioUrl.trim()) {
+      toast.error("La URL del audio no puede estar vacía");
+      return;
+    }
+
+    if (!transcriptionText.trim()) {
+      toast.error("La transcripción no puede estar vacía");
+      return;
+    }
+
+    // Simulate suggested events
+    const suggestedEvents = [
+      { title: "Evento 1", description: "Descripción del evento 1" },
+      { title: "Evento 2", description: "Descripción del evento 2" }
+    ];
+
+    addRecording({
+      name: recordingName.trim(),
+      audioUrl: audioUrl,
+      audioData: audioUrl,
+      output: transcriptionText,
+      folderId: selectedFolder,
+      duration: audioDuration,
+      suggestedEvents: suggestedEvents,
+      createdAt: new Date().toISOString()
+    });
+
+    setPdfFile(null);
+    setRecordingName("");
+    setTranscriptionText("");
+    setAudioUrl("");
+    setAudioDuration(0);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    toast.success("Grabación guardada exitosamente");
+  };
+
   return (
-    <div className="space-y-4 rounded-xl p-4 md:p-6 shadow-lg mb-8 bg-custom-text">
-      <h2 className="text-xl font-semibold text-white">Subir material para clase</h2>
-      
+    <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-lg bg-white/5 dark:bg-black/20 backdrop-blur-xl border border-white/10 dark:border-white/5">
+      <h2 className="text-xl font-semibold mb-4 text-custom-primary">Subir PDF y guardar grabación</h2>
+
       <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="pdf-file" className="text-white">Archivo PDF</Label>
-          <Input 
-            id="pdf-file" 
-            type="file" 
-            accept="application/pdf" 
-            onChange={handleFileChange} 
-            className="cursor-pointer bg-white/10 border-white/20 text-white dark:bg-custom-secondary/30 dark:border-custom-secondary/60" 
-            ref={fileInputRef} 
+        <div>
+          <Label htmlFor="pdf-upload" className="text-custom-text">Archivo PDF</Label>
+          <div className="relative mt-1">
+            <input
+              type="file"
+              id="pdf-upload"
+              ref={fileInputRef}
+              accept="application/pdf"
+              onChange={handleFileChange}
+              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+            />
+            <Button asChild variant="secondary" className="w-full">
+              <Label htmlFor="pdf-upload" className="cursor-pointer flex items-center justify-center">
+                <Upload className="h-4 w-4 mr-2" />
+                {pdfFile ? pdfFile.name : "Subir PDF"}
+              </Label>
+            </Button>
+          </div>
+          {pdfFile && (
+            <Button variant="ghost" size="sm" onClick={handleClearFile} className="mt-2 text-custom-primary hover:bg-custom-primary/10">
+              <X className="h-4 w-4 mr-2" />
+              Borrar PDF
+            </Button>
+          )}
+        </div>
+
+        <div>
+          <Label htmlFor="recording-name" className="text-custom-text">Nombre de la grabación</Label>
+          <Input
+            id="recording-name"
+            placeholder="Nombre de la grabación"
+            value={recordingName}
+            onChange={(e) => setRecordingName(e.target.value)}
+            className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
+            disabled={!pdfFile}
           />
         </div>
-        
-        {file && (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="lesson-name" className="text-white">Nombre de la lección</Label>
-              <Input 
-                id="lesson-name" 
-                value={lessonName} 
-                onChange={e => setLessonName(e.target.value)} 
-                placeholder="Nombre de la lección" 
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/70 dark:bg-custom-secondary/30 dark:border-custom-secondary/60" 
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="folder" className="text-white">Carpeta</Label>
-              <select 
-                id="folder" 
-                className="w-full h-10 px-3 py-2 bg-white/10 border border-white/20 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-white/50 dark:bg-custom-secondary/30 dark:border-custom-secondary/60 dark:focus:ring-custom-accent/50" 
-                value={selectedFolder} 
-                onChange={e => setSelectedFolder(e.target.value)}
-              >
-                {folders.map((folder: Folder) => (
-                  <option key={folder.id} value={folder.id}>
-                    {folder.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <Button 
-              onClick={handleProcessPdf} 
-              disabled={loading} 
-              className="w-full bg-custom-secondary text-white hover:bg-custom-secondary/90 dark:bg-custom-accent dark:hover:bg-custom-accent/90"
+
+        <div>
+          <Label htmlFor="audio-url" className="text-custom-text">URL del audio</Label>
+          <Input
+            id="audio-url"
+            placeholder="URL del audio"
+            value={audioUrl}
+            onChange={handleAudioUrlChange}
+            className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
+            disabled={!pdfFile}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="audio-duration" className="text-custom-text">Duración del audio (segundos)</Label>
+          <Input
+            type="number"
+            id="audio-duration"
+            placeholder="Duración del audio en segundos"
+            value={audioDuration === 0 ? "" : audioDuration.toString()}
+            onChange={handleAudioDurationChange}
+            className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
+            disabled={!pdfFile}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="folder" className="text-custom-text">Carpeta</Label>
+          <Select
+            value={selectedFolder}
+            onValueChange={(value) => setSelectedFolder(value)}
+            disabled={!pdfFile}
+          >
+            <SelectTrigger id="folder" className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary">
+              <SelectValue placeholder="Seleccionar carpeta" />
+            </SelectTrigger>
+            <SelectContent>
+              {folders.map(folder => (
+                <SelectItem key={folder.id} value={folder.id}>
+                  {folder.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label htmlFor="transcription" className="text-custom-text">Transcripción</Label>
+          <div className="flex items-center justify-between">
+            <Button
+              onClick={handleExtractText}
+              disabled={isLoading || !pdfFile}
+              className="bg-custom-accent hover:bg-custom-accent/90 text-white"
             >
-              {loading ? (
+              {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Procesando...
+                  Extrayendo...
                 </>
               ) : (
                 <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Procesar PDF
+                  <File className="h-4 w-4 mr-2" />
+                  Extraer texto del PDF
                 </>
               )}
             </Button>
-            
-            {loading && (
-              <div className="space-y-1">
-                <Progress value={progress} className="h-2 bg-white/20 dark:bg-custom-secondary/40" />
-                <p className="text-xs text-white/80 text-center">
-                  {progress < 50 ? 'Extrayendo texto...' : 'Analizando contenido...'}
-                </p>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-      
-      {showAnalysis && (
-        <div className="mt-6 space-y-4">
-          <Card className="bg-white/10 border-white/20 text-white dark:bg-custom-secondary/20 dark:border-custom-secondary/40">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center text-white">
-                <FileText className="mr-2 h-5 w-5" />
-                Análisis del Material
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {keyPoints && keyPoints.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="text-md font-medium flex items-center mb-2 text-white">
-                    <ListChecks className="mr-2 h-4 w-4" />
-                    Puntos Fuertes
-                  </h3>
-                  <ul className="space-y-2 pl-2">
-                    {keyPoints.map((point, index) => (
-                      <li key={index} className="flex items-start">
-                        <span className="inline-flex items-center justify-center rounded-full bg-white/20 text-white h-5 w-5 text-xs mr-2 mt-0.5 dark:bg-custom-secondary/40">
-                          {index + 1}
-                        </span>
-                        <span className="text-white/90">{point}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {summary && (
-                <div>
-                  <h3 className="text-md font-medium flex items-center mb-2 text-white">
-                    <BookOpenText className="mr-2 h-4 w-4" />
-                    Resumen Completo
-                  </h3>
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <pre className="whitespace-pre-wrap text-sm text-white/90">{summary}</pre>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          </div>
+          <Textarea
+            id="transcription"
+            placeholder="Transcripción del PDF"
+            value={transcriptionText}
+            readOnly
+            className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary mt-2 min-h-[150px]"
+          />
         </div>
-      )}
+
+        <Button
+          onClick={handleSaveRecording}
+          disabled={!pdfFile}
+          className="bg-custom-primary hover:bg-custom-primary/90 text-white"
+        >
+          Guardar grabación
+        </Button>
+      </div>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { loadFromStorage, saveToStorage } from "@/lib/storage";
 
@@ -17,6 +18,14 @@ export interface Recording {
     date?: string;
   }[];
   keyPoints?: string[];
+  highlights?: {
+    id: string;
+    text: string;
+    color: string;
+    startPosition: number;
+    endPosition: number;
+  }[];
+  webhookData?: any;
   createdAt: string;
 }
 
@@ -32,7 +41,9 @@ export interface Note {
   title: string;
   content: string;
   folderId: string;
+  imageUrl?: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface Grade {

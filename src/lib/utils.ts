@@ -1,4 +1,5 @@
 
+
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -33,9 +34,24 @@ export function formatDate(date: Date | string | number | undefined | null, opti
   
   try {
     // Create a valid Date object
-    const validDate = new Date(date);
+    let validDate: Date;
     
-    // Check if the date is valid
+    if (typeof date === 'string') {
+      // Check if the string is a valid date format
+      const timestamp = Date.parse(date);
+      if (isNaN(timestamp)) {
+        return "Fecha inválida";
+      }
+      validDate = new Date(timestamp);
+    } else if (typeof date === 'number') {
+      validDate = new Date(date);
+    } else if (date instanceof Date) {
+      validDate = date;
+    } else {
+      return "Fecha inválida";
+    }
+    
+    // Additional check if the date is valid
     if (isNaN(validDate.getTime())) {
       return "Fecha inválida";
     }
