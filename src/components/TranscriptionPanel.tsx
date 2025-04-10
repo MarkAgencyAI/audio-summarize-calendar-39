@@ -93,7 +93,7 @@ export function TranscriptionPanel({
             </div>
           ) : (
             <TabsContent value="output" className="mt-0 h-full relative">
-              <ScrollArea className="h-full max-h-[calc(60vh-4rem)] rounded-md">
+              <ScrollArea className="h-full max-h-[60vh] rounded-md overflow-auto">
                 <div className="bg-muted/20 rounded-md p-4">
                   {displayOutput ? (
                     <pre className="whitespace-pre-wrap font-sans text-sm">{displayOutput}</pre>

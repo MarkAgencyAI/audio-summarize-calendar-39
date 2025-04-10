@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -192,13 +193,15 @@ export function LiveTranscriptionSheet({
                 </div>
               </div>
               
-              <div className="px-4 h-[calc(100vh-220px)]">
-                <TranscriptionPanel 
-                  output={safeOutput}
-                  isLoading={isTranscribing && !output}
-                  progress={progress}
-                  showProgress={false}
-                />
+              <div className="px-4 h-[calc(100vh-220px)] overflow-hidden">
+                <ScrollArea className="h-full overflow-auto">
+                  <TranscriptionPanel 
+                    output={safeOutput}
+                    isLoading={isTranscribing && !output}
+                    progress={progress}
+                    showProgress={false}
+                  />
+                </ScrollArea>
               </div>
             </TabsContent>
             
@@ -211,12 +214,14 @@ export function LiveTranscriptionSheet({
                 </div>
               </div>
               
-              <div className="px-4 h-[calc(100vh-220px)]">
-                <TranscriptionPanel 
-                  output={webhookContent}
-                  isLoading={isTranscribing && !hasWebhookResponse}
-                  showProgress={false}
-                />
+              <div className="px-4 h-[calc(100vh-220px)] overflow-hidden">
+                <ScrollArea className="h-full overflow-auto">
+                  <TranscriptionPanel 
+                    output={webhookContent}
+                    isLoading={isTranscribing && !hasWebhookResponse}
+                    showProgress={false}
+                  />
+                </ScrollArea>
               </div>
             </TabsContent>
           </Tabs>

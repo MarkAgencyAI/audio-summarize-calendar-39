@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatDate } from "@/lib/utils";
@@ -16,7 +15,6 @@ import { formatTime } from "@/lib/audio-utils";
 import { AudioPlayer } from "@/components/AudioPlayer";
 import { loadAudioFromStorage } from "@/lib/storage";
 
-// Extend or recreate the component by adding the display of speaker mode icons
 export function RecordingItem({ recording, onAddToCalendar }) {
   const navigate = useNavigate();
   const { deleteRecording } = useRecordings();
@@ -66,13 +64,11 @@ export function RecordingItem({ recording, onAddToCalendar }) {
     if (!showPlayer) {
       setIsLoadingAudio(true);
       try {
-        // Try to load audio from IndexedDB storage first
         const storedAudio = await loadAudioFromStorage(recording.id);
         
         if (storedAudio) {
           setAudioBlob(storedAudio);
         } else {
-          // If not in storage, try to fetch from URL
           const response = await fetch(recording.audioUrl);
           if (response.ok) {
             const blob = await response.blob();
@@ -92,7 +88,6 @@ export function RecordingItem({ recording, onAddToCalendar }) {
     setShowPlayer(!showPlayer);
   };
 
-  // Determine icon based on speaker mode
   const speakerIcon = recording.speakerMode === 'multiple' 
     ? <Users className="h-4 w-4 text-blue-500" /> 
     : <User className="h-4 w-4 text-green-500" />;
@@ -101,7 +96,6 @@ export function RecordingItem({ recording, onAddToCalendar }) {
     ? "Múltiples oradores" 
     : "Un orador";
 
-  // Safely format the date (recording.date or recording.createdAt might be undefined or invalid)
   const formattedDate = recording.date 
     ? formatDate(recording.date) 
     : (recording.createdAt ? formatDate(recording.createdAt) : "Fecha desconocida");
