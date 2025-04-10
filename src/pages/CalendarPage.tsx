@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -21,13 +22,15 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [showAddEventDialog, setShowAddEventDialog] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(null);
+  const [deleteAllRecurring, setDeleteAllRecurring] = useState(false);
   const [newEvent, setNewEvent] = useState({
     title: "",
     description: "",
     date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
     endDate: format(addHours(new Date(), 1), "yyyy-MM-dd'T'HH:mm"),
     folderId: "",
-    eventType: "",
     type: "other" as "exam" | "assignment" | "study" | "class" | "meeting" | "other",
     repeat: "none" as "none" | "daily" | "weekly" | "monthly"
   });
@@ -113,7 +116,8 @@ export default function CalendarPage() {
                 title: recording.keyPoints[index],
                 description: `Evento basado en la grabación: ${recording.name}`,
                 date: eventDate.toISOString(),
-                folderId: recording.folderId
+                folderId: recording.folderId,
+                type: "other"
               };
               newEvents.push(newEvent);
             });
@@ -152,7 +156,7 @@ export default function CalendarPage() {
   const handleDeleteEvent = (id: string) => {
     const eventToDelete = events.find(event => event.id === id);
     
-    if (eventToDelete && eventToDelete.repeat && eventToDelete.repeat !== "none") {
+    if (eventToDelete && eventToDelete.repeat && typeof eventToDelete.repeat === 'object' && eventToDelete.repeat.frequency) {
       setEventToDelete(eventToDelete);
       setShowDeleteConfirmDialog(true);
     } else {
@@ -171,8 +175,9 @@ export default function CalendarPage() {
       setEvents(prev => {
         const updatedEvents = prev.filter(event => 
           !(event.title === eventToDelete.title && 
-            event.eventType === eventToDelete.eventType && 
-            event.repeat === eventToDelete.repeat)
+            event.type === eventToDelete.type && 
+            event.repeat && typeof event.repeat === 'object' && 
+            event.repeat.frequency === eventToDelete.repeat?.frequency)
         );
         saveToStorage("calendarEvents", updatedEvents);
         return updatedEvents;
@@ -210,9 +215,8 @@ export default function CalendarPage() {
         date: newEvent.date,
         endDate: newEvent.endDate || undefined,
         folderId: newEvent.folderId || undefined,
-        eventType: newEvent.eventType || undefined,
-        repeat: newEvent.repeat,
-        type: newEvent.type
+        type: newEvent.type,
+        repeat: undefined
       });
       toast.success("Evento agregado");
     } else {
@@ -225,7 +229,6 @@ export default function CalendarPage() {
       date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
       endDate: format(addHours(new Date(), 1), "yyyy-MM-dd'T'HH:mm"),
       folderId: "",
-      eventType: "",
       type: "other",
       repeat: "none"
     });
@@ -234,13 +237,17 @@ export default function CalendarPage() {
   };
 
   const createRepeatingEvents = () => {
+    const repeat = newEvent.repeat !== "none" ? {
+      frequency: newEvent.repeat as "daily" | "weekly" | "monthly",
+      interval: 1
+    } : undefined;
+    
     const baseEvent = {
       title: newEvent.title,
       description: newEvent.description,
       folderId: newEvent.folderId || undefined,
-      eventType: newEvent.eventType || undefined,
-      repeat: newEvent.repeat,
-      type: newEvent.type
+      type: newEvent.type,
+      repeat
     };
     
     handleAddEvent({
@@ -299,7 +306,7 @@ export default function CalendarPage() {
             <Calendar 
               events={events} 
               onAddEvent={() => setShowAddEventDialog(true)}
-              onEditEvent={(event) => {}}
+              onEditEvent={(event) => handleAddEvent(event)}
               onDeleteEvent={handleDeleteEvent}
               activeFilter={activeFilter}
               onFilterChange={handleFilterChange}

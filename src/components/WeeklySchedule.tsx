@@ -65,7 +65,7 @@ export function WeeklySchedule({
   useEffect(() => {
     if (hasExistingSchedule) {
       const scheduleItems = existingEvents.filter(event => 
-        event.eventType === "Cronograma" && event.repeat === "weekly"
+        event.type === "class" && event.repeat && typeof event.repeat === 'object' && event.repeat.frequency === "weekly"
       );
       
       // Group by day of week to avoid duplicates
@@ -227,9 +227,9 @@ export function WeeklySchedule({
                         <div 
                           className="weekly-event"
                           style={{ 
-                            backgroundColor: `${eventTypeColors[event.title.includes("Clase") ? "Clase Especial" : "Actividad"]}20`,
-                            borderLeft: `3px solid ${eventTypeColors[event.title.includes("Clase") ? "Clase Especial" : "Actividad"]}`,
-                            color: eventTypeColors[event.title.includes("Clase") ? "Clase Especial" : "Actividad"]
+                            backgroundColor: `${eventTypeColors[event.title.includes("Clase") ? "class" : "meeting"]}20`,
+                            borderLeft: `3px solid ${eventTypeColors[event.title.includes("Clase") ? "class" : "meeting"]}`,
+                            color: eventTypeColors[event.title.includes("Clase") ? "class" : "meeting"]
                           }}
                         >
                           <div className="flex justify-between items-start">
@@ -344,7 +344,7 @@ export function WeeklySchedule({
                 <Input 
                   id="endTime" 
                   type="time" 
-                  value={format(new Date(newEvent.endDate), "HH:mm")} 
+                  value={format(new Date(newEvent.endDate || ""), "HH:mm")} 
                   onChange={e => {
                     const [hours, minutes] = e.target.value.split(":").map(Number);
                     const day = weekDays[selectedDay];

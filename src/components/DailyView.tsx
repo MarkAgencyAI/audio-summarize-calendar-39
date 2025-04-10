@@ -14,6 +14,8 @@ interface DailyViewProps {
   onBack: () => void;
   onTimeSelect: (time: Date) => void;
   onEventClick: (event: CalendarEvent) => void;
+  onEditEvent?: (event: CalendarEvent) => void;
+  onDeleteEvent?: (eventId: string) => void;
   activeFilter: string;
 }
 
@@ -23,6 +25,8 @@ export function DailyView({
   onBack,
   onTimeSelect,
   onEventClick,
+  onEditEvent,
+  onDeleteEvent,
   activeFilter
 }: DailyViewProps) {
   const isMobile = useIsMobile();
@@ -30,7 +34,7 @@ export function DailyView({
   // Filter events based on the active filter
   const filteredEvents = activeFilter === "all" 
     ? events
-    : events.filter(event => event.eventType === activeFilter || (!event.eventType && activeFilter === "otro"));
+    : events.filter(event => event.type === activeFilter || (!event.type && activeFilter === "otro"));
   
   const dayEvents = filteredEvents.filter(event => 
     format(new Date(event.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
@@ -64,8 +68,8 @@ export function DailyView({
       const height = Math.max(durationInHours * hourHeight, 20); // minimum height of 20px
       
       // Get event color based on event type
-      const eventColor = event.eventType 
-        ? eventTypeColors[event.eventType as keyof typeof eventTypeColors] || "#6b7280" 
+      const eventColor = event.type 
+        ? eventTypeColors[event.type] || "#6b7280" 
         : "#6b7280";
       
       return {
@@ -233,7 +237,7 @@ export function DailyView({
                   onClick={() => onEventClick(event)}
                 >
                   <div className="flex items-center gap-1">
-                    {event.repeat && event.repeat !== "none" && (
+                    {event.repeat && typeof event.repeat === 'object' && (
                       <RotateCcw className="h-3 w-3 flex-shrink-0" />
                     )}
                     <p className="font-medium truncate">{event.title}</p>

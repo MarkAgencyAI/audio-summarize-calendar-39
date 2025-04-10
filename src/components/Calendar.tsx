@@ -44,20 +44,34 @@ export interface CalendarEvent {
   };
 }
 
-export const eventTypeColors = {
-  exam: 'bg-red-500',
-  assignment: 'bg-blue-500',
-  study: 'bg-green-500',
-  class: 'bg-purple-500',
-  meeting: 'bg-orange-500',
-  other: 'bg-gray-500'
+export const eventTypeColors: Record<string, string> = {
+  exam: '#ef4444',
+  assignment: '#3b82f6',
+  study: '#22c55e',
+  class: '#a855f7',
+  meeting: '#f97316',
+  other: '#6b7280'
 };
 
 interface CalendarProps {
   initialDate?: Date;
+  events?: CalendarEvent[];
+  onAddEvent?: () => void;
+  onEditEvent?: (event: CalendarEvent) => void;
+  onDeleteEvent?: (eventId: string) => void;
+  activeFilter?: string;
+  onFilterChange?: (filter: string) => void;
 }
 
-export function Calendar({ initialDate = new Date() }: CalendarProps) {
+export function Calendar({ 
+  initialDate = new Date(),
+  events: externalEvents,
+  onAddEvent,
+  onEditEvent,
+  onDeleteEvent,
+  activeFilter: externalActiveFilter,
+  onFilterChange
+}: CalendarProps) {
   const { folders } = useRecordings();
 
   const [currentDate, setCurrentDate] = useState(initialDate);
@@ -75,19 +89,31 @@ export function Calendar({ initialDate = new Date() }: CalendarProps) {
   const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(null);
   const [deleteAllRecurring, setDeleteAllRecurring] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('all');
 
-  // Load events from storage
+  // Load events from storage or use external events
   useEffect(() => {
-    const storedEvents = loadFromStorage<CalendarEvent[]>('calendarEvents') || [];
-    setEvents(storedEvents);
-  }, []);
+    if (externalEvents) {
+      setEvents(externalEvents);
+    } else {
+      const storedEvents = loadFromStorage<CalendarEvent[]>('calendarEvents') || [];
+      setEvents(storedEvents);
+    }
+  }, [externalEvents]);
 
-  // Save events to storage
+  // Use external active filter if provided
   useEffect(() => {
-    if (events.length > 0) {
+    if (externalActiveFilter) {
+      setActiveFilter(externalActiveFilter);
+    }
+  }, [externalActiveFilter]);
+
+  // Save events to storage if we're managing them internally
+  useEffect(() => {
+    if (!externalEvents && events.length > 0) {
       saveToStorage('calendarEvents', events);
     }
-  }, [events]);
+  }, [events, externalEvents]);
 
   // Filter events based on search query
   const filteredEvents = events.filter(event => 
@@ -112,7 +138,15 @@ export function Calendar({ initialDate = new Date() }: CalendarProps) {
       ...event,
       id: uuidv4()
     };
-    setEvents(prev => [...prev, newEventWithId]);
+    
+    if (onAddEvent && onEditEvent) {
+      // External event management
+      onEditEvent(newEventWithId);
+    } else {
+      // Internal event management
+      setEvents(prev => [...prev, newEventWithId]);
+    }
+    
     setNewEvent({
       title: '',
       description: '',
@@ -122,7 +156,13 @@ export function Calendar({ initialDate = new Date() }: CalendarProps) {
   };
 
   const handleEditEvent = (event: CalendarEvent) => {
-    setEvents(prev => prev.map(e => e.id === event.id ? event : e));
+    if (onEditEvent) {
+      // External event management
+      onEditEvent(event);
+    } else {
+      // Internal event management
+      setEvents(prev => prev.map(e => e.id === event.id ? event : e));
+    }
   };
 
   const handleDeleteEvent = (eventId: string) => {
@@ -145,11 +185,17 @@ export function Calendar({ initialDate = new Date() }: CalendarProps) {
       const eventTitle = eventToDelete.title;
       const eventType = eventToDelete.type;
       
-      setEvents(prev => prev.filter(e => 
-        !(e.title === eventTitle && e.type === eventType && 
-          e.date.substring(0, 10) === eventDate.substring(0, 10) && 
-          e.repeat && e.repeat.frequency === eventToDelete.repeat?.frequency)
-      ));
+      if (onDeleteEvent) {
+        // Let parent component handle deletion
+        onDeleteEvent(eventToDelete.id);
+      } else {
+        // Internal event management
+        setEvents(prev => prev.filter(e => 
+          !(e.title === eventTitle && e.type === eventType && 
+            e.date.substring(0, 10) === eventDate.substring(0, 10) && 
+            e.repeat && e.repeat.frequency === eventToDelete.repeat?.frequency)
+        ));
+      }
     } else {
       // Delete just this event
       deleteEvent(eventToDelete.id);
@@ -161,7 +207,13 @@ export function Calendar({ initialDate = new Date() }: CalendarProps) {
   };
 
   const deleteEvent = (eventId: string) => {
-    setEvents(prev => prev.filter(e => e.id !== eventId));
+    if (onDeleteEvent) {
+      // External event management
+      onDeleteEvent(eventId);
+    } else {
+      // Internal event management
+      setEvents(prev => prev.filter(e => e.id !== eventId));
+    }
   };
 
   const getDaysInMonth = () => {
@@ -182,6 +234,13 @@ export function Calendar({ initialDate = new Date() }: CalendarProps) {
     setSelectedDate(date);
     if (view === 'month') {
       setView('day');
+    }
+  };
+  
+  const handleFilterChange = (filter: string) => {
+    setActiveFilter(filter);
+    if (onFilterChange) {
+      onFilterChange(filter);
     }
   };
 
@@ -222,7 +281,8 @@ export function Calendar({ initialDate = new Date() }: CalendarProps) {
                   {dayEvents.slice(0, 3).map((event, index) => (
                     <div 
                       key={event.id} 
-                      className={`w-2 h-2 rounded-full ${eventTypeColors[event.type]}`}
+                      className={`w-2 h-2 rounded-full bg-${event.type}`}
+                      style={{ backgroundColor: eventTypeColors[event.type] }}
                       title={event.title}
                     />
                   ))}
@@ -279,7 +339,7 @@ export function Calendar({ initialDate = new Date() }: CalendarProps) {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button onClick={() => setShowEventDialog(true)}>
+          <Button onClick={() => onAddEvent ? onAddEvent() : setShowEventDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Nuevo evento
           </Button>
@@ -307,10 +367,22 @@ export function Calendar({ initialDate = new Date() }: CalendarProps) {
       
       {view === 'week' && (
         <WeeklySchedule
-          selectedDate={selectedDate}
+          date={selectedDate}
           events={filteredEvents}
-          onEditEvent={handleEditEvent}
-          onDeleteEvent={handleDeleteEvent}
+          onEdit={handleEditEvent}
+          onDelete={handleDeleteEvent}
+          onCancel={() => setView('month')}
+          hasExistingSchedule={true}
+          existingEvents={filteredEvents}
+          onSave={(newEvents) => {
+            newEvents.forEach(event => {
+              addEvent({
+                ...event,
+                repeat: { frequency: 'weekly', interval: 1 }
+              });
+            });
+            setView('month');
+          }}
         />
       )}
       
@@ -318,8 +390,18 @@ export function Calendar({ initialDate = new Date() }: CalendarProps) {
         <DailyView
           date={selectedDate}
           events={selectedDayEvents}
+          onBack={() => setView('month')}
+          onTimeSelect={(time) => {
+            setNewEvent({
+              ...newEvent,
+              date: format(time, 'yyyy-MM-dd\'T\'HH:mm')
+            });
+            setShowEventDialog(true);
+          }}
+          onEventClick={handleEditEvent}
           onEditEvent={handleEditEvent}
           onDeleteEvent={handleDeleteEvent}
+          activeFilter={activeFilter}
         />
       )}
       
@@ -353,7 +435,7 @@ export function Calendar({ initialDate = new Date() }: CalendarProps) {
               <Input
                 id="date"
                 type="date"
-                value={newEvent.date}
+                value={newEvent.date.split('T')[0]}
                 onChange={(e) => setNewEvent({...newEvent, date: e.target.value})}
               />
             </div>
