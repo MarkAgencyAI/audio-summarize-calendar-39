@@ -281,5 +281,3 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     </RecordingsContext.Provider>
   );
 };
-
-export { RecordingsProvider };
