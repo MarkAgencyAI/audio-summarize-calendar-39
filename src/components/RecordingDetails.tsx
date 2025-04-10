@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGroq } from "@/lib/groq";
 import { sendToWebhook } from "@/lib/webhook";
 import { extractWebhookOutput } from "@/lib/transcription-service";
-import { AudioPlayer } from "@/components/AudioPlayer";
+import { AudioPlayer, AudioPlayerHandle } from "@/components/AudioPlayer";
 import { loadAudioFromStorage, saveAudioToStorage } from "@/lib/storage";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AudioChapter, AudioChaptersList, AudioChaptersTimeline } from "./AudioChapter";
@@ -99,6 +99,7 @@ export function RecordingDetails({
   const [currentAudioTime, setCurrentAudioTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(recording.duration || 0);
   const [activeChapterId, setActiveChapterId] = useState<string | undefined>(undefined);
+  const audioPlayerRef = useRef<AudioPlayerHandle>(null);
   
   const dialogOpen = propIsOpen !== undefined ? propIsOpen : isOpen;
   const setDialogOpen = onOpenChange || setIsOpenState;

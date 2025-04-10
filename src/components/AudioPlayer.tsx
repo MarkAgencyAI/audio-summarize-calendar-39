@@ -1,10 +1,14 @@
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX } from "lucide-react";
 import { formatTime } from "@/lib/audio-utils";
 import { toast } from "sonner";
+
+export interface AudioPlayerHandle {
+  seekTo: (time: number) => void;
+}
 
 interface AudioPlayerProps {
   audioUrl: string;
@@ -12,15 +16,19 @@ interface AudioPlayerProps {
   initialDuration?: number;
   autoplay?: boolean;
   onEnded?: () => void;
+  onTimeUpdate?: (time: number) => void;
+  onDurationChange?: (duration: number) => void;
 }
 
-export function AudioPlayer({
+export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
   audioUrl,
   audioBlob,
   initialDuration = 0,
   autoplay = false,
-  onEnded
-}: AudioPlayerProps) {
+  onEnded,
+  onTimeUpdate,
+  onDurationChange
+}, ref) => {
   // Audio element ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
@@ -36,6 +44,19 @@ export function AudioPlayer({
   
   // Timer for updating current time
   const timeUpdateIntervalRef = useRef<number | null>(null);
+
+  // Expose methods to parent component
+  useImperativeHandle(ref, () => ({
+    seekTo: (time: number) => {
+      if (!audioRef.current) return;
+      
+      const newTime = Math.max(0, Math.min(time, duration));
+      if (!isNaN(newTime) && isFinite(newTime)) {
+        audioRef.current.currentTime = newTime;
+        setCurrentTime(newTime);
+      }
+    }
+  }));
   
   // Initialize audio element
   useEffect(() => {
@@ -128,12 +149,21 @@ export function AudioPlayer({
     // Update duration if it's a valid number
     if (audioDuration && !isNaN(audioDuration) && isFinite(audioDuration)) {
       setDuration(audioDuration);
+      if (onDurationChange) {
+        onDurationChange(audioDuration);
+      }
     } else if (initialDuration && initialDuration > 0) {
       // Fall back to initialDuration if available
       setDuration(initialDuration);
+      if (onDurationChange) {
+        onDurationChange(initialDuration);
+      }
     } else {
       // Use a default duration if all else fails
       setDuration(100);
+      if (onDurationChange) {
+        onDurationChange(100);
+      }
     }
     
     setIsLoading(false);
@@ -146,6 +176,9 @@ export function AudioPlayer({
     const newTime = audioRef.current.currentTime;
     if (!isNaN(newTime) && isFinite(newTime)) {
       setCurrentTime(newTime);
+      if (onTimeUpdate) {
+        onTimeUpdate(newTime);
+      }
     }
   };
   
@@ -198,6 +231,9 @@ export function AudioPlayer({
     if (!isNaN(newTime) && isFinite(newTime)) {
       audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
+      if (onTimeUpdate) {
+        onTimeUpdate(newTime);
+      }
     }
   };
   
@@ -209,6 +245,9 @@ export function AudioPlayer({
     if (!isNaN(newTime) && isFinite(newTime)) {
       audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
+      if (onTimeUpdate) {
+        onTimeUpdate(newTime);
+      }
     }
   };
   
@@ -220,6 +259,9 @@ export function AudioPlayer({
     if (!isNaN(newTime) && isFinite(newTime)) {
       audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
+      if (onTimeUpdate) {
+        onTimeUpdate(newTime);
+      }
     }
   };
   
@@ -374,4 +416,6 @@ export function AudioPlayer({
       </div>
     </div>
   );
-}
+});
+
+AudioPlayer.displayName = "AudioPlayer";
