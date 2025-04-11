@@ -1,7 +1,8 @@
+
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, WaveformIcon, Trash2, Plus, Scissors } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Waveform, Trash2, Plus, Scissors } from "lucide-react";
 import { formatTime } from "@/lib/audio-utils";
 import { toast } from "sonner";
 

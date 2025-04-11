@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Recording, useRecordings, AudioChapter, TextHighlight } from "@/context/RecordingsContext";
 import { Button } from "@/components/ui/button";
@@ -1046,6 +1045,7 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                       <AudioChaptersList
                         chapters={chapters}
                         currentTime={currentAudioTime}
+                        duration={audioDuration}
                         onChapterClick={handleChapterClick}
                         onChapterEdit={handleEditChapter}
                         onChapterDelete={handleDeleteChapter}
