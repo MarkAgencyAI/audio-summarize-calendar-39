@@ -42,6 +42,7 @@ export interface Recording {
   chapters?: AudioChapter[];
   speakerMode?: 'single' | 'multiple';
   createdAt?: string;
+  updatedAt?: string; // Add this field to match what's being used in RecordingDetails
   understood?: boolean; // Field to mark if it was understood
 }
 
@@ -158,7 +159,11 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const updateRecording = (id: string, data: Partial<Recording>) => {
     setRecordings(prev =>
       prev.map(recording =>
-        recording.id === id ? { ...recording, ...data } : recording
+        recording.id === id ? { 
+          ...recording, 
+          ...data,
+          updatedAt: data.updatedAt || new Date().toISOString() // Add updatedAt timestamp when updating
+        } : recording
       )
     );
   };

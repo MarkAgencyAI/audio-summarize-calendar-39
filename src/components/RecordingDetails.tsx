@@ -1037,7 +1037,7 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                             {recording.output && recording.output.length > 0 && (
                               <div className="border-t px-4 py-2 flex justify-between items-center text-xs text-muted-foreground">
                                 <span>{recording.output.length} caracteres</span>
-                                <span>Última actualización: {new Date(recording.updatedAt || recording.createdAt).toLocaleDateString()}</span>
+                                <span>Última actualización: {new Date(recording.updatedAt || recording.createdAt || recording.date).toLocaleDateString()}</span>
                               </div>
                             )}
                           </div>
