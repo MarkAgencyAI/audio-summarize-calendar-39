@@ -28,7 +28,6 @@ interface RecordingDetailsProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-// More color options for the pickers
 const chapterColors = [
   "#FEF7CD", // Amarillo
   "#F2FCE2", // Verde
@@ -57,7 +56,6 @@ const highlightColors = [
   { label: "Celeste", value: "#BEE3F8" },
 ];
 
-// Function to format time without milliseconds for chapter display
 const formatTimeNoMs = (seconds: number): string => {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -313,7 +311,6 @@ export function RecordingDetails({
     }
   };
 
-  // Modified to handle custom colors
   const applyHighlight = (color: string) => {
     if (!selectionRange || !selectedText) return;
     
@@ -844,7 +841,6 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
         
         <Separator className="my-2 dark:bg-custom-secondary/40" />
         
-        {/* Audio player section with more spacing */}
         <div className="my-4">
           <AudioPlayer 
             audioUrl={recording.audioUrl} 
@@ -864,7 +860,6 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
           />
         </div>
         
-        {/* Main content area with improved vertical spacing */}
         <div className="flex-1 overflow-hidden pt-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
             <TabsList className="mb-6">
@@ -889,5 +884,294 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
             </TabsList>
             
             <div className="flex-1 overflow-hidden">
-              <div className="h-[60vh] md:h-[50vh] overflow-hidden">
-                <
+              <div className="h-[60vh] md:h-[50vh] overflow-auto">
+                <TabsContent value="webhook" className="h-full p-4 bg-muted/20 rounded-md">
+                  <div className="h-full overflow-y-auto">
+                    <pre className="whitespace-pre-wrap text-sm">
+                      {formatWebhookResponse()}
+                    </pre>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="transcription" className="h-full">
+                  <div className="grid gap-4 h-full">
+                    <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-md">
+                      <div className="flex-1 flex items-center gap-2">
+                        <Input 
+                          placeholder="Buscar en la transcripción..." 
+                          value={searchQuery} 
+                          onChange={e => setSearchQuery(e.target.value)}
+                          className="h-9"
+                        />
+                        <Button onClick={handleSearch} variant="secondary" size="sm" className="h-9">
+                          <Search className="h-4 w-4 mr-1" />
+                          Buscar
+                        </Button>
+                      </div>
+                      
+                      {searchResults.length > 0 && (
+                        <div className="flex items-center gap-1">
+                          <Button 
+                            onClick={() => navigateSearch('prev')} 
+                            variant="outline" 
+                            size="sm"
+                            className="h-8 px-2"
+                          >
+                            Anterior
+                          </Button>
+                          <span className="text-xs">
+                            {currentSearchIndex + 1}/{searchResults.length}
+                          </span>
+                          <Button 
+                            onClick={() => navigateSearch('next')} 
+                            variant="outline" 
+                            size="sm"
+                            className="h-8 px-2"
+                          >
+                            Siguiente
+                          </Button>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-1">
+                        <Button 
+                          onClick={toggleHighlightMode} 
+                          variant="ghost" 
+                          size="sm"
+                          className="h-9 flex items-center gap-1"
+                        >
+                          <PaintBucket className="h-4 w-4" />
+                          <span>Resaltar</span>
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="relative flex-1">
+                      {showHighlightMenu && selectionRange && (
+                        <div 
+                          className="absolute z-10 bg-white dark:bg-slate-800 shadow-md rounded-md p-2 flex flex-col gap-2"
+                          style={{
+                            left: `${highlightMenuPosition.x}px`,
+                            top: `${highlightMenuPosition.y - 130}px`,
+                            transform: 'translate(-50%, -100%)'
+                          }}
+                        >
+                          <div className="grid grid-cols-4 gap-1">
+                            {highlightColors.map(color => (
+                              <button
+                                key={color.value}
+                                onClick={() => applyHighlight(color.value)}
+                                className="w-6 h-6 rounded-full border hover:scale-110 transition-transform"
+                                style={{ backgroundColor: color.value }}
+                                title={color.label}
+                              />
+                            ))}
+                          </div>
+                          
+                          <div className="flex justify-between mt-1">
+                            <input 
+                              type="color" 
+                              value={customColor} 
+                              onChange={handleCustomColorChange}
+                              className="w-8 h-8 cursor-pointer"
+                            />
+                            <button 
+                              onClick={() => applyHighlight(customColor)}
+                              className="text-xs bg-primary text-white px-2 py-1 rounded"
+                            >
+                              Aplicar
+                            </button>
+                            <button
+                              onClick={removeHighlightAtSelection}
+                              className="text-xs bg-destructive text-white px-2 py-1 rounded"
+                            >
+                              Quitar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <ScrollArea className="h-full p-4 bg-muted/20 rounded-md">
+                        <div className="max-w-3xl mx-auto">
+                          {isEditingOutput ? (
+                            <div className="space-y-4">
+                              <Textarea 
+                                value={editedOutput}
+                                onChange={e => setEditedOutput(e.target.value)}
+                                className="min-h-[400px] font-mono text-sm"
+                              />
+                              <div className="flex justify-end gap-2">
+                                <Button variant="outline" onClick={handleCancelOutputEdit}>
+                                  Cancelar
+                                </Button>
+                                <Button onClick={handleSaveOutput}>
+                                  Guardar
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="relative">
+                              <pre 
+                                ref={transcriptionRef} 
+                                className="whitespace-pre-wrap text-sm" 
+                                onMouseUp={handleTextSelection}
+                              >
+                                {renderHighlightedText()}
+                              </pre>
+                              
+                              {!recording.output && (
+                                <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                                  <p className="text-muted-foreground text-center">
+                                    No hay transcripción disponible para esta grabación.
+                                  </p>
+                                  <Button 
+                                    onClick={generateOutputWithGroq} 
+                                    disabled={isGeneratingOutput}
+                                  >
+                                    {isGeneratingOutput ? (
+                                      <>
+                                        <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
+                                        Generando...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Sparkles className="h-4 w-4 mr-2" />
+                                        Generar con IA
+                                      </>
+                                    )}
+                                  </Button>
+                                </div>
+                              )}
+                              
+                              {recording.output && (
+                                <div className="flex justify-end mt-4">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => setIsEditingOutput(true)}
+                                  >
+                                    <Edit className="h-4 w-4 mr-1" />
+                                    Editar
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </ScrollArea>
+                    </div>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="chapters" className="h-full">
+                  <div className="grid gap-4 h-full">
+                    <div className="flex items-center justify-between p-2 bg-muted/20 rounded-md">
+                      <h3 className="text-sm font-medium">Capítulos de audio</h3>
+                      <div className="flex items-center gap-2">
+                        <div className="text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3 inline mr-1" />
+                          {formatTimeNoMs(currentAudioTime)} / {formatTimeNoMs(audioDuration)}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="overflow-y-auto bg-muted/20 rounded-md p-4">
+                      <AudioChaptersList 
+                        chapters={chapters}
+                        currentTime={currentAudioTime}
+                        duration={audioDuration}
+                        onChapterClick={handleChapterClick}
+                        onChapterDelete={handleDeleteChapter}
+                        onChapterEdit={handleEditChapter}
+                        activeChapterId={activeChapterId}
+                      />
+                    </div>
+                  </div>
+                </TabsContent>
+              </div>
+            </div>
+          </Tabs>
+        </div>
+      </DialogContent>
+      
+      <Dialog open={showChapterDialog} onOpenChange={setShowChapterDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              {currentChapter && chapters.some(ch => ch.id === currentChapter.id)
+                ? "Editar capítulo"
+                : "Crear capítulo"}
+            </DialogTitle>
+            <DialogDescription>
+              Define título y color para este segmento de audio
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="chapter-title">Título</Label>
+              <Input 
+                id="chapter-title"
+                value={newChapterTitle}
+                onChange={e => setNewChapterTitle(e.target.value)}
+                placeholder="Nombre del capítulo"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Tiempo</Label>
+              <div className="flex items-center gap-2 text-sm">
+                <span>Inicio: {formatTimeNoMs(currentChapter?.startTime || currentAudioTime)}</span>
+                {currentChapter?.endTime && (
+                  <span>Fin: {formatTimeNoMs(currentChapter.endTime)}</span>
+                )}
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <div className="grid grid-cols-6 gap-2">
+                {chapterColors.map(color => (
+                  <button
+                    key={color}
+                    type="button"
+                    className={`h-6 w-6 rounded-full border-2 ${newChapterColor === color ? 'border-primary' : 'border-transparent'}`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setNewChapterColor(color)}
+                  />
+                ))}
+                <div className="relative">
+                  <input 
+                    type="color" 
+                    value={customColor} 
+                    onChange={handleCustomColorChange}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
+                  <button
+                    type="button"
+                    className={`h-6 w-6 rounded-full bg-white border-2 flex items-center justify-center ${newChapterColor === customColor ? 'border-primary' : 'border-gray-300'}`}
+                    onClick={() => applyCustomColor()}
+                  >
+                    <Plus className="h-4 w-4 text-gray-500" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowChapterDialog(false)}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveChapter}>
+              Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Dialog>
+  );
+}
