@@ -1,8 +1,7 @@
-
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Waveform, Trash2, Plus, Scissors } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, AudioWaveform, Trash2, Plus, Scissors } from "lucide-react";
 import { formatTime } from "@/lib/audio-utils";
 import { toast } from "sonner";
 
@@ -286,7 +285,7 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
             onClick={toggleWaveform}
             className="text-xs h-8 flex items-center gap-1"
           >
-            <WaveformIcon className="h-4 w-4" />
+            <AudioWaveform className="h-4 w-4" />
             {showWaveform ? "Hide waveform" : "Show waveform"}
           </Button>
           
