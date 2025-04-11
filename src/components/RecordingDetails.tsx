@@ -738,8 +738,8 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogContent className="max-w-4xl w-[95vw] md:w-auto h-[90vh] flex flex-col dark:bg-[#001A29] dark:border-custom-secondary overflow-hidden">
-        <ScrollArea className="flex-1">
-          <div className="px-6 py-4">
+        <ScrollArea className="flex-1 w-full">
+          <div className="px-6 py-4 w-full">
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between">
                 <div className="flex-1 max-w-[calc(100%-40px)]">
@@ -897,8 +897,8 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                     
                     <TabsContent value="transcription" className="h-full">
                       <div className="grid gap-4">
-                        <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-md">
-                          <div className="flex-1 flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2 p-2 bg-muted/20 rounded-md">
+                          <div className="flex-1 flex items-center gap-2 min-w-[200px]">
                             <Input 
                               placeholder="Buscar en la transcripción..." 
                               value={searchQuery} 
@@ -994,7 +994,7 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                           )}
                           
                           <ScrollArea className="h-[40vh] p-4 bg-muted/20 rounded-md">
-                            <div className="max-w-3xl mx-auto">
+                            <div className="max-w-full">
                               {isEditingOutput ? (
                                 <div className="space-y-4">
                                   <Textarea 
@@ -1012,10 +1012,10 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                                   </div>
                                 </div>
                               ) : (
-                                <div className="relative">
+                                <div className="relative max-w-full">
                                   <pre 
                                     ref={transcriptionRef} 
-                                    className="whitespace-pre-wrap text-sm" 
+                                    className="whitespace-pre-wrap text-sm break-words max-w-full" 
                                     onMouseUp={handleTextSelection}
                                   >
                                     {renderHighlightedText()}
