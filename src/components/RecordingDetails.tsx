@@ -43,7 +43,6 @@ const highlightColors = [
   { label: "Naranja", value: "#FEC6A1" },
   { label: "Azul", value: "#D3E4FD" },
   { label: "Rosa", value: "#FFDEE2" },
-  { label: "Morado", value: "#E5DEFF" },
 ];
 
 const WEBHOOK_URL = "https://ssn8nss.maettiai.tech/webhook-test/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
@@ -875,4 +874,5 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                         <div className="flex gap-1 flex-wrap">
                           {isEditingOutput ? (
                             <>
-                              <Button variant="ghost" size="sm" onClick={handleSaveOutput} className="h-7 py-0
+                              <Button variant="ghost" size="sm" onClick={handleSaveOutput} className="h-7 py-0">
+                                <Save className="h-4 w-4 mr-1" />
