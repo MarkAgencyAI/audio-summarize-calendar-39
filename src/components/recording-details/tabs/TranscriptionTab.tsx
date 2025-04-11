@@ -4,15 +4,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Edit, Search, PaintBucket, Sparkles, Loader2 } from "lucide-react";
+import { Edit, Search, PaintBucket, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { TranscriptionTabProps, highlightColors } from "../types";
 import { useSearch } from "../hooks/useSearch";
-import { useHighlights } from "../hooks/useHighlights";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useRecordings } from "@/context/RecordingsContext";
 import { useGroq } from "@/lib/groq";
 import { sendToWebhook } from "@/lib/webhook";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 const WEBHOOK_URL = "https://ssn8nss.maettiai.tech/webhook-test/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
@@ -40,20 +39,11 @@ export function TranscriptionTab({
     navigateSearch
   } = useSearch(data.recording.output);
   
-  const {
-    highlights,
-    selectedText,
-    selectionRange,
-    removeHighlightAtSelection,
-    applyHighlight,
-    renderHighlightedText
-  } = useHighlights(data.recording, updateRecording);
-  
   useEffect(() => {
-    if (showHighlightMenu && !selectedText) {
+    if (showHighlightMenu && !data.highlights) {
       setShowHighlightMenu(false);
     }
-  }, [selectedText, showHighlightMenu]);
+  }, [data.highlights, showHighlightMenu]);
   
   const toggleHighlightMode = () => {
     const selection = window.getSelection();
@@ -179,7 +169,7 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
   const highlightMenuPositionY = isMobile ? -80 : -130;
 
   return (
-    <div className="grid gap-4 max-w-full">
+    <div className="grid gap-4 w-full">
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-2 bg-muted/20 rounded-md">
         <div className={`flex ${searchControlsClass} gap-2 flex-1 min-w-[200px]`}>
           <Input 
@@ -231,56 +221,11 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
         )}
       </div>
       
-      <div className="relative">
-        {showHighlightMenu && selectionRange && (
-          <div 
-            className="absolute z-10 bg-white dark:bg-slate-800 shadow-md rounded-md p-2 flex flex-col gap-2"
-            style={{
-              left: `${highlightMenuPosition.x}px`,
-              top: `${highlightMenuPosition.y + highlightMenuPositionY}px`,
-              transform: 'translate(-50%, 0)',
-              maxWidth: '95vw'
-            }}
-          >
-            <div className="grid grid-cols-4 gap-1">
-              {highlightColors.map(color => (
-                <button
-                  key={color.value}
-                  onClick={() => applyHighlight(color.value)}
-                  className="w-6 h-6 rounded-full border hover:scale-110 transition-transform"
-                  style={{ backgroundColor: color.value }}
-                  title={color.label}
-                />
-              ))}
-            </div>
-            
-            <div className="flex justify-between mt-1">
-              <input 
-                type="color" 
-                value={customColor} 
-                onChange={handleCustomColorChange}
-                className="w-8 h-8 cursor-pointer"
-              />
-              <button 
-                onClick={() => applyHighlight(customColor)}
-                className="text-xs bg-primary text-white px-2 py-1 rounded"
-              >
-                Aplicar
-              </button>
-              <button
-                onClick={removeHighlightAtSelection}
-                className="text-xs bg-destructive text-white px-2 py-1 rounded"
-              >
-                Quitar
-              </button>
-            </div>
-          </div>
-        )}
-        
-        <ScrollArea className="h-[30vh] sm:h-[40vh] p-4 bg-muted/20 rounded-md">
-          <div className="max-w-full overflow-hidden overflow-x-hidden break-words whitespace-normal">
+      <div className="p-4 bg-muted/20 rounded-md w-full">
+        <ScrollArea className="h-[40vh] overflow-y-auto w-full custom-scrollbar">
+          <div className="pr-2 max-w-full overflow-x-hidden">
             {isEditingOutput ? (
-              <div className="space-y-4">
+              <div className="space-y-4 w-full">
                 <Textarea 
                   value={editedOutput}
                   onChange={e => setEditedOutput(e.target.value)}
@@ -299,41 +244,35 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
               <div className="relative max-w-full overflow-x-hidden">
                 <pre 
                   ref={transcriptionRef} 
-                  className="whitespace-pre-wrap text-sm break-words max-w-full overflow-x-hidden overflow-wrap-anywhere" 
+                  className="whitespace-pre-wrap text-sm break-words max-w-full overflow-x-hidden overflow-wrap-anywhere transcription-text" 
                   onMouseUp={onTextSelection}
-                  style={{ 
-                    wordBreak: "break-word", 
-                    overflowWrap: "break-word",
-                    maxWidth: "100%",
-                    width: "100%"
-                  }}
                 >
-                  {renderHighlightedText()}
+                  {data.recording.output ? (
+                    data.renderHighlightedText()
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                      <p className="text-muted-foreground text-center">
+                        No hay transcripción disponible para esta grabación.
+                      </p>
+                      <Button 
+                        onClick={generateOutputWithGroq} 
+                        disabled={isGeneratingOutput}
+                      >
+                        {isGeneratingOutput ? (
+                          <>
+                            <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
+                            Generando...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            Generar con IA
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </pre>
-                
-                {!data.recording.output && (
-                  <div className="flex flex-col items-center justify-center py-10 space-y-4">
-                    <p className="text-muted-foreground text-center">
-                      No hay transcripción disponible para esta grabación.
-                    </p>
-                    <Button 
-                      onClick={generateOutputWithGroq} 
-                      disabled={isGeneratingOutput}
-                    >
-                      {isGeneratingOutput ? (
-                        <>
-                          <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
-                          Generando...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-4 w-4 mr-2" />
-                          Generar con IA
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                )}
                 
                 {data.recording.output && (
                   <div className="flex justify-end mt-4">

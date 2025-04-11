@@ -2,6 +2,7 @@
 import { Clock, Plus } from "lucide-react";
 import { AudioChaptersList } from "@/components/AudioChapter";
 import { ChaptersTabProps } from "../types";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export function ChaptersTab({
   data,
@@ -19,7 +20,7 @@ export function ChaptersTab({
   };
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-4 w-full">
       <div className="flex items-center justify-between p-2 bg-muted/20 rounded-md">
         <h3 className="text-sm font-medium">Capítulos de audio</h3>
         <div className="flex items-center gap-2">
@@ -30,16 +31,20 @@ export function ChaptersTab({
         </div>
       </div>
       
-      <div className="h-[40vh] overflow-y-auto bg-muted/20 rounded-md p-4">
-        <AudioChaptersList 
-          chapters={data.chapters}
-          currentTime={data.currentAudioTime}
-          duration={data.audioDuration}
-          onChapterClick={() => {}}
-          onChapterDelete={onDeleteChapter}
-          onChapterEdit={onEditChapter}
-          activeChapterId={data.activeChapterId}
-        />
+      <div className="bg-muted/20 rounded-md p-4 w-full">
+        <ScrollArea className="h-[40vh] overflow-y-auto w-full custom-scrollbar">
+          <div className="pr-2 max-w-full overflow-x-hidden">
+            <AudioChaptersList 
+              chapters={data.chapters}
+              currentTime={data.currentAudioTime}
+              duration={data.audioDuration}
+              onChapterClick={() => {}}
+              onChapterDelete={onDeleteChapter}
+              onChapterEdit={onEditChapter}
+              activeChapterId={data.activeChapterId}
+            />
+          </div>
+        </ScrollArea>
       </div>
     </div>
   );

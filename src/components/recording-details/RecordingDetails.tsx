@@ -136,7 +136,7 @@ export function RecordingDetails({
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className={`${dialogSizeClass} h-[90vh] flex flex-col dark:bg-[#001A29] dark:border-custom-secondary overflow-hidden`}>
           <ScrollArea className="flex-1 w-full pr-2 custom-scrollbar">
-            <div className={`${contentPaddingClass} w-full overflow-x-hidden`}>
+            <div className={`${contentPaddingClass} w-full recording-content`}>
               <DialogHeader>
                 <DialogTitle className="flex items-center justify-between">
                   <RecordingHeader recording={recording} />
@@ -148,28 +148,26 @@ export function RecordingDetails({
               
               <Separator className="my-2 dark:bg-custom-secondary/40" />
               
-              <div className="my-4 w-full overflow-x-hidden">
-                <div className="w-full max-w-full overflow-x-hidden no-horizontal-overflow">
-                  <AudioPlayer 
-                    audioUrl={recording.audioUrl} 
-                    audioBlob={audioBlob || undefined}
-                    initialDuration={recording.duration}
-                    onTimeUpdate={handleTimeUpdate}
-                    ref={audioPlayerRef}
-                    onDurationChange={setAudioDuration}
-                    onAddChapter={handleAddChapter}
-                  />
-                  
-                  <AudioChaptersTimeline 
-                    chapters={chapters}
-                    duration={audioDuration}
-                    currentTime={currentAudioTime}
-                    onChapterClick={handleChapterClick}
-                  />
-                </div>
+              <div className="my-4 w-full audio-timeline">
+                <AudioPlayer 
+                  audioUrl={recording.audioUrl} 
+                  audioBlob={audioBlob || undefined}
+                  initialDuration={recording.duration}
+                  onTimeUpdate={handleTimeUpdate}
+                  ref={audioPlayerRef}
+                  onDurationChange={setAudioDuration}
+                  onAddChapter={handleAddChapter}
+                />
+                
+                <AudioChaptersTimeline 
+                  chapters={chapters}
+                  duration={audioDuration}
+                  currentTime={currentAudioTime}
+                  onChapterClick={handleChapterClick}
+                />
               </div>
               
-              <div className="pt-2 sm:pt-4 overflow-x-hidden no-horizontal-overflow">
+              <div className="pt-2 sm:pt-4 w-full">
                 <RecordingTabs 
                   data={recordingDetailsData}
                   onTabChange={setActiveTab}

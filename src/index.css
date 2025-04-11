@@ -142,6 +142,7 @@
   width: 100%;
   overflow-x: hidden;
   white-space: normal;
+  word-break: break-word;
 }
 
 /* Add highlights and marks styling */
@@ -149,4 +150,31 @@ mark {
   padding: 0 0.1em;
   border-radius: 0.2em;
   display: inline;
+}
+
+/* Ensure all pre elements wrap text properly */
+pre {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+/* Recording details specific styles */
+.recording-content {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.audio-timeline {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.transcription-text {
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
 }

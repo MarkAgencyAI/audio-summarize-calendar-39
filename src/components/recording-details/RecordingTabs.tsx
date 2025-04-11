@@ -16,7 +16,7 @@ export function RecordingTabs({
   const hasWebhookData = !!data.recording.webhookData;
   
   return (
-    <Tabs value={data.activeTab} onValueChange={onTabChange}>
+    <Tabs value={data.activeTab} onValueChange={onTabChange} className="w-full">
       <TabsList className="mb-4 sm:mb-6 grid grid-cols-3 gap-1 w-full">
         <TabsTrigger value="webhook" className="flex items-center gap-1 text-xs sm:text-sm px-2 py-1 h-auto">
           <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -38,20 +38,20 @@ export function RecordingTabs({
         </TabsTrigger>
       </TabsList>
       
-      <div>
-        <div className="max-h-[50vh] overflow-hidden">
-          <TabsContent value="webhook" className="h-full mt-0">
+      <div className="relative w-full">
+        <div className="max-h-[50vh] overflow-hidden w-full">
+          <TabsContent value="webhook" className="h-full mt-0 w-full">
             <WebhookTab data={data} />
           </TabsContent>
           
-          <TabsContent value="transcription" className="h-full mt-0">
+          <TabsContent value="transcription" className="h-full mt-0 w-full">
             <TranscriptionTab 
               data={data} 
               onTextSelection={onTextSelection} 
             />
           </TabsContent>
           
-          <TabsContent value="chapters" className="h-full mt-0">
+          <TabsContent value="chapters" className="h-full mt-0 w-full">
             <ChaptersTab 
               data={data}
               onEditChapter={onEditChapter}

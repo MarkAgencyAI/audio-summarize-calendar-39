@@ -1,5 +1,6 @@
 
 import { WebhookTabProps } from "../types";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export function WebhookTab({ data }: WebhookTabProps) {
   const formatWebhookResponse = () => {
@@ -20,12 +21,14 @@ export function WebhookTab({ data }: WebhookTabProps) {
   };
 
   return (
-    <div className="p-4 bg-muted/20 rounded-md">
-      <div className="overflow-y-auto">
-        <pre className="whitespace-pre-wrap text-sm">
-          {formatWebhookResponse()}
-        </pre>
-      </div>
+    <div className="p-4 bg-muted/20 rounded-md w-full">
+      <ScrollArea className="h-[40vh] overflow-y-auto w-full custom-scrollbar">
+        <div className="pr-2 max-w-full overflow-x-hidden">
+          <pre className="whitespace-pre-wrap text-sm break-words overflow-x-hidden max-w-full transcription-text">
+            {formatWebhookResponse()}
+          </pre>
+        </div>
+      </ScrollArea>
     </div>
   );
 }

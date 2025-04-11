@@ -142,7 +142,7 @@ export function useHighlights(
     window.getSelection()?.removeAllRanges();
   };
   
-  const renderHighlightedText = () => {
+  const renderHighlightedText = (): React.ReactNode => {
     if (!recording.output) return null;
     
     const text = recording.output;
@@ -174,16 +174,7 @@ export function useHighlights(
       segments.push(
         <mark 
           key={highlight.id}
-          style={{ 
-            backgroundColor: highlight.color, 
-            position: 'relative', 
-            borderRadius: '2px',
-            maxWidth: '100%',
-            overflowWrap: 'break-word',
-            wordBreak: 'break-word',
-            whiteSpace: 'normal',
-            display: 'inline'
-          }}
+          style={{ backgroundColor: highlight.color, position: 'relative', borderRadius: '2px' }}
           onDoubleClick={() => removeHighlight(highlight.id)}
           title="Doble clic para eliminar el resaltado"
         >
