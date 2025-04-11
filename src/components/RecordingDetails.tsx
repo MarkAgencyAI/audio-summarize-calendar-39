@@ -737,361 +737,365 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
 
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <DialogContent className="max-w-4xl w-[95vw] md:w-auto max-h-[90vh] flex flex-col dark:bg-[#001A29] dark:border-custom-secondary">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <div className="flex-1 max-w-[calc(100%-40px)]">
-              {isRenaming ? (
-                <div className="flex items-center gap-2">
-                  <Input 
-                    value={newName} 
-                    onChange={e => setNewName(e.target.value)} 
-                    className="h-8 max-w-[200px]" 
-                    autoFocus 
-                  />
-                  <Button variant="ghost" size="icon" onClick={handleSaveRename} className="h-7 w-7 p-0">
-                    <Save className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={handleCancelRename} className="h-7 w-7 p-0">
-                    <X className="h-4 w-4" />
-                  </Button>
+      <DialogContent className="max-w-4xl w-[95vw] md:w-auto h-[90vh] flex flex-col dark:bg-[#001A29] dark:border-custom-secondary overflow-hidden">
+        <ScrollArea className="flex-1">
+          <div className="px-6 py-4">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between">
+                <div className="flex-1 max-w-[calc(100%-40px)]">
+                  {isRenaming ? (
+                    <div className="flex items-center gap-2">
+                      <Input 
+                        value={newName} 
+                        onChange={e => setNewName(e.target.value)} 
+                        className="h-8 max-w-[200px]" 
+                        autoFocus 
+                      />
+                      <Button variant="ghost" size="icon" onClick={handleSaveRename} className="h-7 w-7 p-0">
+                        <Save className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={handleCancelRename} className="h-7 w-7 p-0">
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#005c5f] dark:text-[#f1f2f6] truncate">{recording.name}</span>
+                      <Button variant="ghost" size="icon" onClick={() => setIsRenaming(true)} className="h-7 w-7 p-0 flex-shrink-0">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <span className="text-[#005c5f] dark:text-[#f1f2f6] truncate">{recording.name}</span>
-                  <Button variant="ghost" size="icon" onClick={() => setIsRenaming(true)} className="h-7 w-7 p-0 flex-shrink-0">
-                    <Edit className="h-4 w-4" />
-                  </Button>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="text-destructive h-7 w-7 p-0 flex-shrink-0">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="dark:bg-[#001A29] dark:border-custom-secondary max-w-[95vw] md:max-w-md">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>¿Eliminar esta grabación?</AlertDialogTitle>
+                      <AlertDialogDescription className="dark:text-gray-300">
+                        Esta acción no se puede deshacer. Se eliminará permanentemente esta grabación.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="dark:bg-custom-secondary/40 dark:text-white dark:hover:bg-custom-secondary/60">Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+                        Eliminar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground">
+                Detalles de la grabación y datos procesados
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="flex flex-wrap items-center gap-2 mt-2 mb-2">
+              <div className="flex items-center gap-2 w-full">
+                <Label htmlFor="folder-select" className="min-w-20 flex items-center">
+                  <div 
+                    className="h-6 w-6 rounded-full flex items-center justify-center mr-2" 
+                    style={{ backgroundColor: folder.color }}
+                  >
+                    <Folder className="h-3 w-3 text-white" />
+                  </div>
+                  <span>Carpeta:</span>
+                </Label>
+                
+                <Select 
+                  value={selectedFolder} 
+                  onValueChange={handleFolderChange}
+                >
+                  <SelectTrigger 
+                    id="folder-select"
+                    className="h-9 w-full min-w-[200px] flex-1 dark:bg-custom-secondary/40 dark:border-custom-secondary"
+                  >
+                    <SelectValue placeholder="Seleccionar carpeta" />
+                  </SelectTrigger>
+                  <SelectContent className="dark:bg-[#001A29] dark:border-custom-secondary max-h-[300px]">
+                    {folders.map(f => (
+                      <SelectItem key={f.id} value={f.id}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="h-3 w-3 rounded-full" 
+                            style={{ backgroundColor: f.color }}
+                          />
+                          <span className="truncate">{f.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {recording.subject && (
+                <div className="flex items-center gap-1 ml-auto text-xs bg-muted px-2 py-1 rounded-full dark:bg-custom-secondary/40 dark:text-white">
+                  <Globe className="h-3 w-3" />
+                  <span>{recording.subject}</span>
                 </div>
               )}
             </div>
             
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-destructive h-7 w-7 p-0 flex-shrink-0">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent className="dark:bg-[#001A29] dark:border-custom-secondary max-w-[95vw] md:max-w-md">
-                <AlertDialogHeader>
-                  <AlertDialogTitle>¿Eliminar esta grabación?</AlertDialogTitle>
-                  <AlertDialogDescription className="dark:text-gray-300">
-                    Esta acción no se puede deshacer. Se eliminará permanentemente esta grabación.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel className="dark:bg-custom-secondary/40 dark:text-white dark:hover:bg-custom-secondary/60">Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
-                    Eliminar
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
-            Detalles de la grabación y datos procesados
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="flex flex-wrap items-center gap-2 mt-2 mb-2">
-          <div className="flex items-center gap-2 w-full">
-            <Label htmlFor="folder-select" className="min-w-20 flex items-center">
-              <div 
-                className="h-6 w-6 rounded-full flex items-center justify-center mr-2" 
-                style={{ backgroundColor: folder.color }}
-              >
-                <Folder className="h-3 w-3 text-white" />
-              </div>
-              <span>Carpeta:</span>
-            </Label>
+            <Separator className="my-2 dark:bg-custom-secondary/40" />
             
-            <Select 
-              value={selectedFolder} 
-              onValueChange={handleFolderChange}
-            >
-              <SelectTrigger 
-                id="folder-select"
-                className="h-9 w-full min-w-[200px] flex-1 dark:bg-custom-secondary/40 dark:border-custom-secondary"
-              >
-                <SelectValue placeholder="Seleccionar carpeta" />
-              </SelectTrigger>
-              <SelectContent className="dark:bg-[#001A29] dark:border-custom-secondary max-h-[300px]">
-                {folders.map(f => (
-                  <SelectItem key={f.id} value={f.id}>
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="h-3 w-3 rounded-full" 
-                        style={{ backgroundColor: f.color }}
-                      />
-                      <span className="truncate">{f.name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          {recording.subject && (
-            <div className="flex items-center gap-1 ml-auto text-xs bg-muted px-2 py-1 rounded-full dark:bg-custom-secondary/40 dark:text-white">
-              <Globe className="h-3 w-3" />
-              <span>{recording.subject}</span>
+            <div className="my-4">
+              <AudioPlayer 
+                audioUrl={recording.audioUrl} 
+                audioBlob={audioBlob || undefined}
+                initialDuration={recording.duration}
+                onTimeUpdate={handleTimeUpdate}
+                ref={audioPlayerRef}
+                onDurationChange={setAudioDuration}
+                onAddChapter={handleAddChapter}
+              />
+              
+              <AudioChaptersTimeline 
+                chapters={chapters}
+                duration={audioDuration}
+                currentTime={currentAudioTime}
+                onChapterClick={handleChapterClick}
+              />
             </div>
-          )}
-        </div>
-        
-        <Separator className="my-2 dark:bg-custom-secondary/40" />
-        
-        <div className="my-4">
-          <AudioPlayer 
-            audioUrl={recording.audioUrl} 
-            audioBlob={audioBlob || undefined}
-            initialDuration={recording.duration}
-            onTimeUpdate={handleTimeUpdate}
-            ref={audioPlayerRef}
-            onDurationChange={setAudioDuration}
-            onAddChapter={handleAddChapter}
-          />
-          
-          <AudioChaptersTimeline 
-            chapters={chapters}
-            duration={audioDuration}
-            currentTime={currentAudioTime}
-            onChapterClick={handleChapterClick}
-          />
-        </div>
-        
-        <div className="flex-1 overflow-hidden pt-4">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-            <TabsList className="mb-6">
-              <TabsTrigger value="webhook" className="flex items-center gap-1">
-                <Sparkles className="h-4 w-4" />
-                <span>Resumen y puntos fuertes</span>
-                {hasWebhookData && (
-                  <span className="bg-green-500 h-2 w-2 rounded-full ml-1"></span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="transcription" className="flex items-center gap-1">
-                <MessageSquare className="h-4 w-4" />
-                <span>Transcripción</span>
-              </TabsTrigger>
-              <TabsTrigger value="chapters" className="flex items-center gap-1">
-                <Bookmark className="h-4 w-4" />
-                <span>Capítulos</span>
-                <span className="bg-blue-500 text-xs text-white rounded-full h-5 w-5 flex items-center justify-center ml-1">
-                  {chapters.length}
-                </span>
-              </TabsTrigger>
-            </TabsList>
             
-            <div className="flex-1 overflow-hidden">
-              <div className="h-[60vh] md:h-[50vh] overflow-auto">
-                <TabsContent value="webhook" className="h-full p-4 bg-muted/20 rounded-md">
-                  <div className="h-full overflow-y-auto">
-                    <pre className="whitespace-pre-wrap text-sm">
-                      {formatWebhookResponse()}
-                    </pre>
-                  </div>
-                </TabsContent>
+            <div className="pt-4">
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="mb-6">
+                  <TabsTrigger value="webhook" className="flex items-center gap-1">
+                    <Sparkles className="h-4 w-4" />
+                    <span>Resumen y puntos fuertes</span>
+                    {hasWebhookData && (
+                      <span className="bg-green-500 h-2 w-2 rounded-full ml-1"></span>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="transcription" className="flex items-center gap-1">
+                    <MessageSquare className="h-4 w-4" />
+                    <span>Transcripción</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="chapters" className="flex items-center gap-1">
+                    <Bookmark className="h-4 w-4" />
+                    <span>Capítulos</span>
+                    <span className="bg-blue-500 text-xs text-white rounded-full h-5 w-5 flex items-center justify-center ml-1">
+                      {chapters.length}
+                    </span>
+                  </TabsTrigger>
+                </TabsList>
                 
-                <TabsContent value="transcription" className="h-full">
-                  <div className="grid gap-4 h-full">
-                    <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-md">
-                      <div className="flex-1 flex items-center gap-2">
-                        <Input 
-                          placeholder="Buscar en la transcripción..." 
-                          value={searchQuery} 
-                          onChange={e => setSearchQuery(e.target.value)}
-                          className="h-9"
-                        />
-                        <Button onClick={handleSearch} variant="secondary" size="sm" className="h-9">
-                          <Search className="h-4 w-4 mr-1" />
-                          Buscar
-                        </Button>
+                <div>
+                  <div className="max-h-[50vh]">
+                    <TabsContent value="webhook" className="h-full p-4 bg-muted/20 rounded-md">
+                      <div className="overflow-y-auto">
+                        <pre className="whitespace-pre-wrap text-sm">
+                          {formatWebhookResponse()}
+                        </pre>
                       </div>
-                      
-                      {searchResults.length > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Button 
-                            onClick={() => navigateSearch('prev')} 
-                            variant="outline" 
-                            size="sm"
-                            className="h-8 px-2"
-                          >
-                            Anterior
-                          </Button>
-                          <span className="text-xs">
-                            {currentSearchIndex + 1}/{searchResults.length}
-                          </span>
-                          <Button 
-                            onClick={() => navigateSearch('next')} 
-                            variant="outline" 
-                            size="sm"
-                            className="h-8 px-2"
-                          >
-                            Siguiente
-                          </Button>
-                        </div>
-                      )}
-                      
-                      <div className="flex items-center gap-1">
-                        <Button 
-                          onClick={toggleHighlightMode} 
-                          variant="ghost" 
-                          size="sm"
-                          className="h-9 flex items-center gap-1"
-                        >
-                          <PaintBucket className="h-4 w-4" />
-                          <span>Resaltar</span>
-                        </Button>
-                      </div>
-                    </div>
+                    </TabsContent>
                     
-                    <div className="relative flex-1">
-                      {showHighlightMenu && selectionRange && (
-                        <div 
-                          className="absolute z-10 bg-white dark:bg-slate-800 shadow-md rounded-md p-2 flex flex-col gap-2"
-                          style={{
-                            left: `${highlightMenuPosition.x}px`,
-                            top: `${highlightMenuPosition.y - 130}px`,
-                            transform: 'translate(-50%, -100%)'
-                          }}
-                        >
-                          <div className="grid grid-cols-4 gap-1">
-                            {highlightColors.map(color => (
-                              <button
-                                key={color.value}
-                                onClick={() => applyHighlight(color.value)}
-                                className="w-6 h-6 rounded-full border hover:scale-110 transition-transform"
-                                style={{ backgroundColor: color.value }}
-                                title={color.label}
-                              />
-                            ))}
+                    <TabsContent value="transcription" className="h-full">
+                      <div className="grid gap-4">
+                        <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-md">
+                          <div className="flex-1 flex items-center gap-2">
+                            <Input 
+                              placeholder="Buscar en la transcripción..." 
+                              value={searchQuery} 
+                              onChange={e => setSearchQuery(e.target.value)}
+                              className="h-9"
+                            />
+                            <Button onClick={handleSearch} variant="secondary" size="sm" className="h-9">
+                              <Search className="h-4 w-4 mr-1" />
+                              Buscar
+                            </Button>
                           </div>
                           
-                          <div className="flex justify-between mt-1">
-                            <input 
-                              type="color" 
-                              value={customColor} 
-                              onChange={handleCustomColorChange}
-                              className="w-8 h-8 cursor-pointer"
-                            />
-                            <button 
-                              onClick={() => applyHighlight(customColor)}
-                              className="text-xs bg-primary text-white px-2 py-1 rounded"
-                            >
-                              Aplicar
-                            </button>
-                            <button
-                              onClick={removeHighlightAtSelection}
-                              className="text-xs bg-destructive text-white px-2 py-1 rounded"
-                            >
-                              Quitar
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                      
-                      <ScrollArea className="h-full p-4 bg-muted/20 rounded-md">
-                        <div className="max-w-3xl mx-auto">
-                          {isEditingOutput ? (
-                            <div className="space-y-4">
-                              <Textarea 
-                                value={editedOutput}
-                                onChange={e => setEditedOutput(e.target.value)}
-                                className="min-h-[400px] font-mono text-sm"
-                              />
-                              <div className="flex justify-end gap-2">
-                                <Button variant="outline" onClick={handleCancelOutputEdit}>
-                                  Cancelar
-                                </Button>
-                                <Button onClick={handleSaveOutput}>
-                                  Guardar
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="relative">
-                              <pre 
-                                ref={transcriptionRef} 
-                                className="whitespace-pre-wrap text-sm" 
-                                onMouseUp={handleTextSelection}
+                          {searchResults.length > 0 && (
+                            <div className="flex items-center gap-1">
+                              <Button 
+                                onClick={() => navigateSearch('prev')} 
+                                variant="outline" 
+                                size="sm"
+                                className="h-8 px-2"
                               >
-                                {renderHighlightedText()}
-                              </pre>
-                              
-                              {!recording.output && (
-                                <div className="flex flex-col items-center justify-center py-10 space-y-4">
-                                  <p className="text-muted-foreground text-center">
-                                    No hay transcripción disponible para esta grabación.
-                                  </p>
-                                  <Button 
-                                    onClick={generateOutputWithGroq} 
-                                    disabled={isGeneratingOutput}
-                                  >
-                                    {isGeneratingOutput ? (
-                                      <>
-                                        <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
-                                        Generando...
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Sparkles className="h-4 w-4 mr-2" />
-                                        Generar con IA
-                                      </>
-                                    )}
-                                  </Button>
-                                </div>
-                              )}
-                              
-                              {recording.output && (
-                                <div className="flex justify-end mt-4">
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    onClick={() => setIsEditingOutput(true)}
-                                  >
-                                    <Edit className="h-4 w-4 mr-1" />
-                                    Editar
-                                  </Button>
-                                </div>
-                              )}
+                                Anterior
+                              </Button>
+                              <span className="text-xs">
+                                {currentSearchIndex + 1}/{searchResults.length}
+                              </span>
+                              <Button 
+                                onClick={() => navigateSearch('next')} 
+                                variant="outline" 
+                                size="sm"
+                                className="h-8 px-2"
+                              >
+                                Siguiente
+                              </Button>
                             </div>
                           )}
+                          
+                          <div className="flex items-center gap-1">
+                            <Button 
+                              onClick={toggleHighlightMode} 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-9 flex items-center gap-1"
+                            >
+                              <PaintBucket className="h-4 w-4" />
+                              <span>Resaltar</span>
+                            </Button>
+                          </div>
                         </div>
-                      </ScrollArea>
-                    </div>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="chapters" className="h-full">
-                  <div className="grid gap-4 h-full">
-                    <div className="flex items-center justify-between p-2 bg-muted/20 rounded-md">
-                      <h3 className="text-sm font-medium">Capítulos de audio</h3>
-                      <div className="flex items-center gap-2">
-                        <div className="text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3 inline mr-1" />
-                          {formatTimeNoMs(currentAudioTime)} / {formatTimeNoMs(audioDuration)}
+                        
+                        <div className="relative">
+                          {showHighlightMenu && selectionRange && (
+                            <div 
+                              className="absolute z-10 bg-white dark:bg-slate-800 shadow-md rounded-md p-2 flex flex-col gap-2"
+                              style={{
+                                left: `${highlightMenuPosition.x}px`,
+                                top: `${highlightMenuPosition.y - 130}px`,
+                                transform: 'translate(-50%, -100%)'
+                              }}
+                            >
+                              <div className="grid grid-cols-4 gap-1">
+                                {highlightColors.map(color => (
+                                  <button
+                                    key={color.value}
+                                    onClick={() => applyHighlight(color.value)}
+                                    className="w-6 h-6 rounded-full border hover:scale-110 transition-transform"
+                                    style={{ backgroundColor: color.value }}
+                                    title={color.label}
+                                  />
+                                ))}
+                              </div>
+                              
+                              <div className="flex justify-between mt-1">
+                                <input 
+                                  type="color" 
+                                  value={customColor} 
+                                  onChange={handleCustomColorChange}
+                                  className="w-8 h-8 cursor-pointer"
+                                />
+                                <button 
+                                  onClick={() => applyHighlight(customColor)}
+                                  className="text-xs bg-primary text-white px-2 py-1 rounded"
+                                >
+                                  Aplicar
+                                </button>
+                                <button
+                                  onClick={removeHighlightAtSelection}
+                                  className="text-xs bg-destructive text-white px-2 py-1 rounded"
+                                >
+                                  Quitar
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                          
+                          <ScrollArea className="h-[40vh] p-4 bg-muted/20 rounded-md">
+                            <div className="max-w-3xl mx-auto">
+                              {isEditingOutput ? (
+                                <div className="space-y-4">
+                                  <Textarea 
+                                    value={editedOutput}
+                                    onChange={e => setEditedOutput(e.target.value)}
+                                    className="min-h-[400px] font-mono text-sm"
+                                  />
+                                  <div className="flex justify-end gap-2">
+                                    <Button variant="outline" onClick={handleCancelOutputEdit}>
+                                      Cancelar
+                                    </Button>
+                                    <Button onClick={handleSaveOutput}>
+                                      Guardar
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="relative">
+                                  <pre 
+                                    ref={transcriptionRef} 
+                                    className="whitespace-pre-wrap text-sm" 
+                                    onMouseUp={handleTextSelection}
+                                  >
+                                    {renderHighlightedText()}
+                                  </pre>
+                                  
+                                  {!recording.output && (
+                                    <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                                      <p className="text-muted-foreground text-center">
+                                        No hay transcripción disponible para esta grabación.
+                                      </p>
+                                      <Button 
+                                        onClick={generateOutputWithGroq} 
+                                        disabled={isGeneratingOutput}
+                                      >
+                                        {isGeneratingOutput ? (
+                                          <>
+                                            <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
+                                            Generando...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Sparkles className="h-4 w-4 mr-2" />
+                                            Generar con IA
+                                          </>
+                                        )}
+                                      </Button>
+                                    </div>
+                                  )}
+                                  
+                                  {recording.output && (
+                                    <div className="flex justify-end mt-4">
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setIsEditingOutput(true)}
+                                      >
+                                        <Edit className="h-4 w-4 mr-1" />
+                                        Editar
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </ScrollArea>
                         </div>
                       </div>
-                    </div>
+                    </TabsContent>
                     
-                    <div className="overflow-y-auto bg-muted/20 rounded-md p-4">
-                      <AudioChaptersList 
-                        chapters={chapters}
-                        currentTime={currentAudioTime}
-                        duration={audioDuration}
-                        onChapterClick={handleChapterClick}
-                        onChapterDelete={handleDeleteChapter}
-                        onChapterEdit={handleEditChapter}
-                        activeChapterId={activeChapterId}
-                      />
-                    </div>
+                    <TabsContent value="chapters" className="h-full">
+                      <div className="grid gap-4">
+                        <div className="flex items-center justify-between p-2 bg-muted/20 rounded-md">
+                          <h3 className="text-sm font-medium">Capítulos de audio</h3>
+                          <div className="flex items-center gap-2">
+                            <div className="text-xs text-muted-foreground">
+                              <Clock className="h-3 w-3 inline mr-1" />
+                              {formatTimeNoMs(currentAudioTime)} / {formatTimeNoMs(audioDuration)}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="h-[40vh] overflow-y-auto bg-muted/20 rounded-md p-4">
+                          <AudioChaptersList 
+                            chapters={chapters}
+                            currentTime={currentAudioTime}
+                            duration={audioDuration}
+                            onChapterClick={handleChapterClick}
+                            onChapterDelete={handleDeleteChapter}
+                            onChapterEdit={handleEditChapter}
+                            activeChapterId={activeChapterId}
+                          />
+                        </div>
+                      </div>
+                    </TabsContent>
                   </div>
-                </TabsContent>
-              </div>
+                </div>
+              </Tabs>
             </div>
-          </Tabs>
-        </div>
+          </div>
+        </ScrollArea>
       </DialogContent>
       
       <Dialog open={showChapterDialog} onOpenChange={setShowChapterDialog}>
