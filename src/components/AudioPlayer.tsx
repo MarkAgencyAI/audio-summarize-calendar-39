@@ -1,8 +1,7 @@
-
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Waveform, Trash2, Plus, Scissors } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, WaveformIcon, Trash2, Plus, Scissors } from "lucide-react";
 import { formatTime } from "@/lib/audio-utils";
 import { toast } from "sonner";
 
@@ -31,10 +30,8 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
   onDurationChange,
   onAddChapter
 }, ref) => {
-  // Audio element ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
-  // State variables
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(initialDuration || 0);
   const [currentTime, setCurrentTime] = useState(0);
@@ -45,10 +42,8 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
   const [isDragging, setIsDragging] = useState(false);
   const [showWaveform, setShowWaveform] = useState(true);
   
-  // Timer for updating current time
   const timeUpdateIntervalRef = useRef<number | null>(null);
 
-  // Expose methods to parent component
   useImperativeHandle(ref, () => ({
     seekTo: (time: number) => {
       if (!audioRef.current) return;
@@ -61,18 +56,14 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
     }
   }));
   
-  // Initialize audio element
   useEffect(() => {
-    // Create new audio element
     const audio = new Audio();
     audioRef.current = audio;
     
-    // Configure audio element
     audio.preload = "metadata";
     audio.volume = volume;
     audio.playbackRate = playbackRate;
     
-    // Set up event listeners
     audio.addEventListener("loadedmetadata", handleLoadedMetadata);
     audio.addEventListener("ended", handleEnded);
     audio.addEventListener("canplay", () => setIsLoading(false));
@@ -80,15 +71,12 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
     audio.addEventListener("playing", () => setIsLoading(false));
     audio.addEventListener("timeupdate", handleTimeUpdate);
     
-    // Clean up on unmount
     return () => {
       if (audioRef.current) {
         const audio = audioRef.current;
         
-        // Stop playback
         audio.pause();
         
-        // Remove event listeners
         audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
         audio.removeEventListener("ended", handleEnded);
         audio.removeEventListener("canplay", () => setIsLoading(false));
@@ -96,12 +84,10 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
         audio.removeEventListener("playing", () => setIsLoading(false));
         audio.removeEventListener("timeupdate", handleTimeUpdate);
         
-        // Clear interval if it exists
         if (timeUpdateIntervalRef.current) {
           window.clearInterval(timeUpdateIntervalRef.current);
         }
         
-        // Revoke object URL if needed
         if (audio.src.startsWith('blob:')) {
           URL.revokeObjectURL(audio.src);
         }
@@ -109,13 +95,11 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
     };
   }, []);
   
-  // Update audio source when audioUrl or audioBlob changes
   useEffect(() => {
     if (!audioRef.current) return;
     
     setIsLoading(true);
     
-    // Use audioBlob if available, otherwise use audioUrl
     if (audioBlob instanceof Blob) {
       const objectUrl = URL.createObjectURL(audioBlob);
       audioRef.current.src = objectUrl;
@@ -123,46 +107,39 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
       audioRef.current.src = audioUrl;
     }
     
-    // Autoplay if requested
     if (autoplay) {
       playAudio();
     }
   }, [audioUrl, audioBlob]);
   
-  // Update volume when it changes
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = isMuted ? 0 : volume;
     }
   }, [volume, isMuted]);
   
-  // Update playback rate when it changes
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.playbackRate = playbackRate;
     }
   }, [playbackRate]);
   
-  // Handle metadata loaded event - get audio duration
   const handleLoadedMetadata = () => {
     if (!audioRef.current) return;
     
     const audioDuration = audioRef.current.duration;
     
-    // Update duration if it's a valid number
     if (audioDuration && !isNaN(audioDuration) && isFinite(audioDuration)) {
       setDuration(audioDuration);
       if (onDurationChange) {
         onDurationChange(audioDuration);
       }
     } else if (initialDuration && initialDuration > 0) {
-      // Fall back to initialDuration if available
       setDuration(initialDuration);
       if (onDurationChange) {
         onDurationChange(initialDuration);
       }
     } else {
-      // Use a default duration if all else fails
       setDuration(100);
       if (onDurationChange) {
         onDurationChange(100);
@@ -172,7 +149,6 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
     setIsLoading(false);
   };
   
-  // Handle time update event - update current time
   const handleTimeUpdate = () => {
     if (!audioRef.current || isDragging) return;
     
@@ -185,7 +161,6 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
     }
   };
   
-  // Handle ended event
   const handleEnded = () => {
     setIsPlaying(false);
     setCurrentTime(0);
@@ -195,7 +170,6 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
     }
   };
   
-  // Play audio
   const playAudio = () => {
     if (!audioRef.current) return;
     
@@ -209,7 +183,6 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
       });
   };
   
-  // Pause audio
   const pauseAudio = () => {
     if (!audioRef.current) return;
     
@@ -217,7 +190,6 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
     setIsPlaying(false);
   };
   
-  // Toggle play/pause
   const togglePlayPause = () => {
     if (isPlaying) {
       pauseAudio();
@@ -226,7 +198,6 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
     }
   };
   
-  // Skip forward 10 seconds
   const skipForward = () => {
     if (!audioRef.current) return;
     
@@ -240,7 +211,6 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
     }
   };
   
-  // Skip backward 10 seconds
   const skipBackward = () => {
     if (!audioRef.current) return;
     
@@ -254,7 +224,6 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
     }
   };
   
-  // Seek to a specific position
   const handleSeek = (value: number[]) => {
     if (!audioRef.current) return;
     
@@ -268,7 +237,6 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
     }
   };
   
-  // Change volume
   const handleVolumeChange = (value: number[]) => {
     const newVolume = value[0];
     setVolume(newVolume);
@@ -280,35 +248,29 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
     }
   };
   
-  // Toggle mute
   const toggleMute = () => {
     setIsMuted(!isMuted);
   };
   
-  // Change playback rate
   const changePlaybackRate = (rate: number) => {
     setPlaybackRate(rate);
   };
   
-  // Toggle waveform display
   const toggleWaveform = () => {
     setShowWaveform(!showWaveform);
   };
   
-  // Add chapter at current position
   const handleAddChapter = () => {
     if (onAddChapter) {
       onAddChapter(currentTime);
     }
   };
   
-  // Calculate progress for the progress bar
   const calculateProgress = () => {
     if (duration <= 0) return 0;
     return (currentTime / duration) * 100;
   };
   
-  // Validate and ensure duration is a positive number
   const validDuration = duration > 0 && isFinite(duration) ? duration : 100;
   
   const formattedCurrentTime = formatTime(Math.floor(currentTime));
@@ -316,7 +278,6 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
   return (
     <div className="w-full bg-background border rounded-md p-4 shadow-sm">
       <div className="space-y-4">
-        {/* Waveform and top controls */}
         <div className="flex items-center justify-between mb-2">
           <Button 
             variant="ghost" 
@@ -324,7 +285,7 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
             onClick={toggleWaveform}
             className="text-xs h-8 flex items-center gap-1"
           >
-            <Waveform className="h-4 w-4" />
+            <WaveformIcon className="h-4 w-4" />
             {showWaveform ? "Hide waveform" : "Show waveform"}
           </Button>
           
@@ -350,74 +311,68 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
           </div>
         </div>
         
-        {/* Waveform visualization */}
-        {showWaveform && (
-          <div className="relative w-full h-24 bg-gray-100 rounded-lg overflow-hidden mb-2">
-            <div className="absolute inset-0 flex items-center justify-start">
-              <div className="h-full w-1/3 bg-blue-500/30 border-r-2 border-blue-500 flex items-center justify-center">
-                <div className="w-full h-16 px-4">
-                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
-                    <path 
-                      d="M 0,50 Q 10,40 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
-                      stroke="rgb(59, 130, 246)" 
-                      strokeWidth="2" 
-                      fill="none"
-                    />
-                    <path 
-                      d="M 0,50 Q 10,60 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
-                      stroke="rgb(59, 130, 246)" 
-                      strokeWidth="2" 
-                      fill="none"
-                    />
-                  </svg>
-                </div>
+        <div className="relative w-full h-24 bg-gray-100 rounded-lg overflow-hidden mb-2">
+          <div className="absolute inset-0 flex items-center justify-start">
+            <div className="h-full w-1/3 bg-blue-500/30 border-r-2 border-blue-500 flex items-center justify-center">
+              <div className="w-full h-16 px-4">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
+                  <path 
+                    d="M 0,50 Q 10,40 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
+                    stroke="rgb(59, 130, 246)" 
+                    strokeWidth="2" 
+                    fill="none"
+                  />
+                  <path 
+                    d="M 0,50 Q 10,60 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
+                    stroke="rgb(59, 130, 246)" 
+                    strokeWidth="2" 
+                    fill="none"
+                  />
+                </svg>
               </div>
-              <div className="h-full flex-1 flex items-center justify-center">
-                <div className="w-full h-10 px-4">
-                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
-                    <path 
-                      d="M 0,50 Q 10,45 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
-                      stroke="rgb(156, 163, 175)" 
-                      strokeWidth="1.5" 
-                      fill="none"
-                    />
-                    <path 
-                      d="M 0,50 Q 10,55 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
-                      stroke="rgb(156, 163, 175)" 
-                      strokeWidth="1.5" 
-                      fill="none"
-                    />
-                  </svg>
-                </div>
-              </div>
-              
-              {/* Current position marker */}
-              <div 
-                className="absolute top-0 bottom-0 w-0.5 bg-red-500"
-                style={{ 
-                  left: `${(currentTime / validDuration) * 100}%`,
-                  transform: 'translateX(-50%)'
-                }}
-              >
-                <div className="w-3 h-3 rounded-full bg-red-500 absolute -top-1.5 left-1/2 transform -translate-x-1/2"></div>
+            </div>
+            <div className="h-full flex-1 flex items-center justify-center">
+              <div className="w-full h-10 px-4">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
+                  <path 
+                    d="M 0,50 Q 10,45 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
+                    stroke="rgb(156, 163, 175)" 
+                    strokeWidth="1.5" 
+                    fill="none"
+                  />
+                  <path 
+                    d="M 0,50 Q 10,55 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
+                    stroke="rgb(156, 163, 175)" 
+                    strokeWidth="1.5" 
+                    fill="none"
+                  />
+                </svg>
               </div>
             </div>
             
-            {/* Time markers */}
-            <div className="absolute bottom-0 left-0 right-0 flex justify-between px-2 text-xs text-gray-500">
-              <span>0:00</span>
-              <span>0:30</span>
-              <span>1:00</span>
-              <span>1:30</span>
-              <span>2:00</span>
-              <span>2:30</span>
-              <span>3:00</span>
-              <span>{formatTime(Math.floor(validDuration))}</span>
+            <div 
+              className="absolute top-0 bottom-0 w-0.5 bg-red-500"
+              style={{ 
+                left: `${(currentTime / validDuration) * 100}%`,
+                transform: 'translateX(-50%)'
+              }}
+            >
+              <div className="w-3 h-3 rounded-full bg-red-500 absolute -top-1.5 left-1/2 transform -translate-x-1/2"></div>
             </div>
           </div>
-        )}
+          
+          <div className="absolute bottom-0 left-0 right-0 flex justify-between px-2 text-xs text-gray-500">
+            <span>0:00</span>
+            <span>0:30</span>
+            <span>1:00</span>
+            <span>1:30</span>
+            <span>2:00</span>
+            <span>2:30</span>
+            <span>3:00</span>
+            <span>{formatTime(Math.floor(validDuration))}</span>
+          </div>
+        </div>
         
-        {/* Timeline seeker */}
         <div className="w-full space-y-1">
           <div className="relative">
             <Slider 
@@ -437,7 +392,6 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
           </div>
         </div>
         
-        {/* Controls - Improved layout */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Button 
