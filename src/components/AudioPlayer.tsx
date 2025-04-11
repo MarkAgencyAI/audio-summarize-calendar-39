@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ interface AudioPlayerProps {
   onEnded?: () => void;
   onTimeUpdate?: (time: number) => void;
   onDurationChange?: (duration: number) => void;
-  onAddChapter?: (time: number) => void;
+  onAddChapter?: (startTime: number, endTime: number) => void;
 }
 
 export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
@@ -31,6 +32,7 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
   onAddChapter
 }, ref) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const waveformRef = useRef<HTMLDivElement>(null);
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(initialDuration || 0);
@@ -41,6 +43,12 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
   const [isLoading, setIsLoading] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const [showWaveform, setShowWaveform] = useState(true);
+  
+  // Selection state
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectionStart, setSelectionStart] = useState<number | null>(null);
+  const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
+  const [mouseDownPosition, setMouseDownPosition] = useState<{ x: number, clientX: number } | null>(null);
   
   const timeUpdateIntervalRef = useRef<number | null>(null);
 
@@ -261,8 +269,66 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
   };
   
   const handleAddChapter = () => {
-    if (onAddChapter) {
-      onAddChapter(currentTime);
+    if (onAddChapter && selectionStart !== null && selectionEnd !== null) {
+      // Ensure start time is always less than end time
+      const startTime = Math.min(selectionStart, selectionEnd);
+      const endTime = Math.max(selectionStart, selectionEnd);
+      
+      onAddChapter(startTime, endTime);
+      
+      // Clear selection after adding chapter
+      clearSelection();
+    } else {
+      toast.error("Primero selecciona un fragmento de audio");
+    }
+  };
+  
+  const clearSelection = () => {
+    setSelectionStart(null);
+    setSelectionEnd(null);
+    setIsSelecting(false);
+    setMouseDownPosition(null);
+  };
+  
+  const handleWaveformMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!waveformRef.current) return;
+    
+    const rect = waveformRef.current.getBoundingClientRect();
+    const relativeX = e.clientX - rect.left;
+    const percentage = relativeX / rect.width;
+    const timeValue = percentage * duration;
+    
+    setIsSelecting(true);
+    setSelectionStart(timeValue);
+    setSelectionEnd(null);
+    setMouseDownPosition({ x: relativeX, clientX: e.clientX });
+  };
+  
+  const handleWaveformMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isSelecting || !waveformRef.current || !mouseDownPosition) return;
+    
+    const rect = waveformRef.current.getBoundingClientRect();
+    const relativeX = e.clientX - rect.left;
+    const percentage = relativeX / rect.width;
+    const timeValue = percentage * duration;
+    
+    setSelectionEnd(timeValue);
+  };
+  
+  const handleWaveformMouseUp = () => {
+    if (isSelecting && selectionStart !== null && selectionEnd === null) {
+      // If the user just clicked without dragging, clear the selection
+      clearSelection();
+    } else {
+      setIsSelecting(false);
+      setMouseDownPosition(null);
+    }
+  };
+  
+  const handleWaveformMouseLeave = () => {
+    if (isSelecting && selectionStart !== null && selectionEnd === null) {
+      // If the user moves the mouse out before dragging, clear the selection
+      clearSelection();
     }
   };
   
@@ -275,6 +341,18 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
   
   const formattedCurrentTime = formatTime(Math.floor(currentTime));
   
+  // Calculate selection position and width as percentage
+  const selectionStartPercent = selectionStart !== null ? (selectionStart / validDuration) * 100 : null;
+  const selectionEndPercent = selectionEnd !== null ? (selectionEnd / validDuration) * 100 : null;
+  
+  const selectionLeftPercent = selectionStartPercent !== null && selectionEndPercent !== null
+    ? Math.min(selectionStartPercent, selectionEndPercent)
+    : null;
+    
+  const selectionWidthPercent = selectionStartPercent !== null && selectionEndPercent !== null
+    ? Math.abs(selectionEndPercent - selectionStartPercent)
+    : null;
+  
   return (
     <div className="w-full bg-background border rounded-md p-4 shadow-sm">
       <div className="space-y-4">
@@ -286,70 +364,94 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
             className="text-xs h-8 flex items-center gap-1"
           >
             <AudioWaveform className="h-4 w-4" />
-            {showWaveform ? "Hide waveform" : "Show waveform"}
+            {showWaveform ? "Ocultar forma de onda" : "Mostrar forma de onda"}
           </Button>
           
           <div className="flex items-center gap-2">
             <Button 
               variant="ghost" 
               size="sm" 
+              onClick={clearSelection}
+              disabled={selectionStart === null && selectionEnd === null}
               className="text-xs h-8 flex items-center gap-1 text-red-500 hover:text-red-600"
             >
               <Trash2 className="h-4 w-4" />
-              Delete selection
+              Limpiar selección
             </Button>
             
             <Button 
               variant="outline" 
               size="sm" 
               onClick={handleAddChapter}
+              disabled={selectionStart === null || selectionEnd === null}
               className="text-xs h-8 flex items-center gap-1 bg-purple-100 text-purple-700 border-purple-300 hover:bg-purple-200"
             >
               <Scissors className="h-4 w-4" />
-              Add chapter at {formattedCurrentTime}
+              Crear capítulo con selección
             </Button>
           </div>
         </div>
         
-        <div className="relative w-full h-24 bg-gray-100 rounded-lg overflow-hidden mb-2">
+        <div 
+          ref={waveformRef}
+          className="relative w-full h-24 bg-gray-100 rounded-lg overflow-hidden mb-2 select-none cursor-pointer"
+          onMouseDown={handleWaveformMouseDown}
+          onMouseMove={handleWaveformMouseMove}
+          onMouseUp={handleWaveformMouseUp}
+          onMouseLeave={handleWaveformMouseLeave}
+        >
           <div className="absolute inset-0 flex items-center justify-start">
-            <div className="h-full w-1/3 bg-blue-500/30 border-r-2 border-blue-500 flex items-center justify-center">
+            {/* Full waveform in white */}
+            <div className="h-full w-full flex items-center justify-center">
               <div className="w-full h-16 px-4">
                 <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
                   <path 
                     d="M 0,50 Q 10,40 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
-                    stroke="rgb(59, 130, 246)" 
+                    stroke="white" 
                     strokeWidth="2" 
                     fill="none"
                   />
                   <path 
                     d="M 0,50 Q 10,60 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
-                    stroke="rgb(59, 130, 246)" 
+                    stroke="white" 
                     strokeWidth="2" 
-                    fill="none"
-                  />
-                </svg>
-              </div>
-            </div>
-            <div className="h-full flex-1 flex items-center justify-center">
-              <div className="w-full h-10 px-4">
-                <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
-                  <path 
-                    d="M 0,50 Q 10,45 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
-                    stroke="rgb(156, 163, 175)" 
-                    strokeWidth="1.5" 
-                    fill="none"
-                  />
-                  <path 
-                    d="M 0,50 Q 10,55 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
-                    stroke="rgb(156, 163, 175)" 
-                    strokeWidth="1.5" 
                     fill="none"
                   />
                 </svg>
               </div>
             </div>
             
+            {/* Selected region for chapter creation */}
+            {selectionLeftPercent !== null && selectionWidthPercent !== null && (
+              <div 
+                className="absolute h-full bg-blue-500/30 border-l-2 border-r-2 border-blue-500 pointer-events-none"
+                style={{ 
+                  left: `${selectionLeftPercent}%`, 
+                  width: `${selectionWidthPercent}%`
+                }}
+              >
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="w-full h-16 px-4">
+                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
+                      <path 
+                        d="M 0,50 Q 10,40 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
+                        stroke="rgb(59, 130, 246)" 
+                        strokeWidth="2" 
+                        fill="none"
+                      />
+                      <path 
+                        d="M 0,50 Q 10,60 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
+                        stroke="rgb(59, 130, 246)" 
+                        strokeWidth="2" 
+                        fill="none"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Current time indicator */}
             <div 
               className="absolute top-0 bottom-0 w-0.5 bg-red-500"
               style={{ 
@@ -362,13 +464,12 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
           </div>
           
           <div className="absolute bottom-0 left-0 right-0 flex justify-between px-2 text-xs text-gray-500">
-            <span>0:00</span>
-            <span>0:30</span>
-            <span>1:00</span>
-            <span>1:30</span>
-            <span>2:00</span>
-            <span>2:30</span>
-            <span>3:00</span>
+            <span>{formatTime(0)}</span>
+            <span>{formatTime(Math.floor(validDuration / 6))}</span>
+            <span>{formatTime(Math.floor(validDuration / 3))}</span>
+            <span>{formatTime(Math.floor(validDuration / 2))}</span>
+            <span>{formatTime(Math.floor(2 * validDuration / 3))}</span>
+            <span>{formatTime(Math.floor(5 * validDuration / 6))}</span>
             <span>{formatTime(Math.floor(validDuration))}</span>
           </div>
         </div>

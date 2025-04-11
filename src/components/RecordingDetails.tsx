@@ -597,10 +597,16 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
     }
   };
 
-  const handleAddChapter = () => {
+  const handleAddChapter = (startTime: number, endTime: number) => {
     setNewChapterTitle(`Capítulo ${chapters.length + 1}`);
     setNewChapterColor(chapterColors[chapters.length % chapterColors.length]);
-    setCurrentChapter(null);
+    setCurrentChapter({
+      id: uuidv4(),
+      title: `Capítulo ${chapters.length + 1}`,
+      startTime: startTime,
+      endTime: endTime,
+      color: chapterColors[chapters.length % chapterColors.length]
+    });
     setShowChapterDialog(true);
   };
 
@@ -631,12 +637,29 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
     let updatedChapters: AudioChapter[];
     
     if (currentChapter) {
-      updatedChapters = chapters.map(chapter => 
-        chapter.id === currentChapter.id 
-          ? { ...chapter, title: newChapterTitle, color: newChapterColor }
-          : chapter
-      );
+      if (chapters.some(ch => ch.id === currentChapter.id)) {
+        // Editing existing chapter
+        updatedChapters = chapters.map(chapter => 
+          chapter.id === currentChapter.id 
+            ? { 
+                ...chapter, 
+                title: newChapterTitle, 
+                color: newChapterColor,
+                startTime: currentChapter.startTime,
+                endTime: currentChapter.endTime
+              }
+            : chapter
+        );
+      } else {
+        // Adding new chapter with predefined start and end times
+        updatedChapters = [...chapters, {
+          ...currentChapter,
+          title: newChapterTitle,
+          color: newChapterColor
+        }];
+      }
     } else {
+      // Legacy handling for button click (not fragment selection)
       const newChapter: AudioChapter = {
         id: uuidv4(),
         title: newChapterTitle,
@@ -666,7 +689,9 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
     });
     
     setShowChapterDialog(false);
-    toast.success(currentChapter ? "Capítulo actualizado" : "Capítulo creado");
+    toast.success(currentChapter && chapters.some(ch => ch.id === currentChapter.id) 
+      ? "Capítulo actualizado" 
+      : "Capítulo creado");
   };
 
   const handleChapterClick = (chapter: AudioChapter) => {
@@ -867,61 +892,77 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                 <TabsContent value="transcription" className="h-full mt-0 overflow-hidden">
                   <div className="h-full overflow-hidden">
                     <div className="mb-4">
-                      <div className="flex items-center justify-between flex-wrap gap-2">
-                        <h3 className="font-medium mb-2 dark:text-custom-accent text-[#005c5f] dark:text-[#f1f2f6]">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-medium dark:text-custom-accent text-[#005c5f] dark:text-[#f1f2f6]">
                           Transcripción del Audio
                         </h3>
-                        <div className="flex gap-1 flex-wrap">
+                        
+                        <div className="flex gap-2">
                           {isEditingOutput ? (
-                            <>
-                              <Button variant="ghost" size="sm" onClick={handleSaveOutput} className="h-7 py-0">
-                                <Save className="h-4 w-4 mr-1" />
-                                Guardar
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={handleCancelOutputEdit} className="h-7 py-0">
-                                <X className="h-4 w-4 mr-1" />
-                                Cancelar
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button variant="ghost" size="sm" onClick={() => setIsEditingOutput(true)} className="h-7 py-0">
-                                <Edit className="h-4 w-4 mr-1" />
-                                Editar
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={handleSaveOutput} 
+                                className="h-8 bg-green-50 text-green-700 border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400"
+                              >
+                                <Save className="h-4 w-4 mr-1.5" />
+                                <span>Guardar</span>
                               </Button>
                               <Button 
-                                variant="ghost" 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={handleCancelOutputEdit} 
+                                className="h-8"
+                              >
+                                <X className="h-4 w-4 mr-1.5" />
+                                <span>Cancelar</span>
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => setIsEditingOutput(true)} 
+                                className="h-8"
+                              >
+                                <Edit className="h-4 w-4 mr-1.5" />
+                                <span>Editar</span>
+                              </Button>
+                              <Button 
+                                variant="outline" 
                                 size="sm" 
                                 onClick={generateOutputWithGroq}
                                 disabled={isGeneratingOutput}
-                                className="h-7 py-0"
+                                className="h-8 bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400"
                               >
-                                <Sparkles className="h-4 w-4 mr-1" />
-                                {isGeneratingOutput ? "Generando..." : "IA"}
+                                <Sparkles className="h-4 w-4 mr-1.5" />
+                                <span>{isGeneratingOutput ? "Generando..." : "Generar con IA"}</span>
                               </Button>
                               <Button 
-                                variant="ghost" 
+                                variant="outline" 
                                 size="sm" 
                                 onClick={toggleHighlightMode}
-                                className="h-7 py-0"
+                                className="h-8 bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400"
                               >
-                                <PaintBucket className="h-4 w-4 mr-1" />
-                                Resaltar
+                                <PaintBucket className="h-4 w-4 mr-1.5" />
+                                <span>Resaltar</span>
                               </Button>
-                            </>
+                            </div>
                           )}
                         </div>
                       </div>
                       
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-4">
+                        <div className="flex items-center gap-2 bg-gray-50 dark:bg-custom-secondary/10 rounded-md p-2">
                           <div className="flex-1 relative">
                             <Input
                               placeholder="Buscar en la transcripción..."
                               value={searchQuery}
                               onChange={(e) => setSearchQuery(e.target.value)}
                               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                              className="pr-8"
+                              className="pr-10"
                             />
                             <Button
                               variant="ghost"
@@ -932,66 +973,76 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                               <Search className="h-4 w-4" />
                             </Button>
                           </div>
-                        </div>
-                        
-                        {searchResults.length > 0 && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => navigateSearch('prev')}
-                              className="h-7 w-7 p-0"
-                            >
-                              &lt;
-                            </Button>
-                            <span>
-                              {currentSearchIndex + 1} de {searchResults.length}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => navigateSearch('next')}
-                              className="h-7 w-7 p-0"
-                            >
-                              &gt;
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {isEditingOutput ? (
-                        <Textarea
-                          value={editedOutput}
-                          onChange={(e) => setEditedOutput(e.target.value)}
-                          className="min-h-[40vh] mt-2 font-mono text-sm"
-                        />
-                      ) : (
-                        <ScrollArea className="h-[40vh] mt-2 bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90">
-                          {recording.output ? (
-                            <pre
-                              ref={transcriptionRef}
-                              className="whitespace-pre-wrap text-sm"
-                              onMouseUp={handleTextSelection}
-                            >
-                              {renderHighlightedText()}
-                            </pre>
-                          ) : (
-                            <div className="text-center text-muted-foreground py-8">
-                              <p>No hay transcripción disponible para esta grabación.</p>
+                          
+                          {searchResults.length > 0 && (
+                            <div className="flex items-center gap-1 bg-white dark:bg-custom-secondary/20 rounded-md px-2 py-1 border">
                               <Button
-                                variant="outline"
+                                variant="ghost"
                                 size="sm"
-                                onClick={generateOutputWithGroq}
-                                className="mt-2"
-                                disabled={isGeneratingOutput}
+                                onClick={() => navigateSearch('prev')}
+                                className="h-7 w-7 p-0"
                               >
-                                <Sparkles className="h-4 w-4 mr-1" />
-                                {isGeneratingOutput ? "Generando..." : "Generar con IA"}
+                                &lt;
+                              </Button>
+                              <span className="text-sm">
+                                {currentSearchIndex + 1} de {searchResults.length}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => navigateSearch('next')}
+                                className="h-7 w-7 p-0"
+                              >
+                                &gt;
                               </Button>
                             </div>
                           )}
-                        </ScrollArea>
-                      )}
+                        </div>
+                        
+                        {isEditingOutput ? (
+                          <Textarea
+                            value={editedOutput}
+                            onChange={(e) => setEditedOutput(e.target.value)}
+                            className="min-h-[40vh] font-mono text-sm resize-none"
+                            placeholder="Escribe la transcripción aquí..."
+                          />
+                        ) : (
+                          <div className="bg-white dark:bg-custom-secondary/10 border rounded-md shadow-sm">
+                            <ScrollArea className="h-[40vh] p-4 overflow-y-auto">
+                              {recording.output ? (
+                                <pre
+                                  ref={transcriptionRef}
+                                  className="whitespace-pre-wrap text-sm font-sans"
+                                  onMouseUp={handleTextSelection}
+                                >
+                                  {renderHighlightedText()}
+                                </pre>
+                              ) : (
+                                <div className="text-center text-muted-foreground py-8">
+                                  <p className="mb-4">No hay transcripción disponible para esta grabación.</p>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={generateOutputWithGroq}
+                                    className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400"
+                                    disabled={isGeneratingOutput}
+                                  >
+                                    <Sparkles className="h-4 w-4 mr-1.5" />
+                                    {isGeneratingOutput ? "Generando..." : "Generar con IA"}
+                                  </Button>
+                                </div>
+                              )}
+                            </ScrollArea>
+                            
+                            {recording.output && recording.output.length > 0 && (
+                              <div className="border-t px-4 py-2 flex justify-between items-center text-xs text-muted-foreground">
+                                <span>{recording.output.length} caracteres</span>
+                                <span>Última actualización: {new Date(recording.updatedAt || recording.createdAt).toLocaleDateString()}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                       
                       {showHighlightMenu && (
                         <div
@@ -1030,28 +1081,39 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                       <h3 className="font-medium dark:text-custom-accent text-[#005c5f] dark:text-[#f1f2f6]">
                         Capítulos
                       </h3>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleAddChapter}
-                        className="flex items-center"
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Agregar capítulo
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toast.info("Selecciona un fragmento en la forma de onda y luego haz clic en 'Crear capítulo con selección'")}
+                          className="flex items-center h-8"
+                        >
+                          <Scissors className="h-4 w-4 mr-1.5" />
+                          <span>Instrucciones</span>
+                        </Button>
+                      </div>
                     </div>
                     
-                    <ScrollArea className="h-[40vh] bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90">
-                      <AudioChaptersList
-                        chapters={chapters}
-                        currentTime={currentAudioTime}
-                        duration={audioDuration}
-                        onChapterClick={handleChapterClick}
-                        onChapterEdit={handleEditChapter}
-                        onChapterDelete={handleDeleteChapter}
-                        activeChapterId={activeChapterId}
-                      />
-                    </ScrollArea>
+                    <div className="bg-white dark:bg-custom-secondary/10 border rounded-md shadow-sm">
+                      <ScrollArea className="h-[40vh] p-4 overflow-y-auto">
+                        <AudioChaptersList
+                          chapters={chapters}
+                          currentTime={currentAudioTime}
+                          duration={audioDuration}
+                          onChapterClick={handleChapterClick}
+                          onChapterEdit={handleEditChapter}
+                          onChapterDelete={handleDeleteChapter}
+                          activeChapterId={activeChapterId}
+                        />
+                      </ScrollArea>
+                      
+                      {chapters.length === 0 && (
+                        <div className="text-center text-muted-foreground py-8">
+                          <p className="mb-4">Aún no hay capítulos definidos para esta grabación.</p>
+                          <p className="text-sm">Para crear un capítulo, selecciona un fragmento en la forma de onda y luego haz clic en "Crear capítulo con selección".</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </TabsContent>
               </div>
@@ -1064,7 +1126,7 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
             <DialogContent className="dark:bg-[#001A29] dark:border-custom-secondary max-w-[95vw] md:max-w-md">
               <DialogHeader>
                 <DialogTitle>
-                  {currentChapter ? "Editar capítulo" : "Nuevo capítulo"}
+                  {currentChapter && chapters.some(ch => ch.id === currentChapter.id) ? "Editar capítulo" : "Nuevo capítulo"}
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
@@ -1098,16 +1160,25 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                 <div className="space-y-2">
                   <Label>Tiempo de inicio</Label>
                   <div className="text-base font-mono bg-muted/50 p-2 rounded-md text-center dark:bg-custom-secondary/40">
-                    {formatTime(currentAudioTime)}
+                    {formatTime(currentChapter ? currentChapter.startTime : currentAudioTime)}
                   </div>
                 </div>
+                
+                {currentChapter && currentChapter.endTime && (
+                  <div className="space-y-2">
+                    <Label>Tiempo de fin</Label>
+                    <div className="text-base font-mono bg-muted/50 p-2 rounded-md text-center dark:bg-custom-secondary/40">
+                      {formatTime(currentChapter.endTime)}
+                    </div>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="ghost" onClick={() => setShowChapterDialog(false)}>
                   Cancelar
                 </Button>
                 <Button onClick={handleSaveChapter}>
-                  {currentChapter ? "Actualizar" : "Crear"}
+                  {currentChapter && chapters.some(ch => ch.id === currentChapter.id) ? "Actualizar" : "Crear"}
                 </Button>
               </DialogFooter>
             </DialogContent>
