@@ -59,6 +59,7 @@
   }
 }
 
+/* Glassmorphism styles for card elements */
 .glassmorphism {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
@@ -70,6 +71,7 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Calendar grid for date display */
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -89,6 +91,7 @@
   text-overflow: ellipsis;
 }
 
+/* Responsive adjustments for smaller screens */
 @media (max-width: 640px) {
   .calendar-date {
     min-height: 0;
@@ -102,11 +105,48 @@
   }
 }
 
-/* Add custom utilities for better text wrapping */
+/* Custom text wrapping utilities for better transcription display */
 .overflow-wrap-anywhere {
   overflow-wrap: anywhere;
+  word-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
 }
 
 .break-words {
   word-break: break-word;
+}
+
+/* Improved scrollbar styles */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(155, 155, 155, 0.5);
+  border-radius: 20px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(80, 80, 80, 0.5);
+}
+
+/* Prevent horizontal overflow */
+.no-horizontal-overflow {
+  max-width: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  white-space: normal;
+}
+
+/* Add highlights and marks styling */
+mark {
+  padding: 0 0.1em;
+  border-radius: 0.2em;
+  display: inline;
 }

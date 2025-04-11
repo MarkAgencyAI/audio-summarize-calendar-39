@@ -159,18 +159,15 @@ export function useHighlights(
       return acc;
     }, []);
     
-    const segments: JSX.Element[] = [];
+    const segments: React.ReactNode[] = [];
     let currentPosition = 0;
     
     for (const highlight of nonOverlappingHighlights) {
       if (highlight.startPosition > currentPosition) {
         segments.push(
-          <span 
-            key={`text-${currentPosition}`}
-            className="max-w-full overflow-hidden break-words"
-          >
+          <React.Fragment key={`text-${currentPosition}`}>
             {text.substring(currentPosition, highlight.startPosition)}
-          </span>
+          </React.Fragment>
         );
       }
       
@@ -182,12 +179,13 @@ export function useHighlights(
             position: 'relative', 
             borderRadius: '2px',
             maxWidth: '100%',
-            overflow: 'hidden',
-            wordBreak: 'break-word'
+            overflowWrap: 'break-word',
+            wordBreak: 'break-word',
+            whiteSpace: 'normal',
+            display: 'inline'
           }}
           onDoubleClick={() => removeHighlight(highlight.id)}
           title="Doble clic para eliminar el resaltado"
-          className="max-w-full break-words"
         >
           {text.substring(highlight.startPosition, highlight.endPosition)}
         </mark>
@@ -198,12 +196,9 @@ export function useHighlights(
     
     if (currentPosition < text.length) {
       segments.push(
-        <span 
-          key={`text-end`}
-          className="max-w-full overflow-hidden break-words"
-        >
+        <React.Fragment key="text-end">
           {text.substring(currentPosition)}
-        </span>
+        </React.Fragment>
       );
     }
     

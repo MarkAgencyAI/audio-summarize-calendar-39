@@ -138,7 +138,10 @@ export function LiveTranscriptionSheet({
     return "Esperando resumen y puntos fuertes...";
   })();
   
-  const sheetWidth = isMobile ? "w-[95vw]" : "sm:max-w-md md:max-w-xl";
+  // Responsive sheet width based on screen size
+  const sheetSizeClass = isMobile 
+    ? "w-[95vw] max-w-full" 
+    : "sm:max-w-md md:max-w-xl lg:max-w-2xl";
   
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
@@ -148,15 +151,15 @@ export function LiveTranscriptionSheet({
         </SheetTrigger>
       ) : (
         <SheetTrigger asChild>
-          
+          {/* Empty trigger - triggered programmatically */}
         </SheetTrigger>
       )}
       
-      <SheetContent side="right" className={`${sheetWidth} p-0 flex flex-col overflow-hidden`}>
+      <SheetContent side="right" className={`${sheetSizeClass} p-0 flex flex-col overflow-hidden`}>
         <SheetHeader className="p-3 sm:p-4 border-b flex flex-row justify-between items-center">
           <div>
-            <SheetTitle>Transcripción en proceso</SheetTitle>
-            <SheetDescription>
+            <SheetTitle className="text-base sm:text-lg">Transcripción en proceso</SheetTitle>
+            <SheetDescription className="text-xs sm:text-sm">
               {isTranscribing ? 
                 "Visualiza la transcripción en tiempo real" : 
                 "Resultados del procesamiento de audio"}
@@ -172,14 +175,14 @@ export function LiveTranscriptionSheet({
         
         <div className="flex-1 overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-            <TabsList className="bg-muted/30 p-1 mx-2 sm:mx-4 my-2">
-              <TabsTrigger value="transcription" className="flex items-center gap-1 text-xs sm:text-sm">
+            <TabsList className="bg-muted/30 p-1 mx-2 sm:mx-4 my-2 grid grid-cols-2 gap-1">
+              <TabsTrigger value="transcription" className="flex items-center gap-1 text-xs sm:text-sm py-1">
                 <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span>Transcripción</span>
+                <span className="truncate">Transcripción</span>
               </TabsTrigger>
-              <TabsTrigger value="webhook" className="flex items-center gap-1 text-xs sm:text-sm">
+              <TabsTrigger value="webhook" className="flex items-center gap-1 text-xs sm:text-sm py-1">
                 <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span>Resumen y puntos fuertes</span>
+                <span className="truncate">Resumen</span>
                 {hasWebhookResponse && (
                   <span className="bg-green-500 h-2 w-2 rounded-full ml-1"></span>
                 )}

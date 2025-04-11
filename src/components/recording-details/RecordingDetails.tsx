@@ -13,6 +13,7 @@ import { useHighlights } from "./hooks/useHighlights";
 import { RecordingTabs } from "./RecordingTabs";
 import { AudioChaptersTimeline } from "@/components/AudioChapter";
 import { ChapterDialog } from "./ChapterDialog";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface RecordingDetailsProps {
   recording: Recording;
@@ -33,6 +34,7 @@ export function RecordingDetails({
   const [currentAudioTime, setCurrentAudioTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(recording.duration || 0);
   const audioPlayerRef = useRef<AudioPlayerHandle>(null);
+  const isMobile = useIsMobile();
   
   // Custom hooks
   const {
@@ -120,12 +122,21 @@ export function RecordingDetails({
     activeTab
   };
 
+  // Adjust the dialog size and padding based on screen size
+  const dialogSizeClass = isMobile 
+    ? "w-[95vw]" 
+    : "max-w-4xl md:w-auto";
+  
+  const contentPaddingClass = isMobile
+    ? "px-2 py-3"
+    : "px-2 sm:px-4 py-4";
+
   return (
     <>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-4xl w-[95vw] md:w-auto h-[90vh] flex flex-col dark:bg-[#001A29] dark:border-custom-secondary overflow-hidden">
-          <ScrollArea className="flex-1 w-full pr-2">
-            <div className="px-2 sm:px-4 py-4 w-full overflow-x-hidden">
+        <DialogContent className={`${dialogSizeClass} h-[90vh] flex flex-col dark:bg-[#001A29] dark:border-custom-secondary overflow-hidden`}>
+          <ScrollArea className="flex-1 w-full pr-2 custom-scrollbar">
+            <div className={`${contentPaddingClass} w-full overflow-x-hidden`}>
               <DialogHeader>
                 <DialogTitle className="flex items-center justify-between">
                   <RecordingHeader recording={recording} />
@@ -138,7 +149,7 @@ export function RecordingDetails({
               <Separator className="my-2 dark:bg-custom-secondary/40" />
               
               <div className="my-4 w-full overflow-x-hidden">
-                <div className="w-full max-w-full overflow-x-hidden">
+                <div className="w-full max-w-full overflow-x-hidden no-horizontal-overflow">
                   <AudioPlayer 
                     audioUrl={recording.audioUrl} 
                     audioBlob={audioBlob || undefined}
@@ -158,7 +169,7 @@ export function RecordingDetails({
                 </div>
               </div>
               
-              <div className="pt-4 overflow-x-hidden">
+              <div className="pt-2 sm:pt-4 overflow-x-hidden no-horizontal-overflow">
                 <RecordingTabs 
                   data={recordingDetailsData}
                   onTabChange={setActiveTab}

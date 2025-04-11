@@ -17,41 +17,41 @@ export function RecordingTabs({
   
   return (
     <Tabs value={data.activeTab} onValueChange={onTabChange}>
-      <TabsList className="mb-6">
-        <TabsTrigger value="webhook" className="flex items-center gap-1">
-          <Sparkles className="h-4 w-4" />
-          <span>Resumen y puntos fuertes</span>
+      <TabsList className="mb-4 sm:mb-6 grid grid-cols-3 gap-1 w-full">
+        <TabsTrigger value="webhook" className="flex items-center gap-1 text-xs sm:text-sm px-2 py-1 h-auto">
+          <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
+          <span className="truncate">Resumen</span>
           {hasWebhookData && (
-            <span className="bg-green-500 h-2 w-2 rounded-full ml-1"></span>
+            <span className="bg-green-500 h-2 w-2 rounded-full ml-1 flex-shrink-0"></span>
           )}
         </TabsTrigger>
-        <TabsTrigger value="transcription" className="flex items-center gap-1">
-          <MessageSquare className="h-4 w-4" />
-          <span>Transcripción</span>
+        <TabsTrigger value="transcription" className="flex items-center gap-1 text-xs sm:text-sm px-2 py-1 h-auto">
+          <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
+          <span className="truncate">Transcripción</span>
         </TabsTrigger>
-        <TabsTrigger value="chapters" className="flex items-center gap-1">
-          <Bookmark className="h-4 w-4" />
-          <span>Capítulos</span>
-          <span className="bg-blue-500 text-xs text-white rounded-full h-5 w-5 flex items-center justify-center ml-1">
+        <TabsTrigger value="chapters" className="flex items-center gap-1 text-xs sm:text-sm px-2 py-1 h-auto">
+          <Bookmark className="h-3 w-3 sm:h-4 sm:w-4" />
+          <span className="truncate">Capítulos</span>
+          <span className="bg-blue-500 text-xs text-white rounded-full h-4 w-4 flex items-center justify-center ml-1 flex-shrink-0">
             {data.chapters.length}
           </span>
         </TabsTrigger>
       </TabsList>
       
       <div>
-        <div className="max-h-[50vh]">
-          <TabsContent value="webhook" className="h-full">
+        <div className="max-h-[50vh] overflow-hidden">
+          <TabsContent value="webhook" className="h-full mt-0">
             <WebhookTab data={data} />
           </TabsContent>
           
-          <TabsContent value="transcription" className="h-full">
+          <TabsContent value="transcription" className="h-full mt-0">
             <TranscriptionTab 
               data={data} 
               onTextSelection={onTextSelection} 
             />
           </TabsContent>
           
-          <TabsContent value="chapters" className="h-full">
+          <TabsContent value="chapters" className="h-full mt-0">
             <ChaptersTab 
               data={data}
               onEditChapter={onEditChapter}

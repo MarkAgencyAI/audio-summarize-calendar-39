@@ -12,6 +12,7 @@ import { useHighlights } from "../hooks/useHighlights";
 import { useRecordings } from "@/context/RecordingsContext";
 import { useGroq } from "@/lib/groq";
 import { sendToWebhook } from "@/lib/webhook";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const WEBHOOK_URL = "https://ssn8nss.maettiai.tech/webhook-test/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
@@ -21,6 +22,7 @@ export function TranscriptionTab({
 }: TranscriptionTabProps) {
   const { updateRecording } = useRecordings();
   const { llama3 } = useGroq();
+  const isMobile = useIsMobile();
   const [isEditingOutput, setIsEditingOutput] = useState(false);
   const [editedOutput, setEditedOutput] = useState(data.recording.output || "");
   const [isGeneratingOutput, setIsGeneratingOutput] = useState(false);
@@ -171,24 +173,41 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
     setCustomColor(e.target.value);
   };
 
+  // Mobile vs desktop layout adjustments
+  const searchControlsClass = isMobile ? "flex-col w-full" : "flex-row items-center";
+  const searchActionButtonsClass = isMobile ? "mt-2 grid grid-cols-2 gap-1" : "flex gap-1 ml-2";
+  const highlightMenuPositionY = isMobile ? -80 : -130;
+
   return (
     <div className="grid gap-4 max-w-full">
-      <div className="flex flex-wrap items-center gap-2 p-2 bg-muted/20 rounded-md">
-        <div className="flex-1 flex items-center gap-2 min-w-[200px]">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-2 bg-muted/20 rounded-md">
+        <div className={`flex ${searchControlsClass} gap-2 flex-1 min-w-[200px]`}>
           <Input 
             placeholder="Buscar en la transcripción..." 
             value={searchQuery} 
             onChange={e => setSearchQuery(e.target.value)}
-            className="h-9"
+            className="h-9 flex-1"
           />
-          <Button onClick={handleSearch} variant="secondary" size="sm" className="h-9">
-            <Search className="h-4 w-4 mr-1" />
-            Buscar
-          </Button>
+          <div className={searchActionButtonsClass}>
+            <Button onClick={handleSearch} variant="secondary" size="sm" className="h-9">
+              <Search className="h-4 w-4 mr-1" />
+              <span className="whitespace-nowrap">Buscar</span>
+            </Button>
+            
+            <Button 
+              onClick={toggleHighlightMode} 
+              variant="ghost" 
+              size="sm"
+              className="h-9 flex items-center gap-1"
+            >
+              <PaintBucket className="h-4 w-4" />
+              <span className="whitespace-nowrap">Resaltar</span>
+            </Button>
+          </div>
         </div>
         
         {searchResults.length > 0 && (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 w-full sm:w-auto mt-2 sm:mt-0">
             <Button 
               onClick={() => navigateSearch('prev')} 
               variant="outline" 
@@ -210,18 +229,6 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
             </Button>
           </div>
         )}
-        
-        <div className="flex items-center gap-1">
-          <Button 
-            onClick={toggleHighlightMode} 
-            variant="ghost" 
-            size="sm"
-            className="h-9 flex items-center gap-1"
-          >
-            <PaintBucket className="h-4 w-4" />
-            <span>Resaltar</span>
-          </Button>
-        </div>
       </div>
       
       <div className="relative">
@@ -230,8 +237,9 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
             className="absolute z-10 bg-white dark:bg-slate-800 shadow-md rounded-md p-2 flex flex-col gap-2"
             style={{
               left: `${highlightMenuPosition.x}px`,
-              top: `${highlightMenuPosition.y - 130}px`,
-              transform: 'translate(-50%, -100%)'
+              top: `${highlightMenuPosition.y + highlightMenuPositionY}px`,
+              transform: 'translate(-50%, 0)',
+              maxWidth: '95vw'
             }}
           >
             <div className="grid grid-cols-4 gap-1">
@@ -269,14 +277,14 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
           </div>
         )}
         
-        <ScrollArea className="h-[40vh] p-4 bg-muted/20 rounded-md">
-          <div className="max-w-full overflow-x-hidden">
+        <ScrollArea className="h-[30vh] sm:h-[40vh] p-4 bg-muted/20 rounded-md">
+          <div className="max-w-full overflow-hidden overflow-x-hidden break-words whitespace-normal">
             {isEditingOutput ? (
               <div className="space-y-4">
                 <Textarea 
                   value={editedOutput}
                   onChange={e => setEditedOutput(e.target.value)}
-                  className="min-h-[400px] font-mono text-sm w-full"
+                  className="min-h-[200px] sm:min-h-[300px] font-mono text-sm w-full resize-y"
                 />
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={handleCancelOutputEdit}>
@@ -291,9 +299,14 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
               <div className="relative max-w-full overflow-x-hidden">
                 <pre 
                   ref={transcriptionRef} 
-                  className="whitespace-pre-wrap text-sm break-words max-w-full overflow-x-hidden" 
+                  className="whitespace-pre-wrap text-sm break-words max-w-full overflow-x-hidden overflow-wrap-anywhere" 
                   onMouseUp={onTextSelection}
-                  style={{ wordBreak: "break-word", overflowWrap: "break-word" }}
+                  style={{ 
+                    wordBreak: "break-word", 
+                    overflowWrap: "break-word",
+                    maxWidth: "100%",
+                    width: "100%"
+                  }}
                 >
                   {renderHighlightedText()}
                 </pre>
