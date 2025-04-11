@@ -12,6 +12,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ArrowLeft, Check, X } from "lucide-react";
 import { loadAudioFromStorage } from "@/lib/storage";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function RecordingDetailsPage() {
   const { recordingId } = useParams<{ recordingId: string }>();
@@ -19,6 +20,7 @@ export default function RecordingDetailsPage() {
   const { recordings, updateRecording } = useRecordings();
   const [isOpen, setIsOpen] = useState(true);
   const [isAudioLoaded, setIsAudioLoaded] = useState(false);
+  const isMobile = useIsMobile();
   
   // Find the recording
   const recording = recordings.find(r => r.id === recordingId);
@@ -80,8 +82,8 @@ export default function RecordingDetailsPage() {
   
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+      <div className="container mx-auto px-2 sm:px-4 py-6">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <Button 
             variant="ghost" 
             onClick={() => navigate("/dashboard")}
@@ -90,7 +92,7 @@ export default function RecordingDetailsPage() {
             <ArrowLeft className="h-4 w-4" /> Volver al Dashboard
           </Button>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <ToggleGroup 
               type="single" 
               value={recording.understood ? "understood" : "not-understood"}
@@ -105,19 +107,19 @@ export default function RecordingDetailsPage() {
                 value="understood" 
                 aria-label="Entendida" 
                 className={`${recording.understood ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50' : ''} 
-                  flex items-center gap-1 px-3 py-1 rounded-l-md h-9 data-[state=on]:border-green-500`}
+                  flex items-center gap-1 px-2 sm:px-3 py-1 rounded-l-md h-9 data-[state=on]:border-green-500`}
               >
                 <Check className="h-4 w-4" />
-                <span className="text-sm">Entendida</span>
+                <span className="text-xs sm:text-sm">Entendida</span>
               </ToggleGroupItem>
               <ToggleGroupItem 
                 value="not-understood" 
                 aria-label="No entendida" 
                 className={`${!recording.understood ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50' : ''} 
-                  flex items-center gap-1 px-3 py-1 rounded-r-md h-9 data-[state=on]:border-amber-500`}
+                  flex items-center gap-1 px-2 sm:px-3 py-1 rounded-r-md h-9 data-[state=on]:border-amber-500`}
               >
                 <X className="h-4 w-4" />
-                <span className="text-sm">No entendida</span>
+                <span className="text-xs sm:text-sm">No entendida</span>
               </ToggleGroupItem>
             </ToggleGroup>
           </div>

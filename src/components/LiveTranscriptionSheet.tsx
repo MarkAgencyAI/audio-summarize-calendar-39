@@ -7,6 +7,7 @@ import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload, FileJson, Me
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { extractWebhookOutput } from "@/lib/transcription-service";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface LiveTranscriptionSheetProps {
   isTranscribing: boolean;
@@ -33,6 +34,7 @@ export function LiveTranscriptionSheet({
   const [processedWebhookResponse, setProcessedWebhookResponse] = useState<any>(null);
   const isControlled = open !== undefined && onOpenChange !== undefined;
   const isOpen = isControlled ? open : internalOpen;
+  const isMobile = useIsMobile();
   
   const handleOpenChange = (newOpen: boolean) => {
     if (isControlled) {
@@ -136,6 +138,8 @@ export function LiveTranscriptionSheet({
     return "Esperando resumen y puntos fuertes...";
   })();
   
+  const sheetWidth = isMobile ? "w-[95vw]" : "sm:max-w-md md:max-w-xl";
+  
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       {children ? (
@@ -148,8 +152,8 @@ export function LiveTranscriptionSheet({
         </SheetTrigger>
       )}
       
-      <SheetContent side="right" className="w-full sm:max-w-md md:max-w-xl p-0 flex flex-col overflow-hidden">
-        <SheetHeader className="p-4 border-b flex flex-row justify-between items-center">
+      <SheetContent side="right" className={`${sheetWidth} p-0 flex flex-col overflow-hidden`}>
+        <SheetHeader className="p-3 sm:p-4 border-b flex flex-row justify-between items-center">
           <div>
             <SheetTitle>Transcripción en proceso</SheetTitle>
             <SheetDescription>
@@ -168,13 +172,13 @@ export function LiveTranscriptionSheet({
         
         <div className="flex-1 overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-            <TabsList className="bg-muted/30 p-1 mx-4 my-2">
-              <TabsTrigger value="transcription" className="flex items-center gap-1">
-                <MessageSquare className="h-4 w-4" />
+            <TabsList className="bg-muted/30 p-1 mx-2 sm:mx-4 my-2">
+              <TabsTrigger value="transcription" className="flex items-center gap-1 text-xs sm:text-sm">
+                <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span>Transcripción</span>
               </TabsTrigger>
-              <TabsTrigger value="webhook" className="flex items-center gap-1">
-                <Sparkles className="h-4 w-4" />
+              <TabsTrigger value="webhook" className="flex items-center gap-1 text-xs sm:text-sm">
+                <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span>Resumen y puntos fuertes</span>
                 {hasWebhookResponse && (
                   <span className="bg-green-500 h-2 w-2 rounded-full ml-1"></span>
@@ -183,7 +187,7 @@ export function LiveTranscriptionSheet({
             </TabsList>
             
             <TabsContent value="transcription" className="flex-1 overflow-hidden mt-0">
-              <div className="px-4 pb-2">
+              <div className="px-2 sm:px-4 pb-2">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs text-muted-foreground">Progreso de transcripción</span>
                   <span className="text-xs font-medium">{progress}%</span>
@@ -193,34 +197,38 @@ export function LiveTranscriptionSheet({
                 </div>
               </div>
               
-              <div className="px-4 h-[calc(100vh-220px)] overflow-hidden">
+              <div className="px-2 sm:px-4 h-[calc(100vh-220px)] overflow-hidden">
                 <ScrollArea className="h-full overflow-y-auto">
-                  <TranscriptionPanel 
-                    output={safeOutput}
-                    isLoading={isTranscribing && !output}
-                    progress={progress}
-                    showProgress={false}
-                  />
+                  <div className="pr-2 sm:pr-4">
+                    <TranscriptionPanel 
+                      output={safeOutput}
+                      isLoading={isTranscribing && !output}
+                      progress={progress}
+                      showProgress={false}
+                    />
+                  </div>
                 </ScrollArea>
               </div>
             </TabsContent>
             
             <TabsContent value="webhook" className="flex-1 overflow-hidden mt-0">
-              <div className="p-4 pb-2">
-                <div className="text-sm text-muted-foreground mb-2">
+              <div className="p-2 sm:p-4 pb-2">
+                <div className="text-xs sm:text-sm text-muted-foreground mb-2">
                   {hasWebhookResponse ? 
                     "Resumen y puntos fuertes (datos procesados)" : 
                     "Esperando procesamiento de la transcripción..."}
                 </div>
               </div>
               
-              <div className="px-4 h-[calc(100vh-220px)] overflow-hidden">
+              <div className="px-2 sm:px-4 h-[calc(100vh-220px)] overflow-hidden">
                 <ScrollArea className="h-full overflow-y-auto">
-                  <TranscriptionPanel 
-                    output={webhookContent}
-                    isLoading={isTranscribing && !hasWebhookResponse}
-                    showProgress={false}
-                  />
+                  <div className="pr-2 sm:pr-4">
+                    <TranscriptionPanel 
+                      output={webhookContent}
+                      isLoading={isTranscribing && !hasWebhookResponse}
+                      showProgress={false}
+                    />
+                  </div>
                 </ScrollArea>
               </div>
             </TabsContent>
