@@ -5,10 +5,10 @@ import { Layout } from "@/components/Layout";
 import { useRecordings } from "@/context/RecordingsContext";
 import { RecordingDetails } from "@/components/RecordingDetails";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Toggle } from "@/components/ui/toggle";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ArrowLeft, Check, X } from "lucide-react";
 import { loadAudioFromStorage } from "@/lib/storage";
 import { toast } from "sonner";
@@ -91,30 +91,35 @@ export default function RecordingDetailsPage() {
           </Button>
           
           <div className="flex items-center gap-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="understood" 
-                checked={recording.understood || false}
-                onCheckedChange={(checked) => handleUnderstoodChange(checked as boolean)}
-                className="h-5 w-5 data-[state=checked]:bg-green-600 data-[state=checked]:text-white"
-              />
-              <label
-                htmlFor="understood"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2 cursor-pointer"
+            <ToggleGroup 
+              type="single" 
+              value={recording.understood ? "understood" : "not-understood"}
+              onValueChange={(value) => {
+                if (value) { // Only update if a value is selected (prevents deselection)
+                  handleUnderstoodChange(value === "understood");
+                }
+              }}
+              className="border rounded-md overflow-hidden"
+            >
+              <ToggleGroupItem 
+                value="understood" 
+                aria-label="Entendida" 
+                className={`${recording.understood ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50' : ''} 
+                  flex items-center gap-1 px-3 py-1 rounded-l-md h-9 data-[state=on]:border-green-500`}
               >
-                {recording.understood ? (
-                  <>
-                    <span className="text-green-600 font-medium">Entendida</span>
-                    <Check className="h-4 w-4 text-green-600" />
-                  </>
-                ) : (
-                  <>
-                    <span className="text-amber-600 font-medium">No entendida</span>
-                    <X className="h-4 w-4 text-amber-600" />
-                  </>
-                )}
-              </label>
-            </div>
+                <Check className="h-4 w-4" />
+                <span className="text-sm">Entendida</span>
+              </ToggleGroupItem>
+              <ToggleGroupItem 
+                value="not-understood" 
+                aria-label="No entendida" 
+                className={`${!recording.understood ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50' : ''} 
+                  flex items-center gap-1 px-3 py-1 rounded-r-md h-9 data-[state=on]:border-amber-500`}
+              >
+                <X className="h-4 w-4" />
+                <span className="text-sm">No entendida</span>
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
         </div>
         

@@ -5,7 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Toggle, toggleVariants } from "@/components/ui/toggle";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Globe, BookOpen, Clock, AlertCircle, Loader2, Sparkles, Check, X } from "lucide-react";
 
 interface TranscriptionPanelProps {
@@ -71,28 +72,26 @@ export function TranscriptionPanel({
           
           {onUnderstoodChange && (
             <div className="flex items-center gap-2">
-              <Checkbox 
-                id="understood-checkbox"
-                checked={understood}
-                onCheckedChange={(checked) => onUnderstoodChange(checked as boolean)}
-                className="data-[state=checked]:bg-green-600 h-5 w-5"
-              />
-              <label 
-                htmlFor="understood-checkbox" 
-                className="text-sm flex items-center cursor-pointer select-none whitespace-nowrap"
-              >
-                {understood ? (
-                  <span className="text-green-600 flex items-center gap-1">
-                    <Check className="h-4 w-4" />
-                    Entendida
-                  </span>
-                ) : (
-                  <span className="text-amber-600 flex items-center gap-1">
-                    <X className="h-4 w-4" />
-                    No entendida
-                  </span>
-                )}
-              </label>
+              <ToggleGroup type="single" value={understood ? "understood" : "not-understood"} onValueChange={(value) => {
+                if (value) { // Only update if a value is selected (prevents deselection)
+                  onUnderstoodChange(value === "understood");
+                }
+              }}>
+                <ToggleGroupItem value="understood" aria-label="Entendida" 
+                  className={`${understood ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50' : ''} 
+                    flex items-center gap-1 px-3 py-1 rounded-l-md data-[state=on]:border-green-500`}
+                >
+                  <Check className="h-4 w-4" />
+                  <span className="text-sm">Entendida</span>
+                </ToggleGroupItem>
+                <ToggleGroupItem value="not-understood" aria-label="No entendida" 
+                  className={`${!understood ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50' : ''} 
+                    flex items-center gap-1 px-3 py-1 rounded-r-md data-[state=on]:border-amber-500`}
+                >
+                  <X className="h-4 w-4" />
+                  <span className="text-sm">No entendida</span>
+                </ToggleGroupItem>
+              </ToggleGroup>
             </div>
           )}
         </div>

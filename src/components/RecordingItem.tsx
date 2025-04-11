@@ -8,7 +8,7 @@ import { es } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,28 +78,40 @@ export function RecordingItem({ recording, onAddToCalendar, showActions = true }
                   {recording.name}
                 </h3>
                 <div className="inline-flex items-center gap-2 shrink-0">
-                  <Checkbox 
-                    id={`understood-${recording.id}`}
-                    checked={recording.understood || false}
-                    onCheckedChange={() => {
-                      const newValue = !recording.understood;
-                      updateRecording(recording.id, { understood: newValue });
-                      toast.success(newValue ? "Marcada como entendida" : "Marcada como no entendida");
+                  <ToggleGroup 
+                    type="single" 
+                    value={recording.understood ? "understood" : "not-understood"}
+                    onValueChange={(value) => {
+                      if (value) { // Only update if a value is selected (prevents deselection)
+                        const newValue = value === "understood";
+                        updateRecording(recording.id, { understood: newValue });
+                        toast.success(newValue ? "Marcada como entendida" : "Marcada como no entendida");
+                      }
                     }}
                     onClick={(e) => e.stopPropagation()}
-                    className="data-[state=checked]:bg-green-600 data-[state=checked]:text-white h-5 w-5"
-                  />
-                  <label
-                    htmlFor={`understood-${recording.id}`}
-                    className="text-xs font-medium cursor-pointer select-none whitespace-nowrap"
-                    onClick={(e) => e.stopPropagation()}
+                    className="border rounded-md overflow-hidden"
                   >
-                    {recording.understood ? (
-                      <span className="text-green-600">Entendida</span>
-                    ) : (
-                      <span className="text-amber-600">No entendida</span>
-                    )}
-                  </label>
+                    <ToggleGroupItem 
+                      value="understood" 
+                      aria-label="Entendida" 
+                      className={`${recording.understood ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50' : ''} 
+                        flex items-center gap-1 px-2 py-0.5 rounded-l-md h-7 data-[state=on]:border-green-500`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Check className="h-3 w-3" />
+                      <span className="text-xs">Entendida</span>
+                    </ToggleGroupItem>
+                    <ToggleGroupItem 
+                      value="not-understood" 
+                      aria-label="No entendida" 
+                      className={`${!recording.understood ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50' : ''} 
+                        flex items-center gap-1 px-2 py-0.5 rounded-r-md h-7 data-[state=on]:border-amber-500`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <X className="h-3 w-3" />
+                      <span className="text-xs">No entendida</span>
+                    </ToggleGroupItem>
+                  </ToggleGroup>
                 </div>
               </div>
               <div className="text-xs text-muted-foreground">

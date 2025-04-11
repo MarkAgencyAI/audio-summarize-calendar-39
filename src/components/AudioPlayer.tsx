@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Waveform, Trash2, Plus, Scissors } from "lucide-react";
 import { formatTime } from "@/lib/audio-utils";
 import { toast } from "sonner";
 
@@ -18,6 +18,7 @@ interface AudioPlayerProps {
   onEnded?: () => void;
   onTimeUpdate?: (time: number) => void;
   onDurationChange?: (duration: number) => void;
+  onAddChapter?: (time: number) => void;
 }
 
 export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
@@ -27,7 +28,8 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
   autoplay = false,
   onEnded,
   onTimeUpdate,
-  onDurationChange
+  onDurationChange,
+  onAddChapter
 }, ref) => {
   // Audio element ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -41,6 +43,7 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
+  const [showWaveform, setShowWaveform] = useState(true);
   
   // Timer for updating current time
   const timeUpdateIntervalRef = useRef<number | null>(null);
@@ -287,6 +290,18 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
     setPlaybackRate(rate);
   };
   
+  // Toggle waveform display
+  const toggleWaveform = () => {
+    setShowWaveform(!showWaveform);
+  };
+  
+  // Add chapter at current position
+  const handleAddChapter = () => {
+    if (onAddChapter) {
+      onAddChapter(currentTime);
+    }
+  };
+  
   // Calculate progress for the progress bar
   const calculateProgress = () => {
     if (duration <= 0) return 0;
@@ -296,9 +311,112 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
   // Validate and ensure duration is a positive number
   const validDuration = duration > 0 && isFinite(duration) ? duration : 100;
   
+  const formattedCurrentTime = formatTime(Math.floor(currentTime));
+  
   return (
     <div className="w-full bg-background border rounded-md p-4 shadow-sm">
       <div className="space-y-4">
+        {/* Waveform and top controls */}
+        <div className="flex items-center justify-between mb-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={toggleWaveform}
+            className="text-xs h-8 flex items-center gap-1"
+          >
+            <Waveform className="h-4 w-4" />
+            {showWaveform ? "Hide waveform" : "Show waveform"}
+          </Button>
+          
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs h-8 flex items-center gap-1 text-red-500 hover:text-red-600"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete selection
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleAddChapter}
+              className="text-xs h-8 flex items-center gap-1 bg-purple-100 text-purple-700 border-purple-300 hover:bg-purple-200"
+            >
+              <Scissors className="h-4 w-4" />
+              Add chapter at {formattedCurrentTime}
+            </Button>
+          </div>
+        </div>
+        
+        {/* Waveform visualization */}
+        {showWaveform && (
+          <div className="relative w-full h-24 bg-gray-100 rounded-lg overflow-hidden mb-2">
+            <div className="absolute inset-0 flex items-center justify-start">
+              <div className="h-full w-1/3 bg-blue-500/30 border-r-2 border-blue-500 flex items-center justify-center">
+                <div className="w-full h-16 px-4">
+                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
+                    <path 
+                      d="M 0,50 Q 10,40 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
+                      stroke="rgb(59, 130, 246)" 
+                      strokeWidth="2" 
+                      fill="none"
+                    />
+                    <path 
+                      d="M 0,50 Q 10,60 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
+                      stroke="rgb(59, 130, 246)" 
+                      strokeWidth="2" 
+                      fill="none"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div className="h-full flex-1 flex items-center justify-center">
+                <div className="w-full h-10 px-4">
+                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
+                    <path 
+                      d="M 0,50 Q 10,45 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
+                      stroke="rgb(156, 163, 175)" 
+                      strokeWidth="1.5" 
+                      fill="none"
+                    />
+                    <path 
+                      d="M 0,50 Q 10,55 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
+                      stroke="rgb(156, 163, 175)" 
+                      strokeWidth="1.5" 
+                      fill="none"
+                    />
+                  </svg>
+                </div>
+              </div>
+              
+              {/* Current position marker */}
+              <div 
+                className="absolute top-0 bottom-0 w-0.5 bg-red-500"
+                style={{ 
+                  left: `${(currentTime / validDuration) * 100}%`,
+                  transform: 'translateX(-50%)'
+                }}
+              >
+                <div className="w-3 h-3 rounded-full bg-red-500 absolute -top-1.5 left-1/2 transform -translate-x-1/2"></div>
+              </div>
+            </div>
+            
+            {/* Time markers */}
+            <div className="absolute bottom-0 left-0 right-0 flex justify-between px-2 text-xs text-gray-500">
+              <span>0:00</span>
+              <span>0:30</span>
+              <span>1:00</span>
+              <span>1:30</span>
+              <span>2:00</span>
+              <span>2:30</span>
+              <span>3:00</span>
+              <span>{formatTime(Math.floor(validDuration))}</span>
+            </div>
+          </div>
+        )}
+        
         {/* Timeline seeker */}
         <div className="w-full space-y-1">
           <div className="relative">

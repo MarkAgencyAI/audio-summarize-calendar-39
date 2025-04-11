@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { FileText, Edit, Trash2, Save, X, Globe, Folder, MessageSquare, Sparkles, Search, PaintBucket, Bookmark, Clock, Plus } from "lucide-react";
+import { FileText, Edit, Trash2, Save, X, Globe, Folder, MessageSquare, Sparkles, Search, PaintBucket, Bookmark, Clock, Plus, Scissors } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -597,7 +597,7 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
     }
   };
 
-  const handleCreateChapter = () => {
+  const handleAddChapter = () => {
     setNewChapterTitle(`Capítulo ${chapters.length + 1}`);
     setNewChapterColor(chapterColors[chapters.length % chapterColors.length]);
     setCurrentChapter(null);
@@ -790,6 +790,7 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
             onTimeUpdate={handleTimeUpdate}
             ref={audioPlayerRef}
             onDurationChange={setAudioDuration}
+            onAddChapter={handleAddChapter}
           />
           
           <AudioChaptersTimeline 
@@ -904,8 +905,8 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                         </div>
                       </div>
                       
-                      <div className="mb-3">
-                        <div className="flex items-center space-x-2 bg-muted/20 p-2 rounded-md mb-2">
+                      <div className="mb-3 flex flex-col gap-2">
+                        <div className="flex items-center space-x-2 bg-muted/20 p-2 rounded-md">
                           <Search className="h-4 w-4 text-muted-foreground" />
                           <Input
                             type="search"
@@ -1039,11 +1040,11 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        onClick={handleCreateChapter}
-                        className="flex items-center gap-1"
+                        onClick={handleAddChapter}
+                        className="flex items-center gap-1 bg-purple-100 text-purple-700 border-purple-300 hover:bg-purple-200"
                       >
-                        <Plus className="h-3.5 w-3.5" />
-                        <span>Nuevo capítulo</span>
+                        <Scissors className="h-3.5 w-3.5" />
+                        <span>Agregar capítulo en {formatTime(Math.floor(currentAudioTime))}</span>
                       </Button>
                     </div>
                     
@@ -1073,9 +1074,10 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          onClick={handleCreateChapter}
-                          className="mt-4"
+                          onClick={handleAddChapter}
+                          className="mt-4 bg-purple-100 text-purple-700 border-purple-300 hover:bg-purple-200"
                         >
+                          <Scissors className="h-3.5 w-3.5 mr-1" />
                           Crear primer capítulo en posición actual
                         </Button>
                       </div>
