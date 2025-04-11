@@ -738,8 +738,8 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogContent className="max-w-4xl w-[95vw] md:w-auto h-[90vh] flex flex-col dark:bg-[#001A29] dark:border-custom-secondary overflow-hidden">
-        <ScrollArea className="flex-1 w-full">
-          <div className="px-6 py-4 w-full">
+        <ScrollArea className="flex-1 w-full pr-2">
+          <div className="px-4 py-4 w-full">
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between">
                 <div className="flex-1 max-w-[calc(100%-40px)]">
@@ -843,23 +843,25 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
             
             <Separator className="my-2 dark:bg-custom-secondary/40" />
             
-            <div className="my-4">
-              <AudioPlayer 
-                audioUrl={recording.audioUrl} 
-                audioBlob={audioBlob || undefined}
-                initialDuration={recording.duration}
-                onTimeUpdate={handleTimeUpdate}
-                ref={audioPlayerRef}
-                onDurationChange={setAudioDuration}
-                onAddChapter={handleAddChapter}
-              />
-              
-              <AudioChaptersTimeline 
-                chapters={chapters}
-                duration={audioDuration}
-                currentTime={currentAudioTime}
-                onChapterClick={handleChapterClick}
-              />
+            <div className="my-4 w-full overflow-x-hidden">
+              <div className="w-full max-w-full overflow-x-hidden">
+                <AudioPlayer 
+                  audioUrl={recording.audioUrl} 
+                  audioBlob={audioBlob || undefined}
+                  initialDuration={recording.duration}
+                  onTimeUpdate={handleTimeUpdate}
+                  ref={audioPlayerRef}
+                  onDurationChange={setAudioDuration}
+                  onAddChapter={handleAddChapter}
+                />
+                
+                <AudioChaptersTimeline 
+                  chapters={chapters}
+                  duration={audioDuration}
+                  currentTime={currentAudioTime}
+                  onChapterClick={handleChapterClick}
+                />
+              </div>
             </div>
             
             <div className="pt-4">
