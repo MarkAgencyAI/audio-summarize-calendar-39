@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -57,7 +56,8 @@ export function RecordingDetails({
   
   const {
     highlights,
-    handleTextSelection
+    handleTextSelection,
+    renderHighlightedText
   } = useHighlights(recording, updateRecording);
   
   const dialogOpen = propIsOpen !== undefined ? propIsOpen : isOpen;
@@ -119,7 +119,8 @@ export function RecordingDetails({
     activeChapterId,
     currentAudioTime,
     audioDuration,
-    activeTab
+    activeTab,
+    renderHighlightedText
   };
 
   // Adjust the dialog size and padding based on screen size

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -163,7 +162,6 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
     setCustomColor(e.target.value);
   };
 
-  // Mobile vs desktop layout adjustments
   const searchControlsClass = isMobile ? "flex-col w-full" : "flex-row items-center";
   const searchActionButtonsClass = isMobile ? "mt-2 grid grid-cols-2 gap-1" : "flex gap-1 ml-2";
   const highlightMenuPositionY = isMobile ? -80 : -130;

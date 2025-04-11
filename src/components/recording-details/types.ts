@@ -1,4 +1,3 @@
-
 import { Recording, AudioChapter, TextHighlight } from "@/context/RecordingsContext";
 
 export interface RecordingDetails {
@@ -9,6 +8,7 @@ export interface RecordingDetails {
   currentAudioTime: number;
   audioDuration: number;
   activeTab: string;
+  renderHighlightedText: () => React.ReactNode;
 }
 
 export interface HighlightMenuPosition {
