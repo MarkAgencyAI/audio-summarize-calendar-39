@@ -96,7 +96,7 @@ function Transcriptions() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-3">
+        <div className="flex flex-col sm:flex-col items-start sm:items-center gap-3 mb-3">
           <div className="flex items-center flex-1 w-full">
             <Search className="h-4 w-4 text-muted-foreground mr-2" />
             <Input type="search" placeholder="Buscar transcripciones..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
