@@ -28,6 +28,7 @@ interface RecordingDetailsProps {
   onOpenChange?: (open: boolean) => void;
 }
 
+// More color options for the pickers
 const chapterColors = [
   "#FEF7CD", // Amarillo
   "#F2FCE2", // Verde
@@ -35,6 +36,11 @@ const chapterColors = [
   "#D3E4FD", // Azul
   "#FFDEE2", // Rosa
   "#E5DEFF", // Morado
+  "#FDE1D3", // Melocotón
+  "#D6BCFA", // Lavanda
+  "#B9E4C9", // Menta
+  "#FEEBC8", // Beige
+  "#BEE3F8", // Celeste
 ];
 
 const highlightColors = [
@@ -43,7 +49,24 @@ const highlightColors = [
   { label: "Naranja", value: "#FEC6A1" },
   { label: "Azul", value: "#D3E4FD" },
   { label: "Rosa", value: "#FFDEE2" },
+  { label: "Morado", value: "#E5DEFF" },
+  { label: "Melocotón", value: "#FDE1D3" },
+  { label: "Lavanda", value: "#D6BCFA" },
+  { label: "Menta", value: "#B9E4C9" },
+  { label: "Beige", value: "#FEEBC8" },
+  { label: "Celeste", value: "#BEE3F8" },
 ];
+
+// Function to format time without milliseconds for chapter display
+const formatTimeNoMs = (seconds: number): string => {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  
+  return h > 0
+    ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+    : `${m}:${s.toString().padStart(2, '0')}`;
+};
 
 const WEBHOOK_URL = "https://ssn8nss.maettiai.tech/webhook-test/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
@@ -52,6 +75,7 @@ export function RecordingDetails({
   isOpen: propIsOpen,
   onOpenChange
 }: RecordingDetailsProps) {
+  
   const {
     updateRecording,
     deleteRecording,
@@ -92,6 +116,9 @@ export function RecordingDetails({
   const [audioDuration, setAudioDuration] = useState(recording.duration || 0);
   const [activeChapterId, setActiveChapterId] = useState<string | undefined>(undefined);
   const audioPlayerRef = useRef<AudioPlayerHandle>(null);
+  
+  const [showCustomColorPicker, setShowCustomColorPicker] = useState(false);
+  const [customColor, setCustomColor] = useState("#ffffff");
   
   const dialogOpen = propIsOpen !== undefined ? propIsOpen : isOpen;
   const setDialogOpen = onOpenChange || setIsOpenState;
@@ -285,7 +312,8 @@ export function RecordingDetails({
       setShowHighlightMenu(true);
     }
   };
-  
+
+  // Modified to handle custom colors
   const applyHighlight = (color: string) => {
     if (!selectionRange || !selectedText) return;
     
@@ -701,6 +729,15 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
     }
   };
 
+  const handleCustomColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCustomColor(e.target.value);
+  };
+
+  const applyCustomColor = () => {
+    setNewChapterColor(customColor);
+    setShowCustomColorPicker(false);
+  };
+
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogContent className="max-w-4xl w-[95vw] md:w-auto max-h-[90vh] flex flex-col dark:bg-[#001A29] dark:border-custom-secondary">
@@ -807,7 +844,8 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
         
         <Separator className="my-2 dark:bg-custom-secondary/40" />
         
-        <div className="my-2">
+        {/* Audio player section with more spacing */}
+        <div className="my-4">
           <AudioPlayer 
             audioUrl={recording.audioUrl} 
             audioBlob={audioBlob || undefined}
@@ -826,9 +864,10 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
           />
         </div>
         
-        <div className="flex-1 overflow-hidden pt-2">
+        {/* Main content area with improved vertical spacing */}
+        <div className="flex-1 overflow-hidden pt-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-            <TabsList className="mb-4">
+            <TabsList className="mb-6">
               <TabsTrigger value="webhook" className="flex items-center gap-1">
                 <Sparkles className="h-4 w-4" />
                 <span>Resumen y puntos fuertes</span>
@@ -851,340 +890,4 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
             
             <div className="flex-1 overflow-hidden">
               <div className="h-[60vh] md:h-[50vh] overflow-hidden">
-                <TabsContent value="webhook" className="h-full mt-0 overflow-hidden">
-                  <div className="h-full overflow-hidden">
-                    <div className="mb-4">
-                      <h3 className="font-medium mb-2 dark:text-custom-accent text-[#005c5f] dark:text-[#f1f2f6]">
-                        Resumen y puntos fuertes
-                      </h3>
-                      
-                      <div className="prose prose-sm dark:prose-invert max-w-none">
-                        {hasWebhookData ? (
-                          <ScrollArea className="bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 h-[40vh] overflow-y-auto">
-                            <pre className="whitespace-pre-wrap text-sm">{formatWebhookResponse()}</pre>
-                          </ScrollArea>
-                        ) : (
-                          <div className="bg-amber-50 text-amber-800 p-4 rounded-md text-sm">
-                            <p>No hay resumen y puntos fuertes disponibles para esta grabación.</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {recording.suggestedEvents && recording.suggestedEvents.length > 0 && (
-                      <div className="mb-4">
-                        <h3 className="font-medium mb-2 dark:text-custom-accent">Eventos sugeridos</h3>
-                        <ScrollArea className="max-h-[15vh] overflow-y-auto">
-                          <ul className="space-y-1 ml-5 list-disc dark:text-white/90">
-                            {recording.suggestedEvents.map((event, index) => (
-                              <li key={index}>
-                                <strong>{event.title}</strong>: {event.description}
-                                {event.date && <span className="text-sm text-muted-foreground ml-2">({event.date})</span>}
-                              </li>
-                            ))}
-                          </ul>
-                        </ScrollArea>
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="transcription" className="h-full mt-0 overflow-hidden">
-                  <div className="h-full overflow-hidden">
-                    <div className="mb-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-medium dark:text-custom-accent text-[#005c5f] dark:text-[#f1f2f6]">
-                          Transcripción del Audio
-                        </h3>
-                        
-                        <div className="flex gap-2">
-                          {isEditingOutput ? (
-                            <div className="flex gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={handleSaveOutput} 
-                                className="h-8 bg-green-50 text-green-700 border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400"
-                              >
-                                <Save className="h-4 w-4 mr-1.5" />
-                                <span>Guardar</span>
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={handleCancelOutputEdit} 
-                                className="h-8"
-                              >
-                                <X className="h-4 w-4 mr-1.5" />
-                                <span>Cancelar</span>
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => setIsEditingOutput(true)} 
-                                className="h-8"
-                              >
-                                <Edit className="h-4 w-4 mr-1.5" />
-                                <span>Editar</span>
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={generateOutputWithGroq}
-                                disabled={isGeneratingOutput}
-                                className="h-8 bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400"
-                              >
-                                <Sparkles className="h-4 w-4 mr-1.5" />
-                                <span>{isGeneratingOutput ? "Generando..." : "Generar con IA"}</span>
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={toggleHighlightMode}
-                                className="h-8 bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400"
-                              >
-                                <PaintBucket className="h-4 w-4 mr-1.5" />
-                                <span>Resaltar</span>
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-col gap-4">
-                        <div className="flex items-center gap-2 bg-gray-50 dark:bg-custom-secondary/10 rounded-md p-2">
-                          <div className="flex-1 relative">
-                            <Input
-                              placeholder="Buscar en la transcripción..."
-                              value={searchQuery}
-                              onChange={(e) => setSearchQuery(e.target.value)}
-                              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                              className="pr-10"
-                            />
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={handleSearch}
-                              className="h-8 w-8 absolute right-0.5 top-0.5"
-                            >
-                              <Search className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          
-                          {searchResults.length > 0 && (
-                            <div className="flex items-center gap-1 bg-white dark:bg-custom-secondary/20 rounded-md px-2 py-1 border">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => navigateSearch('prev')}
-                                className="h-7 w-7 p-0"
-                              >
-                                &lt;
-                              </Button>
-                              <span className="text-sm">
-                                {currentSearchIndex + 1} de {searchResults.length}
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => navigateSearch('next')}
-                                className="h-7 w-7 p-0"
-                              >
-                                &gt;
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {isEditingOutput ? (
-                          <Textarea
-                            value={editedOutput}
-                            onChange={(e) => setEditedOutput(e.target.value)}
-                            className="min-h-[40vh] font-mono text-sm resize-none"
-                            placeholder="Escribe la transcripción aquí..."
-                          />
-                        ) : (
-                          <div className="bg-white dark:bg-custom-secondary/10 border rounded-md shadow-sm">
-                            <ScrollArea className="h-[40vh] p-4 overflow-y-auto">
-                              {recording.output ? (
-                                <pre
-                                  ref={transcriptionRef}
-                                  className="whitespace-pre-wrap text-sm font-sans"
-                                  onMouseUp={handleTextSelection}
-                                >
-                                  {renderHighlightedText()}
-                                </pre>
-                              ) : (
-                                <div className="text-center text-muted-foreground py-8">
-                                  <p className="mb-4">No hay transcripción disponible para esta grabación.</p>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={generateOutputWithGroq}
-                                    className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400"
-                                    disabled={isGeneratingOutput}
-                                  >
-                                    <Sparkles className="h-4 w-4 mr-1.5" />
-                                    {isGeneratingOutput ? "Generando..." : "Generar con IA"}
-                                  </Button>
-                                </div>
-                              )}
-                            </ScrollArea>
-                            
-                            {recording.output && recording.output.length > 0 && (
-                              <div className="border-t px-4 py-2 flex justify-between items-center text-xs text-muted-foreground">
-                                <span>{recording.output.length} caracteres</span>
-                                <span>Última actualización: {new Date(recording.updatedAt || recording.createdAt || recording.date).toLocaleDateString()}</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      
-                      {showHighlightMenu && (
-                        <div
-                          className="absolute bg-white dark:bg-[#002a42] border border-border rounded-md shadow-lg p-2 z-50 flex gap-2"
-                          style={{
-                            left: `${highlightMenuPosition.x}px`,
-                            top: `${highlightMenuPosition.y - 40}px`,
-                            transform: "translateX(-50%)"
-                          }}
-                        >
-                          {highlightColors.map((color) => (
-                            <button
-                              key={color.value}
-                              onClick={() => applyHighlight(color.value)}
-                              className="w-6 h-6 rounded-full cursor-pointer border border-gray-300"
-                              style={{ backgroundColor: color.value }}
-                              title={color.label}
-                            />
-                          ))}
-                          <button
-                            onClick={removeHighlightAtSelection}
-                            className="w-6 h-6 rounded-full cursor-pointer border border-gray-300 flex items-center justify-center bg-white dark:bg-[#001a29] dark:text-white"
-                            title="Eliminar resaltado"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="chapters" className="h-full mt-0 overflow-hidden">
-                  <div className="h-full overflow-hidden">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-medium dark:text-custom-accent text-[#005c5f] dark:text-[#f1f2f6]">
-                        Capítulos
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => toast.info("Selecciona un fragmento en la forma de onda y luego haz clic en 'Crear capítulo con selección'")}
-                          className="flex items-center h-8"
-                        >
-                          <Scissors className="h-4 w-4 mr-1.5" />
-                          <span>Instrucciones</span>
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-white dark:bg-custom-secondary/10 border rounded-md shadow-sm">
-                      <ScrollArea className="h-[40vh] p-4 overflow-y-auto">
-                        <AudioChaptersList
-                          chapters={chapters}
-                          currentTime={currentAudioTime}
-                          duration={audioDuration}
-                          onChapterClick={handleChapterClick}
-                          onChapterEdit={handleEditChapter}
-                          onChapterDelete={handleDeleteChapter}
-                          activeChapterId={activeChapterId}
-                        />
-                      </ScrollArea>
-                      
-                      {chapters.length === 0 && (
-                        <div className="text-center text-muted-foreground py-8">
-                          <p className="mb-4">Aún no hay capítulos definidos para esta grabación.</p>
-                          <p className="text-sm">Para crear un capítulo, selecciona un fragmento en la forma de onda y luego haz clic en "Crear capítulo con selección".</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </TabsContent>
-              </div>
-            </div>
-          </Tabs>
-        </div>
-        
-        {showChapterDialog && (
-          <Dialog open={showChapterDialog} onOpenChange={setShowChapterDialog}>
-            <DialogContent className="dark:bg-[#001A29] dark:border-custom-secondary max-w-[95vw] md:max-w-md">
-              <DialogHeader>
-                <DialogTitle>
-                  {currentChapter && chapters.some(ch => ch.id === currentChapter.id) ? "Editar capítulo" : "Nuevo capítulo"}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="chapter-title">Título</Label>
-                  <Input
-                    id="chapter-title"
-                    value={newChapterTitle}
-                    onChange={(e) => setNewChapterTitle(e.target.value)}
-                    autoFocus
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Color</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {chapterColors.map((color) => (
-                      <button
-                        key={color}
-                        type="button"
-                        onClick={() => setNewChapterColor(color)}
-                        className={`w-8 h-8 rounded-full cursor-pointer ${
-                          newChapterColor === color ? "ring-2 ring-offset-2 ring-primary" : "border border-gray-300"
-                        }`}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Tiempo de inicio</Label>
-                  <div className="text-base font-mono bg-muted/50 p-2 rounded-md text-center dark:bg-custom-secondary/40">
-                    {formatTime(currentChapter ? currentChapter.startTime : currentAudioTime)}
-                  </div>
-                </div>
-                
-                {currentChapter && currentChapter.endTime && (
-                  <div className="space-y-2">
-                    <Label>Tiempo de fin</Label>
-                    <div className="text-base font-mono bg-muted/50 p-2 rounded-md text-center dark:bg-custom-secondary/40">
-                      {formatTime(currentChapter.endTime)}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <DialogFooter>
-                <Button variant="ghost" onClick={() => setShowChapterDialog(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={handleSaveChapter}>
-                  {currentChapter && chapters.some(ch => ch.id === currentChapter.id) ? "Actualizar" : "Crear"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
+                <
