@@ -172,7 +172,7 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
   };
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-4 max-w-full">
       <div className="flex flex-wrap items-center gap-2 p-2 bg-muted/20 rounded-md">
         <div className="flex-1 flex items-center gap-2 min-w-[200px]">
           <Input 
@@ -270,13 +270,13 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
         )}
         
         <ScrollArea className="h-[40vh] p-4 bg-muted/20 rounded-md">
-          <div className="max-w-full">
+          <div className="max-w-full overflow-x-hidden">
             {isEditingOutput ? (
               <div className="space-y-4">
                 <Textarea 
                   value={editedOutput}
                   onChange={e => setEditedOutput(e.target.value)}
-                  className="min-h-[400px] font-mono text-sm"
+                  className="min-h-[400px] font-mono text-sm w-full"
                 />
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={handleCancelOutputEdit}>
@@ -288,11 +288,12 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                 </div>
               </div>
             ) : (
-              <div className="relative max-w-full">
+              <div className="relative max-w-full overflow-x-hidden">
                 <pre 
                   ref={transcriptionRef} 
-                  className="whitespace-pre-wrap text-sm break-words max-w-full" 
+                  className="whitespace-pre-wrap text-sm break-words max-w-full overflow-x-hidden" 
                   onMouseUp={onTextSelection}
+                  style={{ wordBreak: "break-word", overflowWrap: "break-word" }}
                 >
                   {renderHighlightedText()}
                 </pre>

@@ -199,7 +199,7 @@ export function LiveTranscriptionSheet({
               
               <div className="px-2 sm:px-4 h-[calc(100vh-220px)] overflow-hidden">
                 <ScrollArea className="h-full overflow-y-auto">
-                  <div className="pr-2 sm:pr-4">
+                  <div className="pr-2 sm:pr-4 max-w-full overflow-x-hidden">
                     <TranscriptionPanel 
                       output={safeOutput}
                       isLoading={isTranscribing && !output}
@@ -222,7 +222,7 @@ export function LiveTranscriptionSheet({
               
               <div className="px-2 sm:px-4 h-[calc(100vh-220px)] overflow-hidden">
                 <ScrollArea className="h-full overflow-y-auto">
-                  <div className="pr-2 sm:pr-4">
+                  <div className="pr-2 sm:pr-4 max-w-full overflow-x-hidden">
                     <TranscriptionPanel 
                       output={webhookContent}
                       isLoading={isTranscribing && !hasWebhookResponse}

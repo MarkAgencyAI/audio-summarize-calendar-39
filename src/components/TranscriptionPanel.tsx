@@ -125,9 +125,9 @@ export function TranscriptionPanel({
           ) : (
             <TabsContent value="output" className="mt-0 h-full relative">
               <ScrollArea className="h-full max-h-[60vh] rounded-md overflow-y-auto">
-                <div className="bg-muted/20 rounded-md p-4">
+                <div className="bg-muted/20 rounded-md p-4 max-w-full">
                   {displayOutput ? (
-                    <pre className="whitespace-pre-wrap font-sans text-sm break-words overflow-x-hidden">{displayOutput}</pre>
+                    <pre className="whitespace-pre-wrap font-sans text-sm break-words overflow-x-hidden overflow-wrap-anywhere max-w-full" style={{ wordBreak: "break-word", overflowWrap: "break-word" }}>{displayOutput}</pre>
                   ) : (
                     <div className="flex flex-col items-center justify-center h-[200px] text-center">
                       <AlertCircle className="h-8 w-8 text-muted-foreground/40 mb-2" />

@@ -101,3 +101,12 @@
     padding: 0.1rem 0.2rem;
   }
 }
+
+/* Add custom utilities for better text wrapping */
+.overflow-wrap-anywhere {
+  overflow-wrap: anywhere;
+}
+
+.break-words {
+  word-break: break-word;
+}
