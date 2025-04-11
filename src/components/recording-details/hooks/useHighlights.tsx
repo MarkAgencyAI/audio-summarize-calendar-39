@@ -1,5 +1,4 @@
-
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { toast } from "sonner";
 import { Recording, TextHighlight } from "@/context/RecordingsContext";
 import { HighlightMenuPosition, SelectionRange } from "../types";
