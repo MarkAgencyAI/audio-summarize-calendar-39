@@ -65,7 +65,7 @@ export function RecordingTabs({
           <SummaryTab data={data} />
         </TabsContent>
         
-        <TabsContent value="transcription" className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
+        <TabsContent value="transcription" className="h-0 m-0 data-[state=active]:flex data-[state=active]:flex-col">
           <TranscriptionTab data={data} onTextSelection={onTextSelection} />
         </TabsContent>
         
