@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -95,7 +94,6 @@ export function Calendar({
   const [eventToEdit, setEventToEdit] = useState<CalendarEvent | null>(null);
   const [repeatOption, setRepeatOption] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
 
-  // Load events from storage or use external events
   useEffect(() => {
     if (externalEvents) {
       setEvents(externalEvents);
@@ -105,30 +103,25 @@ export function Calendar({
     }
   }, [externalEvents]);
 
-  // Use external active filter if provided
   useEffect(() => {
     if (externalActiveFilter) {
       setActiveFilter(externalActiveFilter);
     }
   }, [externalActiveFilter]);
 
-  // Save events to storage if we're managing them internally
   useEffect(() => {
     if (!externalEvents && events.length > 0) {
       saveToStorage('calendarEvents', events);
     }
   }, [events, externalEvents]);
 
-  // Filter events based on search query
   const filteredEvents = events.filter(event => event.title.toLowerCase().includes(searchQuery.toLowerCase()) || event.description && event.description.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  // Events for the current month view
   const currentMonthEvents = filteredEvents.filter(event => {
     const eventDate = parseISO(event.date);
     return isSameMonth(eventDate, currentDate);
   });
 
-  // Events for the selected day
   const selectedDayEvents = filteredEvents.filter(event => {
     const eventDate = parseISO(event.date);
     return isSameDay(eventDate, selectedDate);
@@ -169,10 +162,8 @@ export function Calendar({
       id: uuidv4()
     };
     if (onAddEvent && onEditEvent) {
-      // External event management
       onEditEvent(newEventWithId);
     } else {
-      // Internal event management
       setEvents(prev => [...prev, newEventWithId]);
     }
     setNewEvent({
@@ -187,10 +178,8 @@ export function Calendar({
 
   const handleEditEvent = (event: CalendarEvent) => {
     if (onEditEvent) {
-      // External event management
       onEditEvent(event);
     } else {
-      // Internal event management
       setEvents(prev => prev.map(e => e.id === event.id ? event : e));
     }
   };
@@ -208,19 +197,15 @@ export function Calendar({
   const confirmDelete = () => {
     if (!eventToDelete) return;
     if (deleteAllRecurring && eventToDelete.repeat && eventToDelete.repeat.frequency) {
-      // Delete all recurring events with the same pattern
       const eventDate = eventToDelete.date;
       const eventTitle = eventToDelete.title;
       const eventType = eventToDelete.type;
       if (onDeleteEvent) {
-        // Let parent component handle deletion
         onDeleteEvent(eventToDelete.id);
       } else {
-        // Internal event management
         setEvents(prev => prev.filter(e => !(e.title === eventTitle && e.type === eventType && e.date.substring(0, 10) === eventDate.substring(0, 10) && e.repeat && e.repeat.frequency === eventToDelete.repeat?.frequency)));
       }
     } else {
-      // Delete just this event
       deleteEvent(eventToDelete.id);
     }
     setShowDeleteConfirmDialog(false);
@@ -230,10 +215,8 @@ export function Calendar({
 
   const deleteEvent = (eventId: string) => {
     if (onDeleteEvent) {
-      // External event management
       onDeleteEvent(eventId);
     } else {
-      // Internal event management
       setEvents(prev => prev.filter(e => e.id !== eventId));
     }
   };
@@ -272,7 +255,6 @@ export function Calendar({
   const handleSaveEvent = () => {
     if (!newEvent.title || !newEvent.date) return;
 
-    // Prepare event with repeat options if selected
     const eventWithRepeat = {
       ...newEvent,
       repeat: repeatOption !== 'none' ? {
@@ -282,16 +264,13 @@ export function Calendar({
     };
 
     if (eventToEdit) {
-      // Update existing event
       handleEditEvent({
         ...eventWithRepeat,
         id: eventToEdit.id
       });
     } else {
-      // Add new event
       addEvent(eventWithRepeat);
 
-      // If it's a repeating event, add additional events
       if (repeatOption !== 'none') {
         const startDate = new Date(newEvent.date);
         const endDate = newEvent.endDate ? new Date(newEvent.endDate) : undefined;
@@ -319,7 +298,6 @@ export function Calendar({
       }
     }
 
-    // Reset form and close dialog
     setShowEventDialog(false);
     setEventToEdit(null);
     setRepeatOption('none');
@@ -459,7 +437,6 @@ export function Calendar({
       openNewEventDialog(time);
     }} onEventClick={openEditEventDialog} onEditEvent={handleEditEvent} onDeleteEvent={handleDeleteEvent} activeFilter={activeFilter} />}
       
-      {/* New/Edit Event Dialog */}
       <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -528,7 +505,7 @@ export function Calendar({
                   <SelectValue placeholder="Selecciona una materia" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sin materia</SelectItem>
+                  <SelectItem value="_empty">Sin materia</SelectItem>
                   {folders.map(folder => <SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -563,7 +540,6 @@ export function Calendar({
         </DialogContent>
       </Dialog>
       
-      {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteConfirmDialog} onOpenChange={setShowDeleteConfirmDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>

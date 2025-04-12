@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { format, addDays, startOfWeek, setHours, setMinutes, addMinutes, parseISO } from "date-fns";
+import { format, addDays, startOfWeek, setHours, setMinutes, addMinutes, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChevronLeft, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -72,30 +72,59 @@ export function WeeklySchedule({
       const uniqueByDayAndTime: Record<string, CalendarEvent> = {};
       
       scheduleItems.forEach(event => {
-        const eventDate = new Date(event.date);
-        const dayOfWeek = eventDate.getDay();
-        const timeKey = format(eventDate, "HH:mm");
-        const key = `${dayOfWeek}-${timeKey}`;
-        
-        if (!uniqueByDayAndTime[key]) {
-          uniqueByDayAndTime[key] = event;
+        try {
+          const eventDate = new Date(event.date);
+          // Check if the date is valid before proceeding
+          if (isValid(eventDate)) {
+            const dayOfWeek = eventDate.getDay();
+            const timeKey = format(eventDate, "HH:mm");
+            const key = `${dayOfWeek}-${timeKey}`;
+            
+            if (!uniqueByDayAndTime[key]) {
+              uniqueByDayAndTime[key] = event;
+            }
+          }
+        } catch (e) {
+          console.error("Invalid event date:", event.date);
         }
       });
       
       // Convert to array format needed for the schedule
       const loadedEvents = Object.values(uniqueByDayAndTime).map(event => {
-        const eventDate = new Date(event.date);
-        const eventEnd = event.endDate ? new Date(event.endDate) : addMinutes(eventDate, 60);
-        
-        return {
-          title: event.title,
-          description: event.description || "",
-          date: event.date,
-          endDate: event.endDate || format(eventEnd, "yyyy-MM-dd'T'HH:mm"),
-          folderId: event.folderId || "",
-          type: event.type,
-          tempId: crypto.randomUUID()
-        };
+        try {
+          const eventDate = new Date(event.date);
+          let eventEnd;
+          let endDateStr;
+          
+          // Check if the date is valid before proceeding
+          if (isValid(eventDate)) {
+            eventEnd = event.endDate ? new Date(event.endDate) : addMinutes(eventDate, 60);
+            endDateStr = isValid(eventEnd) ? format(eventEnd, "yyyy-MM-dd'T'HH:mm") : "";
+          } else {
+            endDateStr = "";
+          }
+          
+          return {
+            title: event.title,
+            description: event.description || "",
+            date: event.date,
+            endDate: event.endDate || endDateStr,
+            folderId: event.folderId || "",
+            type: event.type,
+            tempId: crypto.randomUUID()
+          };
+        } catch (e) {
+          console.error("Error formatting event:", e);
+          return {
+            title: event.title,
+            description: event.description || "",
+            date: event.date,
+            endDate: event.endDate || "",
+            folderId: event.folderId || "",
+            type: event.type,
+            tempId: crypto.randomUUID()
+          };
+        }
       });
       
       setScheduleEvents(loadedEvents);
@@ -146,22 +175,46 @@ export function WeeklySchedule({
     onSave(calendarEvents);
   };
   
+  // Safe format function to handle potential invalid dates
+  const safeFormat = (dateStr: string | undefined, formatStr: string): string => {
+    if (!dateStr) return "";
+    try {
+      const date = new Date(dateStr);
+      if (!isValid(date)) return "";
+      return format(date, formatStr);
+    } catch (e) {
+      console.error("Error formatting date:", e);
+      return "";
+    }
+  };
+  
   const getEventAtTimeSlot = (dayIndex: number, time: string) => {
     const day = weekDays[dayIndex];
     const [hours, minutes] = time.split(":").map(Number);
     const slotTime = setMinutes(setHours(day, hours), minutes);
     
     return scheduleEvents.find(event => {
-      const eventStart = new Date(event.date);
-      const eventEnd = event.endDate ? new Date(event.endDate) : addMinutes(eventStart, 60);
-      
-      const slotStart = slotTime;
-      const slotEnd = addMinutes(slotTime, 59);
-      
-      return (
-        eventStart <= slotEnd && eventEnd > slotStart &&
-        eventStart.getDay() === day.getDay()
-      );
+      try {
+        const eventStart = new Date(event.date);
+        
+        // Skip invalid dates
+        if (!isValid(eventStart)) return false;
+        
+        const eventEnd = event.endDate && isValid(new Date(event.endDate)) 
+          ? new Date(event.endDate) 
+          : addMinutes(eventStart, 60);
+        
+        const slotStart = slotTime;
+        const slotEnd = addMinutes(slotTime, 59);
+        
+        return (
+          eventStart <= slotEnd && eventEnd > slotStart &&
+          eventStart.getDay() === day.getDay()
+        );
+      } catch (e) {
+        console.error("Error comparing event dates:", e);
+        return false;
+      }
     });
   };
   
@@ -298,7 +351,7 @@ export function WeeklySchedule({
                   <SelectValue placeholder="Selecciona una materia" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sin materia</SelectItem>
+                  <SelectItem value="_empty">Sin materia</SelectItem>
                   {folders.map(folder => (
                     <SelectItem key={folder.id} value={folder.id}>
                       {folder.name}
@@ -326,7 +379,7 @@ export function WeeklySchedule({
                 <Input 
                   id="startTime" 
                   type="time" 
-                  value={format(new Date(newEvent.date), "HH:mm")} 
+                  value={safeFormat(newEvent.date, "HH:mm")} 
                   onChange={e => {
                     const [hours, minutes] = e.target.value.split(":").map(Number);
                     const day = weekDays[selectedDay];
@@ -344,7 +397,7 @@ export function WeeklySchedule({
                 <Input 
                   id="endTime" 
                   type="time" 
-                  value={format(new Date(newEvent.endDate || ""), "HH:mm")} 
+                  value={safeFormat(newEvent.endDate, "HH:mm")} 
                   onChange={e => {
                     const [hours, minutes] = e.target.value.split(":").map(Number);
                     const day = weekDays[selectedDay];
