@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, AudioWaveform, Trash2, Plus, Scissors } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, AudioWaveform, Scissors } from "lucide-react";
 import { formatTime } from "@/lib/audio-utils";
 import { toast } from "sonner";
 
@@ -42,16 +42,12 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
-  const [showWaveform, setShowWaveform] = useState(true);
   
   // Selection state
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
   const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
-  const [mouseDownPosition, setMouseDownPosition] = useState<{ x: number, clientX: number } | null>(null);
   
-  const timeUpdateIntervalRef = useRef<number | null>(null);
-
   useImperativeHandle(ref, () => ({
     seekTo: (time: number) => {
       if (!audioRef.current) return;
@@ -91,10 +87,6 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
         audio.removeEventListener("waiting", () => setIsLoading(true));
         audio.removeEventListener("playing", () => setIsLoading(false));
         audio.removeEventListener("timeupdate", handleTimeUpdate);
-        
-        if (timeUpdateIntervalRef.current) {
-          window.clearInterval(timeUpdateIntervalRef.current);
-        }
         
         if (audio.src.startsWith('blob:')) {
           URL.revokeObjectURL(audio.src);
@@ -264,8 +256,50 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
     setPlaybackRate(rate);
   };
   
-  const toggleWaveform = () => {
-    setShowWaveform(!showWaveform);
+  const handleWaveformClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!waveformRef.current || !audioRef.current) return;
+    
+    const rect = waveformRef.current.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const percentage = offsetX / rect.width;
+    const newTime = percentage * duration;
+    
+    if (!isNaN(newTime) && isFinite(newTime)) {
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+      if (onTimeUpdate) {
+        onTimeUpdate(newTime);
+      }
+    }
+  };
+  
+  const handleWaveformMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!waveformRef.current) return;
+    
+    const rect = waveformRef.current.getBoundingClientRect();
+    const relativeX = e.clientX - rect.left;
+    const percentage = relativeX / rect.width;
+    const timeValue = percentage * duration;
+    
+    setIsSelecting(true);
+    setSelectionStart(timeValue);
+    setSelectionEnd(null);
+  };
+  
+  const handleWaveformMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isSelecting || !waveformRef.current) return;
+    
+    const rect = waveformRef.current.getBoundingClientRect();
+    const relativeX = e.clientX - rect.left;
+    const percentage = relativeX / rect.width;
+    const timeValue = percentage * duration;
+    
+    setSelectionEnd(timeValue);
+  };
+  
+  const handleWaveformMouseUp = () => {
+    if (!isSelecting) return;
+    setIsSelecting(false);
   };
   
   const handleAddChapter = () => {
@@ -286,60 +320,9 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
   const clearSelection = () => {
     setSelectionStart(null);
     setSelectionEnd(null);
-    setIsSelecting(false);
-    setMouseDownPosition(null);
-  };
-  
-  const handleWaveformMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!waveformRef.current) return;
-    
-    const rect = waveformRef.current.getBoundingClientRect();
-    const relativeX = e.clientX - rect.left;
-    const percentage = relativeX / rect.width;
-    const timeValue = percentage * duration;
-    
-    setIsSelecting(true);
-    setSelectionStart(timeValue);
-    setSelectionEnd(null);
-    setMouseDownPosition({ x: relativeX, clientX: e.clientX });
-  };
-  
-  const handleWaveformMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isSelecting || !waveformRef.current || !mouseDownPosition) return;
-    
-    const rect = waveformRef.current.getBoundingClientRect();
-    const relativeX = e.clientX - rect.left;
-    const percentage = relativeX / rect.width;
-    const timeValue = percentage * duration;
-    
-    setSelectionEnd(timeValue);
-  };
-  
-  const handleWaveformMouseUp = () => {
-    if (isSelecting && selectionStart !== null && selectionEnd === null) {
-      // If the user just clicked without dragging, clear the selection
-      clearSelection();
-    } else {
-      setIsSelecting(false);
-      setMouseDownPosition(null);
-    }
-  };
-  
-  const handleWaveformMouseLeave = () => {
-    if (isSelecting && selectionStart !== null && selectionEnd === null) {
-      // If the user moves the mouse out before dragging, clear the selection
-      clearSelection();
-    }
-  };
-  
-  const calculateProgress = () => {
-    if (duration <= 0) return 0;
-    return (currentTime / duration) * 100;
   };
   
   const validDuration = duration > 0 && isFinite(duration) ? duration : 100;
-  
-  const formattedCurrentTime = formatTime(Math.floor(currentTime));
   
   // Calculate selection position and width as percentage
   const selectionStartPercent = selectionStart !== null ? (selectionStart / validDuration) * 100 : null;
@@ -354,170 +337,132 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
     : null;
   
   return (
-    <div className="w-full bg-background border rounded-md p-4 shadow-sm">
-      <div className="space-y-4">
-        <div className="flex items-center justify-between mb-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={toggleWaveform}
-            className="text-xs h-8 flex items-center gap-1"
-          >
-            <AudioWaveform className="h-4 w-4" />
-            {showWaveform ? "Ocultar forma de onda" : "Mostrar forma de onda"}
-          </Button>
-          
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={clearSelection}
-              disabled={selectionStart === null && selectionEnd === null}
-              className="text-xs h-8 flex items-center gap-1 text-red-500 hover:text-red-600"
-            >
-              <Trash2 className="h-4 w-4" />
-              Limpiar selección
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleAddChapter}
-              disabled={selectionStart === null || selectionEnd === null}
-              className="text-xs h-8 flex items-center gap-1 bg-purple-100 text-purple-700 border-purple-300 hover:bg-purple-200"
-            >
-              <Scissors className="h-4 w-4" />
-              Crear capítulo con selección
-            </Button>
-          </div>
-        </div>
-        
+    <div className="w-full max-w-full bg-background border rounded-md p-3 shadow-sm overflow-hidden">
+      <div className="space-y-3 max-w-full">
+        {/* Waveform visualization */}
         <div 
           ref={waveformRef}
-          className="relative w-full h-24 bg-gray-100 rounded-lg overflow-hidden mb-2 select-none cursor-pointer"
+          className="relative w-full h-16 bg-gray-100 rounded-lg overflow-hidden cursor-pointer"
+          onClick={handleWaveformClick}
           onMouseDown={handleWaveformMouseDown}
           onMouseMove={handleWaveformMouseMove}
           onMouseUp={handleWaveformMouseUp}
-          onMouseLeave={handleWaveformMouseLeave}
+          onMouseLeave={handleWaveformMouseUp}
         >
-          <div className="absolute inset-0 flex items-center justify-start">
-            {/* Full waveform in white */}
-            <div className="h-full w-full flex items-center justify-center">
-              <div className="w-full h-16 px-4">
-                <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
-                  <path 
-                    d="M 0,50 Q 10,40 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
-                    stroke="white" 
-                    strokeWidth="2" 
-                    fill="none"
-                  />
-                  <path 
-                    d="M 0,50 Q 10,60 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
-                    stroke="white" 
-                    strokeWidth="2" 
-                    fill="none"
-                  />
-                </svg>
-              </div>
-            </div>
-            
-            {/* Selected region for chapter creation */}
-            {selectionLeftPercent !== null && selectionWidthPercent !== null && (
-              <div 
-                className="absolute h-full bg-blue-500/30 border-l-2 border-r-2 border-blue-500 pointer-events-none"
-                style={{ 
-                  left: `${selectionLeftPercent}%`, 
-                  width: `${selectionWidthPercent}%`
-                }}
-              >
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="w-full h-16 px-4">
-                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
-                      <path 
-                        d="M 0,50 Q 10,40 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
-                        stroke="rgb(59, 130, 246)" 
-                        strokeWidth="2" 
-                        fill="none"
-                      />
-                      <path 
-                        d="M 0,50 Q 10,60 20,50 T 40,50 T 60,50 T 80,50 T 100,50" 
-                        stroke="rgb(59, 130, 246)" 
-                        strokeWidth="2" 
-                        fill="none"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Current time indicator */}
-            <div 
-              className="absolute top-0 bottom-0 w-0.5 bg-red-500"
-              style={{ 
-                left: `${(currentTime / validDuration) * 100}%`,
-                transform: 'translateX(-50%)'
-              }}
-            >
-              <div className="w-3 h-3 rounded-full bg-red-500 absolute -top-1.5 left-1/2 transform -translate-x-1/2"></div>
-            </div>
+          {/* Full waveform background */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <svg viewBox="0 0 100 50" preserveAspectRatio="none" className="w-full h-full">
+              <path 
+                d="M 0,25 Q 10,20 20,25 T 40,25 T 60,25 T 80,25 T 100,25" 
+                stroke="rgba(209, 213, 219, 0.8)" 
+                strokeWidth="1" 
+                fill="none"
+              />
+              <path 
+                d="M 0,25 Q 10,30 20,25 T 40,25 T 60,25 T 80,25 T 100,25" 
+                stroke="rgba(209, 213, 219, 0.8)" 
+                strokeWidth="1" 
+                fill="none"
+              />
+            </svg>
           </div>
           
-          <div className="absolute bottom-0 left-0 right-0 flex justify-between px-2 text-xs text-gray-500">
+          {/* Played portion of waveform */}
+          <div 
+            className="absolute top-0 bottom-0 left-0 flex items-center overflow-hidden"
+            style={{ width: `${(currentTime / validDuration) * 100}%` }}
+          >
+            <svg viewBox="0 0 100 50" preserveAspectRatio="none" className="w-full h-full">
+              <path 
+                d="M 0,25 Q 10,20 20,25 T 40,25 T 60,25 T 80,25 T 100,25" 
+                stroke="var(--color-primary, #0085FF)" 
+                strokeWidth="1.5" 
+                fill="none"
+              />
+              <path 
+                d="M 0,25 Q 10,30 20,25 T 40,25 T 60,25 T 80,25 T 100,25" 
+                stroke="var(--color-primary, #0085FF)" 
+                strokeWidth="1.5" 
+                fill="none"
+              />
+            </svg>
+          </div>
+          
+          {/* Selected region */}
+          {selectionLeftPercent !== null && selectionWidthPercent !== null && (
+            <div 
+              className="absolute h-full bg-blue-500/30 border-l border-r border-blue-500 pointer-events-none"
+              style={{ 
+                left: `${selectionLeftPercent}%`, 
+                width: `${selectionWidthPercent}%`
+              }}
+            />
+          )}
+          
+          {/* Current time indicator */}
+          <div 
+            className="absolute top-0 bottom-0 w-0.5 bg-red-500"
+            style={{ 
+              left: `${(currentTime / validDuration) * 100}%`,
+              transform: 'translateX(-50%)'
+            }}
+          >
+            <div className="w-2 h-2 rounded-full bg-red-500 absolute -top-1 left-1/2 transform -translate-x-1/2"></div>
+          </div>
+          
+          {/* Time markers */}
+          <div className="absolute bottom-0 left-0 right-0 flex justify-between px-2 text-[10px] text-gray-500">
             <span>{formatTime(0)}</span>
-            <span>{formatTime(Math.floor(validDuration / 6))}</span>
-            <span>{formatTime(Math.floor(validDuration / 3))}</span>
             <span>{formatTime(Math.floor(validDuration / 2))}</span>
-            <span>{formatTime(Math.floor(2 * validDuration / 3))}</span>
-            <span>{formatTime(Math.floor(5 * validDuration / 6))}</span>
             <span>{formatTime(Math.floor(validDuration))}</span>
           </div>
         </div>
         
+        {/* Time slider */}
         <div className="w-full space-y-1">
-          <div className="relative">
-            <Slider 
-              value={[currentTime]} 
-              min={0} 
-              max={validDuration} 
-              step={0.01}
-              onValueChange={handleSeek}
-              onValueCommit={() => setIsDragging(false)}
-              onPointerDown={() => setIsDragging(true)}
-              className="cursor-pointer"
-            />
-          </div>
+          <Slider 
+            value={[currentTime]} 
+            min={0} 
+            max={validDuration} 
+            step={0.1}
+            onValueChange={handleSeek}
+            onValueCommit={() => setIsDragging(false)}
+            onPointerDown={() => setIsDragging(true)}
+            className="cursor-pointer"
+          />
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>{formatTime(Math.floor(currentTime))}</span>
             <span>{formatTime(Math.floor(validDuration))}</span>
           </div>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+        {/* Controls */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 items-center gap-3">
+          <div className="flex items-center justify-center sm:justify-start gap-2">
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={skipBackward}
               aria-label="Retroceder 10 segundos"
+              className="h-8 w-8"
             >
-              <SkipBack className="h-5 w-5" />
+              <SkipBack className="h-4 w-4" />
             </Button>
             
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={togglePlayPause}
-              className="h-10 w-10"
+              className="h-9 w-9"
               disabled={isLoading}
               aria-label={isPlaying ? "Pausar" : "Reproducir"}
             >
               {isLoading ? (
                 <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               ) : isPlaying ? (
-                <Pause className="h-5 w-5" />
+                <Pause className="h-4 w-4" />
               ) : (
-                <Play className="h-5 w-5" />
+                <Play className="h-4 w-4" />
               )}
             </Button>
             
@@ -526,18 +471,33 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
               size="icon" 
               onClick={skipForward}
               aria-label="Avanzar 10 segundos"
+              className="h-8 w-8"
             >
-              <SkipForward className="h-5 w-5" />
+              <SkipForward className="h-4 w-4" />
             </Button>
           </div>
           
-          <div className="flex flex-wrap items-center justify-center gap-2 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2">
+            {/* Selection controls */}
+            {(selectionStart !== null && selectionEnd !== null) && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleAddChapter}
+                className="h-7 text-xs flex items-center gap-1"
+              >
+                <Scissors className="h-3 w-3" />
+                <span>Crear capítulo</span>
+              </Button>
+            )}
+            
+            {/* Playback speed */}
             <div className="flex items-center gap-1">
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => changePlaybackRate(1)}
-                className={`h-6 px-2 ${playbackRate === 1 ? 'bg-primary/20' : ''}`}
+                className={`h-6 px-2 text-xs ${playbackRate === 1 ? 'bg-primary/20' : ''}`}
               >
                 1x
               </Button>
@@ -545,7 +505,7 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
                 variant="ghost" 
                 size="sm" 
                 onClick={() => changePlaybackRate(1.5)}
-                className={`h-6 px-2 ${playbackRate === 1.5 ? 'bg-primary/20' : ''}`}
+                className={`h-6 px-2 text-xs ${playbackRate === 1.5 ? 'bg-primary/20' : ''}`}
               >
                 1.5x
               </Button>
@@ -553,13 +513,14 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
                 variant="ghost" 
                 size="sm" 
                 onClick={() => changePlaybackRate(2)}
-                className={`h-6 px-2 ${playbackRate === 2 ? 'bg-primary/20' : ''}`}
+                className={`h-6 px-2 text-xs ${playbackRate === 2 ? 'bg-primary/20' : ''}`}
               >
                 2x
               </Button>
             </div>
             
-            <div className="flex items-center gap-1 ml-1">
+            {/* Volume control */}
+            <div className="flex items-center gap-1">
               <Button 
                 variant="ghost" 
                 size="icon"
@@ -580,7 +541,7 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
                 max={1}
                 step={0.01}
                 onValueChange={handleVolumeChange}
-                className="w-[60px] sm:w-[80px]"
+                className="w-[60px]"
                 aria-label="Volumen"
               />
             </div>

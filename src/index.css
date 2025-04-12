@@ -164,11 +164,13 @@ pre {
 /* Recording details specific styles */
 .recording-content {
   width: 100%;
+  max-width: 100%;
   overflow-x: hidden;
 }
 
 .audio-timeline {
   width: 100%;
+  max-width: 100%;
   overflow-x: hidden;
 }
 
@@ -177,4 +179,23 @@ pre {
   overflow-wrap: break-word;
   word-wrap: break-word;
   word-break: break-word;
+}
+
+/* Audio player responsive adjustments */
+@media (max-width: 640px) {
+  /* Make audio controls stack on mobile */
+  .audio-controls {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  /* Reduce the height of the waveform on small screens */
+  .audio-waveform {
+    height: 40px;
+  }
+  
+  /* Adjust volume slider width on mobile */
+  .volume-slider {
+    width: 50px;
+  }
 }

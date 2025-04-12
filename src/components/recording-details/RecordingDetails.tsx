@@ -126,7 +126,7 @@ export function RecordingDetails({
     audioDuration,
     activeTab,
     renderHighlightedText,
-    updateRecording // Add this to fix the error
+    updateRecording
   };
 
   // Responsive layout classes
@@ -155,7 +155,7 @@ export function RecordingDetails({
               
               <Separator className="my-2 dark:bg-custom-secondary/40" />
               
-              <div className="my-4 w-full audio-timeline">
+              <div className="my-4 w-full max-w-full overflow-hidden">
                 <AudioPlayer 
                   audioUrl={recording.audioUrl} 
                   audioBlob={audioBlob || undefined}
@@ -166,15 +166,17 @@ export function RecordingDetails({
                   onAddChapter={handleAddChapter}
                 />
                 
-                <AudioChaptersTimeline 
-                  chapters={chapters}
-                  duration={audioDuration}
-                  currentTime={currentAudioTime}
-                  onChapterClick={handleChapterClick}
-                />
+                <div className="mt-2 max-w-full overflow-hidden">
+                  <AudioChaptersTimeline 
+                    chapters={chapters}
+                    duration={audioDuration}
+                    currentTime={currentAudioTime}
+                    onChapterClick={handleChapterClick}
+                  />
+                </div>
               </div>
               
-              <div className="pt-2 sm:pt-4 w-full">
+              <div className="pt-2 sm:pt-4 w-full max-w-full overflow-hidden">
                 <RecordingTabs 
                   data={recordingDetailsData}
                   onTabChange={setActiveTab}
