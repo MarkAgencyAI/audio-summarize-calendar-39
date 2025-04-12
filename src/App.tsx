@@ -29,40 +29,37 @@ const queryClient = new QueryClient({
   },
 });
 
-// Use function declaration instead of arrow function to avoid issues
 function App() {
   // Set the app name in the document title
   document.title = "CALI - Asistente de clases";
 
   return (
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <RecordingsProvider>
-            <TooltipProvider>
-              <div className="relative min-h-screen max-w-full overflow-x-hidden">
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/calendar" element={<CalendarPage />} />
-                    <Route path="/folders" element={<FoldersPage />} />
-                    <Route path="/folder/:folderId" element={<FolderDetailsPage />} />
-                    <Route path="/profile" element={<ProfilePage />} />
-                    <Route path="/recordings/:recordingId" element={<RecordingDetailsPage />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </BrowserRouter>
-              </div>
-            </TooltipProvider>
-          </RecordingsProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <RecordingsProvider>
+          <TooltipProvider>
+            <div className="relative min-h-screen max-w-full overflow-x-hidden">
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/calendar" element={<CalendarPage />} />
+                  <Route path="/folders" element={<FoldersPage />} />
+                  <Route path="/folder/:folderId" element={<FolderDetailsPage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/recordings/:recordingId" element={<RecordingDetailsPage />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </div>
+          </TooltipProvider>
+        </RecordingsProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 

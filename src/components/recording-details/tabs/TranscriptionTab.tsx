@@ -44,7 +44,7 @@ export function TranscriptionTab({
   const [customColor, setCustomColor] = useState("#FEF7CD");
   
   const transcriptionRef = useRef<HTMLDivElement>(null);
-  const selectionTimeout = useRef<NodeJS.Timeout | null>(null);
+  const selectionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Log transcription data for debugging
   useEffect(() => {

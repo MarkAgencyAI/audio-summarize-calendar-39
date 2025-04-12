@@ -32,10 +32,14 @@ const ResizablePanel = React.forwardRef<
 ))
 ResizablePanel.displayName = "ResizablePanel"
 
+type ResizableHandleProps = React.ComponentPropsWithoutRef<typeof ResizablePrimitive.PanelResizeHandle> & {
+  withHandle?: boolean
+}
+
 const ResizableHandle = React.forwardRef<
   React.ElementRef<typeof ResizablePrimitive.PanelResizeHandle>,
-  React.ComponentPropsWithoutRef<typeof ResizablePrimitive.PanelResizeHandle>
->(({ className, ...props }, ref) => (
+  ResizableHandleProps
+>(({ className, withHandle = true, ...props }, ref) => (
   <ResizablePrimitive.PanelResizeHandle
     ref={ref}
     className={cn(
@@ -44,9 +48,11 @@ const ResizableHandle = React.forwardRef<
     )}
     {...props}
   >
-    <div className="z-10 flex h-4 w-3 items-center justify-center rounded-sm border bg-background">
-      <GripVertical className="h-2.5 w-2.5" />
-    </div>
+    {withHandle && (
+      <div className="z-10 flex h-4 w-3 items-center justify-center rounded-sm border bg-background">
+        <GripVertical className="h-2.5 w-2.5" />
+      </div>
+    )}
   </ResizablePrimitive.PanelResizeHandle>
 ))
 ResizableHandle.displayName = "ResizableHandle"

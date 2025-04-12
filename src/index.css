@@ -1,229 +1,80 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
+ 
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
+    --foreground: 224 71.4% 4.1%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
+    --card-foreground: 224 71.4% 4.1%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71.4% 4.1%;
+    --primary: 220.9 39.3% 11%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 220.9 39.3% 11%;
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 220 14.3% 95.9%;
+    --accent-foreground: 220.9 39.3% 11%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --ring: 215 20.2% 65.1%;
-
+    --destructive-foreground: 210 20% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 224 71.4% 4.1%;
     --radius: 0.5rem;
+    --custom-primary: 210 100% 52%;
+    --custom-secondary: 270 95% 75%;
+  }
+ 
+  .dark {
+    --background: 224 71.4% 4.1%;
+    --foreground: 210 20% 98%;
+    --card: 224 71.4% 4.1%;
+    --card-foreground: 210 20% 98%;
+    --popover: 224 71.4% 4.1%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 210 20% 98%;
+    --primary-foreground: 220.9 39.3% 11%;
+    --secondary: 215 27.9% 16.9%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 215 27.9% 16.9%;
+    --muted-foreground: 217.9 10.6% 64.9%;
+    --accent: 215 27.9% 16.9%;
+    --accent-foreground: 210 20% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 215 27.9% 16.9%;
+    --input: 215 27.9% 16.9%;
+    --ring: 216 12.2% 83.9%;
+    --custom-primary: 210 100% 52%;
+    --custom-secondary: 270 95% 75%;
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+  /* Animation for audio wave bars */
+  .audio-wave-bar {
+    animation: wave 1.5s ease-in-out infinite;
+    transform-origin: bottom;
+  }
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 85.7% 97.3%;
-
-    --ring: 217.2 32.6% 17.5%;
+  @keyframes wave {
+    0%, 100% {
+      transform: scaleY(1);
+    }
+    50% {
+      transform: scaleY(0.85);
+    }
   }
 }
-
+ 
 @layer base {
   * {
     @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
-  
-  /* For Firefox */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(155, 155, 155, 0.7) transparent;
-  }
-  
-  /* For Webkit browsers (Chrome, Safari) */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  ::-webkit-scrollbar-thumb {
-    background-color: rgba(155, 155, 155, 0.7);
-    border-radius: 4px;
-  }
-  
-  ::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(155, 155, 155, 0.9);
-  }
-  
-  /* Custom scrollbar for specific elements */
-  .custom-scrollbar {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(155, 155, 155, 0.7) transparent;
-  }
-  
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-  }
-  
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: rgba(155, 155, 155, 0.7);
-    border-radius: 2px;
-  }
-}
-
-/* Audio player waves animation */
-@keyframes wave {
-  0% {
-    transform: scaleY(0.5);
-  }
-  50% {
-    transform: scaleY(1);
-  }
-  100% {
-    transform: scaleY(0.5);
-  }
-}
-
-.audio-wave-bar {
-  animation: wave 1.2s ease-in-out infinite;
-  transform-origin: bottom;
-}
-
-.audio-wave-bar:nth-child(2n) {
-  animation-delay: 0.1s;
-}
-
-.audio-wave-bar:nth-child(3n) {
-  animation-delay: 0.2s;
-}
-
-.audio-wave-bar:nth-child(4n) {
-  animation-delay: 0.3s;
-}
-
-/* Text selection for highlighting */
-.transcription-text ::selection {
-  background-color: rgba(59, 130, 246, 0.3);
-  color: inherit;
-}
-
-.transcription-text ::-moz-selection {
-  background-color: rgba(59, 130, 246, 0.3);
-  color: inherit;
-}
-
-/* Better text wrapping for transcriptions */
-.overflow-wrap-anywhere {
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-/* Fix for scrolling in dialog content */
-[data-radix-scroll-area-viewport] {
-  height: 100% !important;
-  display: block !important;
-}
-
-/* Make sure pre tags don't overflow */
-pre {
-  max-width: 100%;
-  overflow-wrap: break-word;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-/* Ensure proper tab content scrolling */
-[role="tabpanel"] {
-  height: 100%;
-  overflow: auto;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Ensure the dialog scrolls properly on mobile */
-@media (max-width: 640px) {
-  .dialog-content {
-    max-height: 85vh;
-    overflow: auto;
-  }
-}
-
-/* Fix for flex layout issues in scrollable containers */
-.min-h-0 {
-  min-height: 0;
-}
-
-/* Fix for React Fragment key warnings */
-.transcription-text > span {
-  display: inline;
-}
-
-/* Ensure scrollable containers don't overflow */
-.overflow-hidden {
-  overflow: hidden;
-}
-
-/* Ensure scrollable content areas expand properly */
-.flex-grow {
-  flex-grow: 1;
-}
-
-/* Make overflow-wrap work properly for transcription text */
-.overflow-wrap-anywhere {
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  white-space: pre-wrap;
-}
-
-/* Fix for scrolling in dialog content */
-[data-radix-scroll-area-viewport] {
-  height: 100% !important;
-  display: block !important;
 }
