@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -114,9 +115,11 @@ export function RecordingDetails({
   };
 
   // Create a wrapper function for adding chapters
-  // This fixes the type mismatch by creating a no-parameter function
+  // This fixes the type mismatch by correctly passing the startTime parameter
   const handleAddChapterFromPlayer = () => {
-    handleAddChapter(currentAudioTime);
+    // When called from the player, we use the current time as startTime
+    // and pass undefined as endTime to indicate an ongoing chapter
+    handleAddChapter(currentAudioTime, undefined);
   };
 
   // Prepare data for child components
