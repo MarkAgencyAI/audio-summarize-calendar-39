@@ -270,7 +270,7 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
   const selectionEndPercent = selectionEnd !== null ? selectionEnd / validDuration * 100 : null;
   const selectionLeftPercent = selectionStartPercent !== null && selectionEndPercent !== null ? Math.min(selectionStartPercent, selectionEndPercent) : null;
   const selectionWidthPercent = selectionStartPercent !== null && selectionEndPercent !== null ? Math.abs(selectionEndPercent - selectionStartPercent) : null;
-  return <div className="sm:w-96 bg-background border rounded-md p-3 shadow-sm overflow-hidden ">
+  return <div className="w-auto bg-background border rounded-md pr-8 shadow-sm overflow-hidden ">
       <div className="space-y-3 max-w-full">
         {/* Waveform visualization */}
         <div ref={waveformRef} className="relative w-full h-16 bg-gray-100 rounded-lg overflow-hidden cursor-pointer" onClick={handleWaveformClick} onMouseDown={handleWaveformMouseDown} onMouseMove={handleWaveformMouseMove} onMouseUp={handleWaveformMouseUp} onMouseLeave={handleWaveformMouseUp}>

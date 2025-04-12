@@ -125,9 +125,9 @@ export function RecordingDetails({
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="h-[90vh] flex flex-col dark:bg-[#001A29] dark:border-custom-secondary overflow-hidden max-w-full md:max-w-4xl w-[95vw] md:w-full">
           <ScrollArea className="flex-1 w-full pr-2 custom-scrollbar">
-            <div className="w-72 sm:w-96 px-2 sm:px-4">
+            <div className="w-auto p-0">
               <DialogHeader className="mb-2">
-                <DialogTitle className="flex flex-wrap items-center justify-between gap-2">
+                <DialogTitle className="flex flex-wrap items-center justify-between gap-2 w-auto pr-0">
                   <RecordingHeader recording={recording} />
                 </DialogTitle>
                 <DialogDescription className="text-sm text-muted-foreground mt-1">
