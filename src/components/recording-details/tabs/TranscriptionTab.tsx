@@ -1,11 +1,12 @@
-import { useState, useRef, useEffect } from "react";
+
+import React, { useState, useRef, useEffect } from "react";
 import { TranscriptionTabProps, HighlightMenuPosition, SelectionRange } from "../types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
-import { PlayCircle, PauseCircle, Rewind, Forward, Copy, Highlight, Edit, Trash2, ChevronsUpDown, ChevronDown, ChevronUp } from "lucide-react";
+import { PlayCircle, PauseCircle, Rewind, Forward, Copy, Highlighter, Edit, Trash2, ChevronsUpDown, ChevronDown, ChevronUp, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
@@ -110,9 +111,10 @@ export function TranscriptionTab({
           ...(data.highlights || []),
           {
             id: Date.now().toString(),
-            start: selectionRange.start,
-            end: selectionRange.end,
+            text: selectedText,
             color: selectedColor,
+            startPosition: selectionRange.start,
+            endPosition: selectionRange.end,
           },
         ],
       });
@@ -152,31 +154,31 @@ export function TranscriptionTab({
   };
   
   const renderHighlightedText = () => {
-    let transcription = data.recording.transcription || "";
+    let transcription = data.recording.output || "";
     let highlights = data.highlights || [];
     let parts = [];
     let lastIndex = 0;
     
     // Sort highlights by start index
-    highlights.sort((a, b) => a.start - b.start);
+    highlights.sort((a, b) => a.startPosition - b.startPosition);
     
     for (const highlight of highlights) {
-      if (highlight.end <= lastIndex) {
+      if (highlight.endPosition <= lastIndex) {
         // Skip overlapping highlights
         continue;
       }
       
       // Add the text before the highlight
-      if (highlight.start > lastIndex) {
+      if (highlight.startPosition > lastIndex) {
         parts.push(
           <React.Fragment key={`text-${lastIndex}`}>
-            {transcription.substring(lastIndex, highlight.start)}
+            {transcription.substring(lastIndex, highlight.startPosition)}
           </React.Fragment>
         );
       }
       
       // Add the highlighted text
-      const highlightText = transcription.substring(highlight.start, highlight.end);
+      const highlightText = transcription.substring(highlight.startPosition, highlight.endPosition);
       parts.push(
         <mark
           key={highlight.id}
@@ -194,7 +196,7 @@ export function TranscriptionTab({
         </mark>
       );
       
-      lastIndex = highlight.end;
+      lastIndex = highlight.endPosition;
     }
     
     // Add the remaining text after the last highlight
@@ -235,7 +237,7 @@ export function TranscriptionTab({
                 className="h-8 w-8 border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/70"
                 disabled={!selectedText}
               >
-                <Highlight className="h-4 w-4" />
+                <Highlighter className="h-4 w-4" />
                 <span className="sr-only">Resaltar</span>
               </Button>
             </PopoverTrigger>
@@ -307,7 +309,7 @@ export function TranscriptionTab({
             ref={transcriptionRef}
             onMouseUp={handleTextSelect}
           >
-            {data.recording.transcription ? (
+            {data.recording.output ? (
               renderHighlightedText()
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-center p-8">

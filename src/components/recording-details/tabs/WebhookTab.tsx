@@ -30,7 +30,7 @@ export function WebhookTab({ data }: WebhookTabProps) {
       <div className="mb-3 flex items-center gap-2">
         <Sparkles className="h-5 w-5 text-amber-500" />
         <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200">Resumen y puntos clave</h3>
-        <Badge variant="outline" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800">
+        <Badge variant="warning" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800">
           IA
         </Badge>
       </div>
