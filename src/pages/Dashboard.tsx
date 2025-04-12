@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -200,10 +201,19 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("transcriptions");
+  
+  // Add these variables for transcription state
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcriptionOutput, setTranscriptionOutput] = useState("");
+  const [transcriptionProgress, setTranscriptionProgress] = useState(0);
+  const [transcriptionOpen, setTranscriptionOpen] = useState(false);
+  
   const handleAddToCalendar = (recording: any) => {
     console.log("Add to calendar:", recording);
     toast.info("Funcionalidad en desarrollo");
   };
+  
   useEffect(() => {
     const loadEvents = () => {
       const storedEvents = loadFromStorage<CalendarEvent[]>("calendarEvents") || [];
@@ -229,6 +239,7 @@ export default function Dashboard() {
     const intervalId = setInterval(loadEvents, 60000);
     return () => clearInterval(intervalId);
   }, []);
+  
   useEffect(() => {
     const handleWebhookResponse = (event: Event) => {
       const customEvent = event as CustomEvent;
@@ -243,6 +254,40 @@ export default function Dashboard() {
       window.removeEventListener('webhookResponse', handleWebhookResponse);
     };
   }, []);
+  
+  // Add this effect to listen for audio recorder events
+  useEffect(() => {
+    const handleAudioRecorderMessage = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail?.type === 'recordingStarted') {
+        setIsRecording(true);
+      } else if (customEvent.detail?.type === 'recordingStopped') {
+        setIsRecording(false);
+      } else if (customEvent.detail?.type === 'transcriptionStarted') {
+        setIsTranscribing(true);
+        setTranscriptionOutput("");
+        setTranscriptionProgress(0);
+        setTranscriptionOpen(true);
+      } else if (customEvent.detail?.type === 'transcriptionComplete' || customEvent.detail?.type === 'transcriptionStopped') {
+        setIsTranscribing(false);
+        setTranscriptionProgress(100);
+      } else if (customEvent.detail?.type === 'transcriptionUpdate') {
+        if (customEvent.detail.data) {
+          if (customEvent.detail.data.output) {
+            setTranscriptionOutput(customEvent.detail.data.output);
+          }
+          if (customEvent.detail.data.progress !== undefined) {
+            setTranscriptionProgress(customEvent.detail.data.progress);
+          }
+        }
+      }
+    };
+    window.addEventListener('audioRecorderMessage', handleAudioRecorderMessage);
+    return () => {
+      window.removeEventListener('audioRecorderMessage', handleAudioRecorderMessage);
+    };
+  }, []);
+  
   return <Layout>
       <div className="space-y-6 max-w-full">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
