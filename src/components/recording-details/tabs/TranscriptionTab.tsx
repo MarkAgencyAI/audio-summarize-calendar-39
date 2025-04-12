@@ -16,7 +16,7 @@ export function TranscriptionTab({
   data,
   onTextSelection
 }: TranscriptionTabProps) {
-  const { updateRecording } = data.updateRecording;
+  const { updateRecording } = data;
   const { llama3 } = useGroq();
   const [isEditingOutput, setIsEditingOutput] = useState(false);
   const [editedOutput, setEditedOutput] = useState(data.recording.output || "");

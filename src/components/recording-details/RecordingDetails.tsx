@@ -125,7 +125,8 @@ export function RecordingDetails({
     currentAudioTime,
     audioDuration,
     activeTab,
-    renderHighlightedText
+    renderHighlightedText,
+    updateRecording // Add this to fix the error
   };
 
   // Responsive layout classes
