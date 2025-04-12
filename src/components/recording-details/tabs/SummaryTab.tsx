@@ -77,7 +77,7 @@ export function SummaryTab({ data }: WebhookTabProps) {
       <div className="space-y-4">
         {lines.map((line, index) => {
           // Empty lines
-          if (!line.trim()) return <div key={index} className="h-2" />;
+          if (!line.trim()) return null;
           
           // Headings (lines ending with colon or starting with # or ##)
           if (line.trim().endsWith(':') || /^#+\s/.test(line)) {
@@ -114,7 +114,7 @@ export function SummaryTab({ data }: WebhookTabProps) {
   };
 
   return (
-    <div className="h-full flex flex-col p-4 overflow-hidden">
+    <div className="flex-grow flex flex-col p-4 overflow-hidden">
       <div className="mb-4 flex flex-col gap-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-md">
@@ -132,7 +132,7 @@ export function SummaryTab({ data }: WebhookTabProps) {
         </div>
       </div>
       
-      <div className="flex-1 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/30 min-h-0">
+      <div className="flex-1 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/30">
         <ScrollArea className="h-full w-full">
           <div className="p-5 max-w-full">
             {renderSummaryContent()}
