@@ -24,6 +24,11 @@ export function ChaptersTab({
 
   // Ensure chapters are available even if they're not yet initialized in state
   const chaptersToDisplay = data.chapters || [];
+  
+  // Log para depuración
+  console.log("Capítulos a mostrar:", chaptersToDisplay);
+  console.log("Capítulos en data:", data.chapters);
+  console.log("Capítulos en recording:", data.recording.chapters);
 
   return (
     <div className="h-full flex flex-col p-4">

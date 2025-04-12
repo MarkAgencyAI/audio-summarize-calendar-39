@@ -43,6 +43,20 @@ export default function RecordingDetailsPage() {
     return () => clearTimeout(loadingTimer);
   }, [recording, navigate]);
   
+  // Log para depuración - verificar si la grabación tiene datos
+  useEffect(() => {
+    if (recording) {
+      console.log("Grabación cargada:", {
+        id: recording.id,
+        name: recording.name,
+        chapters: recording.chapters?.length || 0,
+        hasOutput: !!recording.output,
+        outputLength: recording.output?.length || 0,
+        hasWebhookData: !!recording.webhookData
+      });
+    }
+  }, [recording]);
+  
   // Handle closing the dialog
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);

@@ -15,6 +15,7 @@ import { AudioPlayerV2 } from "./AudioPlayerV2";
 import { AudioChaptersTimeline } from "@/components/AudioChapter";
 import { AudioPlayerHandle } from "./types";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { toast } from "sonner";
 
 interface RecordingDetailsProps {
   recording: Recording;
@@ -30,7 +31,7 @@ export function RecordingDetails({
   const { updateRecording } = useRecordings();
   const [isOpen, setIsOpenState] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [activeTab, setActiveTab] = useState("webhook");
+  const [activeTab, setActiveTab] = useState("transcription");
   const [currentAudioTime, setCurrentAudioTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(recording.duration || 0);
   const audioPlayerRef = useRef<AudioPlayerHandle>(null);
@@ -64,6 +65,17 @@ export function RecordingDetails({
   // Dialog control
   const dialogOpen = propIsOpen !== undefined ? propIsOpen : isOpen;
   const setDialogOpen = onOpenChange || setIsOpenState;
+
+  // Debug para verificar si hay datos
+  useEffect(() => {
+    console.log("Recording details:", {
+      id: recording.id,
+      chapters: recording.chapters || [],
+      output: recording.output ? recording.output.substring(0, 100) + "..." : "No output",
+      highlights: recording.highlights || [],
+      audioUrl: recording.audioUrl || "No URL"
+    });
+  }, [recording]);
 
   // Load audio from storage
   useEffect(() => {
@@ -116,10 +128,9 @@ export function RecordingDetails({
   };
 
   // Create a wrapper function for adding chapters
-  const handleAddChapterFromPlayer = () => {
-    // When called from the player, we use the current time as startTime
-    // and pass undefined as endTime to indicate an ongoing chapter
-    handleAddChapter(currentAudioTime, undefined);
+  const handleAddChapterFromPlayer = (startTime: number, endTime?: number) => {
+    handleAddChapter(startTime, endTime);
+    toast.success("Fragmento seleccionado para crear capítulo");
   };
 
   // Make sure we have the chapters from the recording if they exist

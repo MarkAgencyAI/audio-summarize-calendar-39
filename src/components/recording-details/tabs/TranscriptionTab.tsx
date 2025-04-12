@@ -28,6 +28,12 @@ export function TranscriptionTab({
   const transcriptionRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   
+  useEffect(() => {
+    // Debuggear el contenido de la transcripción
+    console.log("Transcripción:", data.recording.output);
+    console.log("Highlights:", data.highlights);
+  }, [data.recording.output, data.highlights]);
+  
   const toggleExpanded = () => {
     setIsExpanded(!isExpanded);
   };
@@ -159,6 +165,10 @@ export function TranscriptionTab({
     let parts = [];
     let lastIndex = 0;
     
+    if (!transcription || transcription.trim() === "") {
+      return <p className="text-slate-500 dark:text-slate-400">No hay contenido de transcripción disponible.</p>;
+    }
+    
     // Sort highlights by start index
     highlights.sort((a, b) => a.startPosition - b.startPosition);
     
@@ -208,7 +218,7 @@ export function TranscriptionTab({
       );
     }
     
-    return parts;
+    return parts.length > 0 ? parts : <p>{transcription}</p>;
   };
   
   return (
@@ -303,7 +313,7 @@ export function TranscriptionTab({
           </div>
         )}
         
-        <ScrollArea className="flex-grow min-h-0 h-full">
+        <ScrollArea className="flex-grow min-h-0 h-full overflow-y-auto">
           <div 
             className="p-4 overflow-wrap-anywhere transcription-text"
             ref={transcriptionRef}

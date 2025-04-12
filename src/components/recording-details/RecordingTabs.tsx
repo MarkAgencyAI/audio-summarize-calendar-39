@@ -6,6 +6,7 @@ import { TranscriptionTab } from "./tabs/TranscriptionTab";
 import { WebhookTab } from "./tabs/WebhookTab";
 import { ChaptersTab } from "./tabs/ChaptersTab";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useEffect } from "react";
 
 export function RecordingTabs({
   data,
@@ -19,6 +20,16 @@ export function RecordingTabs({
   
   // Ensure chapters is initialized
   const chapters = data.chapters || [];
+  
+  // Debug para verificar si los datos están llegando correctamente
+  useEffect(() => {
+    console.log("RecordingTabs data:", {
+      activeTab: data.activeTab,
+      chapters: chapters.length,
+      hasOutput: !!data.recording.output,
+      hasWebhookData: hasWebhookData
+    });
+  }, [data, chapters, hasWebhookData]);
   
   return (
     <Tabs value={data.activeTab} onValueChange={onTabChange} className="h-full flex flex-col">
