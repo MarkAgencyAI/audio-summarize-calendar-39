@@ -1,4 +1,3 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, FileText, Bookmark, Clock } from "lucide-react";
 import { RecordingTabsProps } from "./types";
@@ -8,7 +7,6 @@ import { ChaptersTab } from "./tabs/ChaptersTab";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
-
 export function RecordingTabs({
   data,
   onTabChange,
@@ -22,73 +20,47 @@ export function RecordingTabs({
 
   // Ensure chapters is initialized
   const chapters = data.chapters || [];
-
-  return (
-    <Tabs 
-      value={data.activeTab} 
-      onValueChange={onTabChange} 
-      className="h-full flex flex-col"
-    >
+  return <Tabs value={data.activeTab} onValueChange={onTabChange} className="h-full flex flex-col">
       <div className="px-4 pt-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
         <TabsList className="grid grid-cols-3 gap-1 w-full bg-slate-100 dark:bg-slate-800/50 p-1 rounded-lg">
           <TabsTrigger value="webhook" className="flex items-center gap-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm rounded-md">
             <Sparkles className="h-4 w-4" />
             <span className="truncate text-sm">Resumen</span>
-            {hasSummaryData && (
-              <Badge variant="outline" className="h-4 min-w-4 p-0 flex items-center justify-center text-[10px] bg-green-500 text-white border-0">
+            {hasSummaryData && <Badge variant="outline" className="h-4 min-w-4 p-0 flex items-center justify-center text-[10px] bg-green-500 text-white border-0">
                 ✓
-              </Badge>
-            )}
+              </Badge>}
           </TabsTrigger>
           
           <TabsTrigger value="transcription" className="flex items-center gap-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm rounded-md">
             <FileText className="h-4 w-4" />
             <span className="truncate text-sm">Transcripción</span>
-            {hasTranscription && (
-              <Badge variant="outline" className="h-4 min-w-4 p-0 flex items-center justify-center text-[10px] bg-blue-500 text-white border-0">
+            {hasTranscription && <Badge variant="outline" className="h-4 min-w-4 p-0 flex items-center justify-center text-[10px] bg-blue-500 text-white border-0">
                 ✓
-              </Badge>
-            )}
+              </Badge>}
           </TabsTrigger>
           
           <TabsTrigger value="chapters" className="flex items-center gap-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm rounded-md">
             <Bookmark className="h-4 w-4" />
             <span className="truncate text-sm">Capítulos</span>
-            {chapters.length > 0 && (
-              <Badge variant="outline" className="h-5 min-w-5 p-0 flex items-center justify-center text-xs bg-emerald-500 text-white border-0">
+            {chapters.length > 0 && <Badge variant="outline" className="h-5 min-w-5 p-0 flex items-center justify-center text-xs bg-emerald-500 text-white border-0">
                 {chapters.length}
-              </Badge>
-            )}
+              </Badge>}
           </TabsTrigger>
         </TabsList>
       </div>
       
       <div className="flex-grow overflow-hidden min-h-0">
-        <TabsContent 
-          value="webhook" 
-          className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col"
-        >
+        <TabsContent value="webhook" className="h-0 m-0 data-[state=active]:flex data-[state=active]:flex-col">
           <SummaryTab data={data} />
         </TabsContent>
         
-        <TabsContent 
-          value="transcription" 
-          className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col"
-        >
+        <TabsContent value="transcription" className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
           <TranscriptionTab data={data} onTextSelection={onTextSelection} />
         </TabsContent>
         
-        <TabsContent 
-          value="chapters" 
-          className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col"
-        >
-          <ChaptersTab 
-            data={data} 
-            onEditChapter={onEditChapter} 
-            onDeleteChapter={onDeleteChapter} 
-          />
+        <TabsContent value="chapters" className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
+          <ChaptersTab data={data} onEditChapter={onEditChapter} onDeleteChapter={onDeleteChapter} />
         </TabsContent>
       </div>
-    </Tabs>
-  );
+    </Tabs>;
 }
