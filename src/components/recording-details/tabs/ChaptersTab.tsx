@@ -1,5 +1,5 @@
 
-import { Clock, Plus } from "lucide-react";
+import { Clock } from "lucide-react";
 import { AudioChaptersList } from "@/components/AudioChapter";
 import { ChaptersTabProps } from "../types";
 import { ScrollArea } from "@/components/ui/scroll-area";

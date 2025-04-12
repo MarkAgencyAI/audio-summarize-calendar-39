@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -25,7 +26,6 @@ export function RecordingDetails({
   isOpen: propIsOpen,
   onOpenChange
 }: RecordingDetailsProps) {
-  
   const { updateRecording } = useRecordings();
   const [isOpen, setIsOpenState] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -35,7 +35,7 @@ export function RecordingDetails({
   const audioPlayerRef = useRef<AudioPlayerHandle>(null);
   const isMobile = useIsMobile();
   
-  // Custom hooks
+  // Custom hooks for chapters and highlights
   const {
     chapters,
     activeChapterId,
@@ -60,9 +60,11 @@ export function RecordingDetails({
     renderHighlightedText
   } = useHighlights(recording, updateRecording);
   
+  // Dialog control
   const dialogOpen = propIsOpen !== undefined ? propIsOpen : isOpen;
   const setDialogOpen = onOpenChange || setIsOpenState;
   
+  // Load audio from storage
   useEffect(() => {
     const loadAudio = async () => {
       try {
@@ -78,6 +80,7 @@ export function RecordingDetails({
     loadAudio();
   }, [recording.id]);
   
+  // Save audio to storage if not already there
   useEffect(() => {
     const saveAudio = async () => {
       if (recording.audioUrl && !audioBlob) {
@@ -97,9 +100,11 @@ export function RecordingDetails({
     saveAudio();
   }, [recording.audioUrl, recording.id, audioBlob]);
   
+  // Handle audio time updates
   const handleTimeUpdate = (time: number) => {
     setCurrentAudioTime(time);
     
+    // Update active chapter based on current time
     const activeChapter = chapters.find(
       chapter => time >= chapter.startTime && (!chapter.endTime || time <= chapter.endTime)
     );
@@ -123,7 +128,7 @@ export function RecordingDetails({
     renderHighlightedText
   };
 
-  // Adjust the dialog size and padding based on screen size
+  // Responsive layout classes
   const dialogSizeClass = isMobile 
     ? "w-[95vw]" 
     : "max-w-4xl md:w-auto";
