@@ -76,10 +76,18 @@ export function Layout({
       {/* Desktop Sidebar */}
       {!isMobile && (
         <div className={`fixed h-full z-40 dark:bg-[#1a1a1a] light:bg-white border-r dark:border-[#2e2e2e40] light:border-[#e0e0e0] flex flex-col transition-all duration-300 ease-in-out shadow-lg ${sidebarOpen ? 'left-0 w-16 md:w-64' : 'left-[-64px] md:left-[-256px] w-16 md:w-64'}`}>
-          <div className="border-b dark:border-[#2e2e2e40] light:border-[#e0e0e0] flex items-center justify-center p-4 h-16">
-            <div className={`${sidebarOpen ? 'flex' : 'hidden'} items-center justify-center`}>
+          <div className="border-b dark:border-[#2e2e2e40] light:border-[#e0e0e0] flex items-center justify-between p-4 h-16">
+            <div className={`${sidebarOpen ? 'flex' : 'hidden'} items-center justify-center flex-1`}>
               <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="h-24 w-auto object-contain" />
             </div>
+            
+            {/* Moved the toggle button inside the navbar */}
+            <button 
+              onClick={toggleSidebar} 
+              className="dark:bg-[#2a2a2a] light:bg-white rounded-full h-8 w-8 flex items-center justify-center shadow-md dark:border-[#3a3a3a40] light:border-[#d0d0d0] border transition-all duration-300 text-[#00b8ae]"
+            >
+              {sidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </button>
           </div>
           
           <nav className="flex-1 p-2 overflow-y-auto">
@@ -121,17 +129,6 @@ export function Layout({
         </div>
       )}
       
-      {/* Sidebar Toggle Button */}
-      {!isMobile && (
-        <button 
-          onClick={toggleSidebar} 
-          className={`fixed z-50 top-4 dark:bg-[#2a2a2a] light:bg-white rounded-full h-8 w-8 flex items-center justify-center shadow-md dark:border-[#3a3a3a40] light:border-[#d0d0d0] border transition-all duration-300 text-[#00b8ae] 
-            ${sidebarOpen ? 'left-[64px] md:left-[252px]' : 'left-4'}`}
-        >
-          {sidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-        </button>
-      )}
-      
       {/* Mobile Navigation */}
       {isMobile && (
         <div className="fixed bottom-0 left-0 right-0 dark:bg-[#1a1a1a] light:bg-white border-t dark:border-[#2e2e2e40] light:border-[#e0e0e0] z-40 h-16">
@@ -167,4 +164,3 @@ export function Layout({
     </div>
   );
 }
-

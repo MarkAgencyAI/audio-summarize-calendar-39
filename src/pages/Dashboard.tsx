@@ -22,12 +22,14 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Check, X, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+
 interface CalendarEvent {
   id: string;
   title: string;
   date: string;
   description?: string;
 }
+
 function UpcomingEvents({
   events
 }: {
@@ -66,6 +68,7 @@ function UpcomingEvents({
       </CardContent>
     </Card>;
 }
+
 function Transcriptions() {
   const {
     recordings,
@@ -134,12 +137,14 @@ function Transcriptions() {
       </CardContent>
     </Card>;
 }
+
 function AudioTranscriptionTool() {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcriptionOutput, setTranscriptionOutput] = useState("");
   const [transcriptionProgress, setTranscriptionProgress] = useState(0);
   const [transcriptionOpen, setTranscriptionOpen] = useState(false);
+  
   useEffect(() => {
     const handleAudioRecorderMessage = (event: Event) => {
       const customEvent = event as CustomEvent;
@@ -171,6 +176,7 @@ function AudioTranscriptionTool() {
       window.removeEventListener('audioRecorderMessage', handleAudioRecorderMessage);
     };
   }, []);
+  
   return <div className="space-y-4">
       <AudioRecorderV2 />
       
@@ -181,6 +187,7 @@ function AudioTranscriptionTool() {
       <LiveTranscriptionSheet isTranscribing={isTranscribing} output={transcriptionOutput} progress={transcriptionProgress} open={transcriptionOpen} onOpenChange={setTranscriptionOpen} />
     </div>;
 }
+
 export default function Dashboard() {
   const {
     user
@@ -253,15 +260,26 @@ export default function Dashboard() {
             <UpcomingEvents events={upcomingEvents} />
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Mic className="h-5 w-5 text-blue-500" />
-                  Nueva Grabación
+                <CardTitle className="text-lg flex items-center justify-between gap-2">
+                  <div className="flex items-center">
+                    <Mic className="h-5 w-5 text-blue-500 mr-2" />
+                    Nueva Grabación
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <AudioTranscriptionTool />
               </CardContent>
             </Card>
+            
+            <ToolsCarousel 
+              showTranscriptionOptions={isTranscribing || !!transcriptionOutput}
+              isTranscribing={isTranscribing}
+              transcriptionOutput={transcriptionOutput}
+              transcriptionOpen={transcriptionOpen}
+              setTranscriptionOpen={setTranscriptionOpen}
+              transcriptionProgress={transcriptionProgress}
+            />
             
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-2">
@@ -287,15 +305,25 @@ export default function Dashboard() {
             <div className="md:col-span-4 space-y-6">
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Mic className="h-5 w-5 text-blue-500" />
-                    Nueva Grabación
+                  <CardTitle className="text-lg flex items-center justify-between gap-2">
+                    <div className="flex items-center">
+                      <Mic className="h-5 w-5 text-blue-500 mr-2" />
+                      Nueva Grabación
+                    </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <AudioTranscriptionTool />
                 </CardContent>
               </Card>
+              <ToolsCarousel 
+                showTranscriptionOptions={isTranscribing || !!transcriptionOutput}
+                isTranscribing={isTranscribing}
+                transcriptionOutput={transcriptionOutput}
+                transcriptionOpen={transcriptionOpen}
+                setTranscriptionOpen={setTranscriptionOpen}
+                transcriptionProgress={transcriptionProgress}
+              />
               <UpcomingEvents events={upcomingEvents} />
               <NotesSection />
             </div>

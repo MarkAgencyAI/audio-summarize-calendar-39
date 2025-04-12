@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Folder } from "lucide-react";
+import { Folder, Calculator, Upload, Camera } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { AudioRecorder } from "@/components/AudioRecorder";
 import { PdfUploader } from "@/components/PdfUploader";
@@ -75,7 +75,7 @@ export function ToolsCarousel({
               </div>
             </CarouselItem>
             
-            {/* Herramienta: Math Scanner (Nueva) */}
+            {/* Herramienta: Math Scanner */}
             <CarouselItem className="basis-full">
               <div className="p-1">
                 <div className="text-center mb-2">
