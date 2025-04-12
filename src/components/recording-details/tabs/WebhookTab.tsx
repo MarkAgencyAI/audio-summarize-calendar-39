@@ -2,13 +2,14 @@
 import { WebhookTabProps } from "../types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Sparkles } from "lucide-react";
 
 export function WebhookTab({ data }: WebhookTabProps) {
   const isMobile = useIsMobile();
   
   const formatWebhookResponse = () => {
     if (!data.recording.webhookData) {
-      return "No hay resumen y puntos fuertes disponibles";
+      return "No hay resumen disponible para esta grabación. El resumen se genera automáticamente a partir del análisis de la transcripción.";
     }
     
     try {
@@ -19,19 +20,26 @@ export function WebhookTab({ data }: WebhookTabProps) {
       return JSON.stringify(data.recording.webhookData, null, 2);
     } catch (error) {
       console.error("Error al formatear resumen:", error);
-      return "Error al formatear el resumen y puntos fuertes";
+      return "Error al formatear el resumen de la grabación";
     }
   };
 
   return (
-    <div className={`p-2 ${isMobile ? 'p-2' : 'p-4'} bg-muted/20 rounded-md w-full`}>
-      <ScrollArea className={`${isMobile ? 'h-[35vh]' : 'h-[40vh]'} overflow-y-auto w-full custom-scrollbar`}>
-        <div className="pr-2 max-w-full overflow-x-hidden">
-          <pre className="whitespace-pre-wrap text-sm break-words overflow-x-hidden max-w-full transcription-text">
-            {formatWebhookResponse()}
-          </pre>
-        </div>
-      </ScrollArea>
+    <div className="h-full flex flex-col p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <Sparkles className="h-5 w-5 text-amber-500" />
+        <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200">Resumen y puntos clave</h3>
+      </div>
+      
+      <div className="flex-1 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30">
+        <ScrollArea className="h-full w-full p-4">
+          <div className="max-w-full">
+            <pre className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700 dark:text-slate-300 break-words">
+              {formatWebhookResponse()}
+            </pre>
+          </div>
+        </ScrollArea>
+      </div>
     </div>
   );
 }

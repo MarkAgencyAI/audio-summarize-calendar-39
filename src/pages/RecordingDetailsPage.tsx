@@ -6,10 +6,12 @@ import { useRecordings } from "@/context/RecordingsContext";
 import { RecordingDetails } from "@/components/recording-details";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { ArrowLeft, Check, X } from "lucide-react";
+import { ArrowLeft, Check, X, Clock, Loader2 } from "lucide-react";
 import { loadAudioFromStorage } from "@/lib/storage";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
 
 export default function RecordingDetailsPage() {
   const { recordingId } = useParams<{ recordingId: string }>();
@@ -17,6 +19,7 @@ export default function RecordingDetailsPage() {
   const { recordings, updateRecording } = useRecordings();
   const [isOpen, setIsOpen] = useState(true);
   const [isAudioLoaded, setIsAudioLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const isMobile = useIsMobile();
   
   // Find the recording
@@ -26,7 +29,18 @@ export default function RecordingDetailsPage() {
   useEffect(() => {
     if (!recording) {
       navigate("/dashboard");
+      return;
     }
+    
+    // Set loading state
+    setIsLoading(true);
+    
+    // Simulate loading (combine with actual loading logic)
+    const loadingTimer = setTimeout(() => {
+      setIsLoading(false);
+    }, 800);
+    
+    return () => clearTimeout(loadingTimer);
   }, [recording, navigate]);
   
   // Handle closing the dialog
@@ -73,23 +87,49 @@ export default function RecordingDetailsPage() {
     }
   };
   
-  if (!recording) {
-    return null;
+  const getRelativeTime = (dateString: string) => {
+    try {
+      return formatDistanceToNow(new Date(dateString), { 
+        addSuffix: true,
+        locale: es
+      });
+    } catch (e) {
+      return "hace algún tiempo";
+    }
+  };
+  
+  if (isLoading || !recording) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-8 h-[80vh] flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 mx-auto mb-4 text-primary animate-spin" />
+            <h2 className="text-xl font-medium text-slate-800 dark:text-slate-200">Cargando grabación...</h2>
+          </div>
+        </div>
+      </Layout>
+    );
   }
   
   return (
     <Layout>
-      <div className="container mx-auto px-2 sm:px-4 py-6">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <Button 
-            variant="ghost" 
+            variant="outline" 
             onClick={() => navigate("/dashboard")}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/70"
           >
-            <ArrowLeft className="h-4 w-4" /> Volver al Dashboard
+            <ArrowLeft className="h-4 w-4" /> 
+            <span>Volver</span>
           </Button>
           
           <div className="flex items-center gap-2">
+            <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center mr-2">
+              <Clock className="h-3.5 w-3.5 mr-1" />
+              <span>{getRelativeTime(recording.createdAt || recording.date)}</span>
+            </div>
+            
             <ToggleGroup 
               type="single" 
               value={recording.understood ? "understood" : "not-understood"}
@@ -98,25 +138,25 @@ export default function RecordingDetailsPage() {
                   handleUnderstoodChange(value === "understood");
                 }
               }}
-              className="border rounded-md overflow-hidden"
+              className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-sm"
             >
               <ToggleGroupItem 
                 value="understood" 
                 aria-label="Entendida" 
                 className={`${recording.understood ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50' : ''} 
-                  flex items-center gap-1 px-2 sm:px-3 py-1 rounded-l-md h-9 data-[state=on]:border-green-500`}
+                  flex items-center gap-1 px-3 py-1.5 h-9 rounded-l-md data-[state=on]:border-green-500`}
               >
                 <Check className="h-4 w-4" />
-                <span className="text-xs sm:text-sm">Entendida</span>
+                <span className="text-sm">Entendida</span>
               </ToggleGroupItem>
               <ToggleGroupItem 
                 value="not-understood" 
                 aria-label="No entendida" 
                 className={`${!recording.understood ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50' : ''} 
-                  flex items-center gap-1 px-2 sm:px-3 py-1 rounded-r-md h-9 data-[state=on]:border-amber-500`}
+                  flex items-center gap-1 px-3 py-1.5 h-9 rounded-r-md data-[state=on]:border-amber-500`}
               >
                 <X className="h-4 w-4" />
-                <span className="text-xs sm:text-sm">No entendida</span>
+                <span className="text-sm">No entendida</span>
               </ToggleGroupItem>
             </ToggleGroup>
           </div>

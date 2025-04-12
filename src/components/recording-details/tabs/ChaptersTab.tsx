@@ -1,5 +1,5 @@
 
-import { Clock } from "lucide-react";
+import { Clock, Bookmark, PlayCircle } from "lucide-react";
 import { AudioChaptersList } from "@/components/AudioChapter";
 import { ChaptersTabProps } from "../types";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -23,31 +23,53 @@ export function ChaptersTab({
   };
 
   return (
-    <div className="grid gap-2 sm:gap-4 w-full">
-      <div className="flex items-center justify-between p-2 bg-muted/20 rounded-md">
-        <h3 className="text-sm font-medium">Capítulos de audio</h3>
+    <div className="h-full flex flex-col p-4">
+      <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="text-xs text-muted-foreground">
-            <Clock className="h-3 w-3 inline mr-1" />
+          <Bookmark className="h-5 w-5 text-blue-500" />
+          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200">
+            Capítulos de audio
+          </h3>
+          <span className="text-xs text-slate-500 dark:text-slate-400">
+            ({data.chapters.length})
+          </span>
+        </div>
+        
+        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
+          <Clock className="h-3.5 w-3.5" />
+          <span>
             {formatTimeNoMs(data.currentAudioTime)} / {formatTimeNoMs(data.audioDuration)}
-          </div>
+          </span>
         </div>
       </div>
       
-      <div className={`bg-muted/20 rounded-md ${isMobile ? 'p-2' : 'p-4'} w-full`}>
-        <ScrollArea className={`${isMobile ? 'h-[35vh]' : 'h-[40vh]'} overflow-y-auto w-full custom-scrollbar`}>
-          <div className="pr-2 max-w-full overflow-x-hidden">
-            <AudioChaptersList 
-              chapters={data.chapters}
-              currentTime={data.currentAudioTime}
-              duration={data.audioDuration}
-              onChapterClick={() => {}}
-              onChapterDelete={onDeleteChapter}
-              onChapterEdit={onEditChapter}
-              activeChapterId={data.activeChapterId}
-            />
+      <div className="flex-1 overflow-hidden">
+        {data.chapters.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-center p-8 border border-dashed border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/30">
+            <div className="w-16 h-16 mb-4 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+              <Bookmark className="h-8 w-8 text-blue-500 dark:text-blue-400" />
+            </div>
+            <h4 className="text-lg font-medium text-slate-800 dark:text-slate-200 mb-2">No hay capítulos</h4>
+            <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md">
+              Crea capítulos seleccionando fragmentos de audio en el reproductor 
+              y utilizando el botón <span className="font-medium">Crear capítulo</span>.
+            </p>
           </div>
-        </ScrollArea>
+        ) : (
+          <ScrollArea className="h-full border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800/30">
+            <div className="p-2">
+              <AudioChaptersList 
+                chapters={data.chapters}
+                currentTime={data.currentAudioTime}
+                duration={data.audioDuration}
+                onChapterClick={() => {}}
+                onChapterDelete={onDeleteChapter}
+                onChapterEdit={onEditChapter}
+                activeChapterId={data.activeChapterId}
+              />
+            </div>
+          </ScrollArea>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Bookmark, MessageSquare, Sparkles } from "lucide-react";
+import { Sparkles, FileText, Bookmark } from "lucide-react";
 import { RecordingTabsProps } from "./types";
 import { TranscriptionTab } from "./tabs/TranscriptionTab";
 import { WebhookTab } from "./tabs/WebhookTab";
@@ -18,49 +18,60 @@ export function RecordingTabs({
   const isMobile = useIsMobile();
   
   return (
-    <Tabs value={data.activeTab} onValueChange={onTabChange} className="w-full">
-      <TabsList className="mb-4 sm:mb-6 grid grid-cols-3 gap-1 w-full">
-        <TabsTrigger value="webhook" className="flex items-center gap-1 text-xs sm:text-sm px-2 py-1 h-auto">
-          <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
-          <span className="truncate">Resumen</span>
-          {hasWebhookData && (
-            <span className="bg-green-500 h-2 w-2 rounded-full ml-1 flex-shrink-0"></span>
-          )}
-        </TabsTrigger>
-        <TabsTrigger value="transcription" className="flex items-center gap-1 text-xs sm:text-sm px-2 py-1 h-auto">
-          <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
-          <span className="truncate">Transcripción</span>
-        </TabsTrigger>
-        <TabsTrigger value="chapters" className="flex items-center gap-1 text-xs sm:text-sm px-2 py-1 h-auto">
-          <Bookmark className="h-3 w-3 sm:h-4 sm:w-4" />
-          <span className="truncate">Capítulos</span>
-          <span className="bg-blue-500 text-xs text-white rounded-full h-4 w-4 flex items-center justify-center ml-1 flex-shrink-0">
-            {data.chapters.length}
-          </span>
-        </TabsTrigger>
-      </TabsList>
+    <Tabs value={data.activeTab} onValueChange={onTabChange} className="h-full">
+      <div className="px-4 pt-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+        <TabsList className="grid grid-cols-3 gap-1 w-full bg-slate-100 dark:bg-slate-800/50 p-1 rounded-lg">
+          <TabsTrigger 
+            value="webhook" 
+            className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm rounded-md"
+          >
+            <Sparkles className="h-4 w-4" />
+            <span className="truncate text-sm">Resumen</span>
+            {hasWebhookData && (
+              <span className="bg-green-500 h-2 w-2 rounded-full ml-1 flex-shrink-0"></span>
+            )}
+          </TabsTrigger>
+          
+          <TabsTrigger 
+            value="transcription" 
+            className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm rounded-md"
+          >
+            <FileText className="h-4 w-4" />
+            <span className="truncate text-sm">Transcripción</span>
+          </TabsTrigger>
+          
+          <TabsTrigger 
+            value="chapters" 
+            className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm rounded-md"
+          >
+            <Bookmark className="h-4 w-4" />
+            <span className="truncate text-sm">Capítulos</span>
+            <span className="text-xs text-white rounded-full h-5 w-5 flex items-center justify-center bg-blue-500">
+              {data.chapters.length}
+            </span>
+          </TabsTrigger>
+        </TabsList>
+      </div>
       
-      <div className="relative w-full">
-        <div className={`${isMobile ? 'max-h-[40vh]' : 'max-h-[50vh]'} overflow-hidden w-full`}>
-          <TabsContent value="webhook" className="h-full mt-0 w-full">
-            <WebhookTab data={data} />
-          </TabsContent>
-          
-          <TabsContent value="transcription" className="h-full mt-0 w-full">
-            <TranscriptionTab 
-              data={data} 
-              onTextSelection={onTextSelection} 
-            />
-          </TabsContent>
-          
-          <TabsContent value="chapters" className="h-full mt-0 w-full">
-            <ChaptersTab 
-              data={data}
-              onEditChapter={onEditChapter}
-              onDeleteChapter={onDeleteChapter}
-            />
-          </TabsContent>
-        </div>
+      <div className="flex-1 overflow-hidden">
+        <TabsContent value="webhook" className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
+          <WebhookTab data={data} />
+        </TabsContent>
+        
+        <TabsContent value="transcription" className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
+          <TranscriptionTab 
+            data={data} 
+            onTextSelection={onTextSelection} 
+          />
+        </TabsContent>
+        
+        <TabsContent value="chapters" className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
+          <ChaptersTab 
+            data={data}
+            onEditChapter={onEditChapter}
+            onDeleteChapter={onDeleteChapter}
+          />
+        </TabsContent>
       </div>
     </Tabs>
   );

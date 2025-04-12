@@ -1,31 +1,32 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { AudioPlayer, AudioPlayerHandle } from "@/components/AudioPlayer";
 import { loadAudioFromStorage, saveAudioToStorage } from "@/lib/storage";
 import { RecordingHeader } from "./RecordingHeader";
 import { RecordingDetails as RecordingDetailsType } from "./types";
 import { useAudioChapters } from "./hooks/useAudioChapters";
 import { useHighlights } from "./hooks/useHighlights";
 import { RecordingTabs } from "./RecordingTabs";
-import { AudioChaptersTimeline } from "@/components/AudioChapter";
 import { ChapterDialog } from "./ChapterDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AudioPlayerV2 } from "./AudioPlayerV2";
+import { AudioChaptersTimeline } from "@/components/AudioChapter";
+import { AudioPlayerHandle } from "./types";
+
 interface RecordingDetailsProps {
   recording: Recording;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
+
 export function RecordingDetails({
   recording,
   isOpen: propIsOpen,
   onOpenChange
 }: RecordingDetailsProps) {
-  const {
-    updateRecording
-  } = useRecordings();
+  const { updateRecording } = useRecordings();
   const [isOpen, setIsOpenState] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [activeTab, setActiveTab] = useState("webhook");
@@ -52,6 +53,7 @@ export function RecordingDetails({
     newChapterColor,
     setNewChapterColor
   } = useAudioChapters(recording, updateRecording, audioPlayerRef);
+  
   const {
     highlights,
     handleTextSelection,
@@ -101,7 +103,10 @@ export function RecordingDetails({
     setCurrentAudioTime(time);
 
     // Update active chapter based on current time
-    const activeChapter = chapters.find(chapter => time >= chapter.startTime && (!chapter.endTime || time <= chapter.endTime));
+    const activeChapter = chapters.find(chapter => 
+      time >= chapter.startTime && (!chapter.endTime || time <= chapter.endTime)
+    );
+    
     if (activeChapter && activeChapter.id !== activeChapterId) {
       setActiveChapterId(activeChapter.id);
     } else if (!activeChapter && activeChapterId) {
@@ -121,38 +126,65 @@ export function RecordingDetails({
     renderHighlightedText,
     updateRecording
   };
-  return <>
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="h-[90vh] flex flex-col dark:bg-[#001A29] dark:border-custom-secondary overflow-hidden max-w-full md:max-w-4xl w-[95vw] md:w-full">
-          <ScrollArea className="flex-1 w-full pr-2 custom-scrollbar">
-            <div className="w-auto p-0">
-              <DialogHeader className="mb-2">
-                <DialogTitle className="flex flex-wrap items-center justify-between gap-2 w-auto pr-0">
-                  <RecordingHeader recording={recording} />
-                </DialogTitle>
-                <DialogDescription className="text-sm text-muted-foreground mt-1">
-                  Detalles de la grabación y datos procesados
-                </DialogDescription>
-              </DialogHeader>
-              
-              <Separator className="my-2 dark:bg-custom-secondary/40" />
-              
-              <div className="my-4 w-full max-w-full overflow-hidden">
-                <AudioPlayer audioUrl={recording.audioUrl} audioBlob={audioBlob || undefined} initialDuration={recording.duration} onTimeUpdate={handleTimeUpdate} ref={audioPlayerRef} onDurationChange={setAudioDuration} onAddChapter={handleAddChapter} />
-                
-                <div className="mt-2 max-w-full overflow-hidden">
-                  <AudioChaptersTimeline chapters={chapters} duration={audioDuration} currentTime={currentAudioTime} onChapterClick={handleChapterClick} />
-                </div>
+
+  return (
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <DialogContent className="p-0 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg w-[95vw] md:w-[90vw] lg:w-[80vw] max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="flex flex-col w-full h-full overflow-hidden">
+          {/* Header Area */}
+          <div className="p-5 pb-3 border-b border-slate-200 dark:border-slate-800">
+            <RecordingHeader recording={recording} />
+          </div>
+          
+          {/* Audio Player Section */}
+          <div className="p-4 bg-slate-50 dark:bg-slate-800/40">
+            <AudioPlayerV2 
+              audioUrl={recording.audioUrl} 
+              audioBlob={audioBlob || undefined}
+              initialDuration={recording.duration} 
+              onTimeUpdate={handleTimeUpdate} 
+              ref={audioPlayerRef}
+              onDurationChange={setAudioDuration}
+              onAddChapter={handleAddChapter}
+            />
+            
+            {chapters.length > 0 && (
+              <div className="mt-3 max-w-full overflow-hidden">
+                <AudioChaptersTimeline 
+                  chapters={chapters} 
+                  duration={audioDuration} 
+                  currentTime={currentAudioTime} 
+                  onChapterClick={handleChapterClick}
+                />
               </div>
-              
-              <div className="pt-2 sm:pt-4 w-full max-w-full overflow-hidden">
-                <RecordingTabs data={recordingDetailsData} onTabChange={setActiveTab} onTextSelection={handleTextSelection} onEditChapter={handleEditChapter} onDeleteChapter={handleDeleteChapter} />
-              </div>
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
+            )}
+          </div>
+          
+          {/* Content Area */}
+          <div className="flex-1 overflow-hidden">
+            <RecordingTabs 
+              data={recordingDetailsData} 
+              onTabChange={setActiveTab} 
+              onTextSelection={handleTextSelection} 
+              onEditChapter={handleEditChapter} 
+              onDeleteChapter={handleDeleteChapter} 
+            />
+          </div>
+        </div>
+      </DialogContent>
       
-      <ChapterDialog isOpen={showChapterDialog} onOpenChange={setShowChapterDialog} currentChapter={currentChapter} chapters={chapters} title={newChapterTitle} setTitle={setNewChapterTitle} color={newChapterColor} setColor={setNewChapterColor} onSave={handleSaveChapter} currentTime={currentAudioTime} />
-    </>;
+      <ChapterDialog 
+        isOpen={showChapterDialog} 
+        onOpenChange={setShowChapterDialog} 
+        currentChapter={currentChapter} 
+        chapters={chapters} 
+        title={newChapterTitle} 
+        setTitle={setNewChapterTitle} 
+        color={newChapterColor} 
+        setColor={setNewChapterColor} 
+        onSave={handleSaveChapter} 
+        currentTime={currentAudioTime} 
+      />
+    </Dialog>
+  );
 }

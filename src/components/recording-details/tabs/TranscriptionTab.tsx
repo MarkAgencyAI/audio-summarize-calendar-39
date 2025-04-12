@@ -9,6 +9,8 @@ import { sendToWebhook } from "@/lib/webhook";
 import { OutputEditor } from "./transcription/OutputEditor";
 import { SearchBar } from "./transcription/SearchBar";
 import { TranscriptionContent } from "./transcription/TranscriptionContent";
+import { FileText, Edit, Bot } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const WEBHOOK_URL = "https://ssn8nss.maettiai.tech/webhook-test/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
@@ -147,42 +149,89 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
   };
 
   return (
-    <div className="grid gap-4 w-full">
-      <SearchBar
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        handleSearch={handleSearch}
-        toggleHighlightMode={toggleHighlightMode}
-        searchResults={searchResults}
-        currentSearchIndex={currentSearchIndex}
-        navigateSearch={navigateSearch}
-      />
+    <div className="h-full flex flex-col p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <FileText className="h-5 w-5 text-violet-500" />
+          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200">
+            Transcripción
+          </h3>
+        </div>
+        
+        {!isEditingOutput && data.recording.output && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setIsEditingOutput(true)}
+            className="border-slate-200 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+          >
+            <Edit className="h-3.5 w-3.5 mr-1.5" />
+            <span className="text-xs">Editar</span>
+          </Button>
+        )}
+      </div>
       
-      <div className="p-4 bg-muted/20 rounded-md w-full">
-        <ScrollArea className="h-[40vh] overflow-y-auto w-full custom-scrollbar">
-          <div className="pr-2 max-w-full overflow-x-hidden">
-            {isEditingOutput ? (
-              <OutputEditor
-                editedOutput={editedOutput}
-                setEditedOutput={setEditedOutput}
-                handleSaveOutput={handleSaveOutput}
-                handleCancelOutputEdit={handleCancelOutputEdit}
-              />
-            ) : (
-              <div className="relative max-w-full overflow-x-hidden">
-                <TranscriptionContent
-                  output={data.recording.output}
-                  transcriptionRef={transcriptionRef}
-                  onTextSelection={onTextSelection}
-                  renderHighlightedText={data.renderHighlightedText}
-                  isEditingOutput={isEditingOutput}
-                  setIsEditingOutput={setIsEditingOutput}
-                  generateOutputWithGroq={generateOutputWithGroq}
-                  isGeneratingOutput={isGeneratingOutput}
-                />
+      <div className="mb-3">
+        <SearchBar
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          handleSearch={handleSearch}
+          toggleHighlightMode={toggleHighlightMode}
+          searchResults={searchResults}
+          currentSearchIndex={currentSearchIndex}
+          navigateSearch={navigateSearch}
+        />
+      </div>
+      
+      <div className="flex-1 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/30">
+        <ScrollArea className="h-full w-full p-4">
+          {isEditingOutput ? (
+            <OutputEditor
+              editedOutput={editedOutput}
+              setEditedOutput={setEditedOutput}
+              handleSaveOutput={handleSaveOutput}
+              handleCancelOutputEdit={handleCancelOutputEdit}
+            />
+          ) : !data.recording.output ? (
+            <div className="h-full flex flex-col items-center justify-center text-center p-8">
+              <div className="w-16 h-16 mb-4 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                <Bot className="h-8 w-8 text-violet-500 dark:text-violet-400" />
               </div>
-            )}
-          </div>
+              <h4 className="text-lg font-medium text-slate-800 dark:text-slate-200 mb-2">
+                No hay transcripción disponible
+              </h4>
+              <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mb-6">
+                Puedes generar una transcripción automática utilizando inteligencia artificial
+              </p>
+              <Button
+                onClick={generateOutputWithGroq}
+                disabled={isGeneratingOutput}
+                className="bg-violet-500 hover:bg-violet-600 text-white"
+              >
+                {isGeneratingOutput ? (
+                  <>
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    Generando...
+                  </>
+                ) : (
+                  <>
+                    <Bot className="h-4 w-4 mr-2" />
+                    Generar con IA
+                  </>
+                )}
+              </Button>
+            </div>
+          ) : (
+            <div className="max-w-full">
+              <pre 
+                ref={transcriptionRef} 
+                className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700 dark:text-slate-300 break-words" 
+                onMouseUp={onTextSelection}
+              >
+                {data.renderHighlightedText()}
+              </pre>
+            </div>
+          )}
         </ScrollArea>
       </div>
     </div>

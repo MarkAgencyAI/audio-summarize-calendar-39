@@ -63,6 +63,10 @@ export interface WebhookTabProps {
   data: RecordingDetails;
 }
 
+export interface AudioPlayerHandle {
+  seekTo: (time: number) => void;
+}
+
 export const highlightColors = [
   { label: "Amarillo", value: "#FEF7CD" },
   { label: "Verde", value: "#F2FCE2" },
