@@ -1,4 +1,3 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, FileText, Bookmark, Clock } from "lucide-react";
 import { RecordingTabsProps } from "./types";
@@ -7,7 +6,6 @@ import { SummaryTab } from "./tabs/SummaryTab";
 import { ChaptersTab } from "./tabs/ChaptersTab";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
-
 export function RecordingTabs({
   data,
   onTabChange,
@@ -51,9 +49,7 @@ export function RecordingTabs({
       </div>
       
       <div className="flex-grow overflow-hidden min-h-0">
-        <TabsContent value="webhook" className="h-0 m-0 data-[state=active]:h-full data-[state=active]:flex data-[state=active]:flex-col">
-          <SummaryTab data={data} />
-        </TabsContent>
+        
         
         <TabsContent value="transcription" className="h-0 m-0 data-[state=active]:h-full data-[state=active]:flex data-[state=active]:flex-col">
           <TranscriptionTab data={data} onTextSelection={onTextSelection} />
