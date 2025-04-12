@@ -1,3 +1,4 @@
+
 import React, {
   useState,
   useRef,
@@ -27,7 +28,7 @@ interface AudioPlayerProps {
   initialDuration?: number;
   onTimeUpdate?: (time: number) => void;
   onDurationChange?: (duration: number) => void;
-  onAddChapter?: () => void;
+  onAddChapter?: () => void; // This should be a function with no parameters
 }
 
 export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(

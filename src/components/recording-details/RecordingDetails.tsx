@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -114,6 +113,12 @@ export function RecordingDetails({
     }
   };
 
+  // Create a wrapper function for adding chapters
+  // This fixes the type mismatch by creating a no-parameter function
+  const handleAddChapterFromPlayer = () => {
+    handleAddChapter(currentAudioTime);
+  };
+
   // Prepare data for child components
   const recordingDetailsData: RecordingDetailsType = {
     recording,
@@ -145,7 +150,7 @@ export function RecordingDetails({
               onTimeUpdate={handleTimeUpdate} 
               ref={audioPlayerRef}
               onDurationChange={setAudioDuration}
-              onAddChapter={handleAddChapter}
+              onAddChapter={handleAddChapterFromPlayer}
             />
             
             {chapters.length > 0 && (
