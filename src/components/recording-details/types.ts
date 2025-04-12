@@ -10,6 +10,7 @@ export interface RecordingDetails {
   audioDuration: number;
   activeTab: string;
   renderHighlightedText: () => React.ReactNode;
+  updateRecording: (id: string, data: Partial<Recording>) => void;
 }
 
 export interface HighlightMenuPosition {

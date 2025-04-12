@@ -1,17 +1,14 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Edit, Search, PaintBucket, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { TranscriptionTabProps, highlightColors } from "../types";
+import { TranscriptionTabProps } from "../types";
 import { useSearch } from "../hooks/useSearch";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { useRecordings } from "@/context/RecordingsContext";
 import { useGroq } from "@/lib/groq";
 import { sendToWebhook } from "@/lib/webhook";
+import { OutputEditor } from "./transcription/OutputEditor";
+import { SearchBar } from "./transcription/SearchBar";
+import { TranscriptionContent } from "./transcription/TranscriptionContent";
 
 const WEBHOOK_URL = "https://ssn8nss.maettiai.tech/webhook-test/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
@@ -19,15 +16,11 @@ export function TranscriptionTab({
   data,
   onTextSelection
 }: TranscriptionTabProps) {
-  const { updateRecording } = useRecordings();
+  const { updateRecording } = data.updateRecording;
   const { llama3 } = useGroq();
-  const isMobile = useIsMobile();
   const [isEditingOutput, setIsEditingOutput] = useState(false);
   const [editedOutput, setEditedOutput] = useState(data.recording.output || "");
   const [isGeneratingOutput, setIsGeneratingOutput] = useState(false);
-  const [showHighlightMenu, setShowHighlightMenu] = useState(false);
-  const [highlightMenuPosition, setHighlightMenuPosition] = useState({ x: 0, y: 0 });
-  const [customColor, setCustomColor] = useState("#ffffff");
   
   const {
     searchQuery,
@@ -38,12 +31,6 @@ export function TranscriptionTab({
     handleSearch,
     navigateSearch
   } = useSearch(data.recording.output);
-  
-  useEffect(() => {
-    if (showHighlightMenu && !data.highlights) {
-      setShowHighlightMenu(false);
-    }
-  }, [data.highlights, showHighlightMenu]);
   
   const toggleHighlightMode = () => {
     const selection = window.getSelection();
@@ -158,133 +145,41 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
       setIsGeneratingOutput(false);
     }
   };
-  
-  const handleCustomColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCustomColor(e.target.value);
-  };
-
-  const searchControlsClass = isMobile ? "flex-col w-full" : "flex-row items-center";
-  const searchActionButtonsClass = isMobile ? "mt-2 grid grid-cols-2 gap-1" : "flex gap-1 ml-2";
-  const highlightMenuPositionY = isMobile ? -80 : -130;
 
   return (
     <div className="grid gap-4 w-full">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-2 bg-muted/20 rounded-md">
-        <div className={`flex ${searchControlsClass} gap-2 flex-1 min-w-[200px]`}>
-          <Input 
-            placeholder="Buscar en la transcripción..." 
-            value={searchQuery} 
-            onChange={e => setSearchQuery(e.target.value)}
-            className="h-9 flex-1"
-          />
-          <div className={searchActionButtonsClass}>
-            <Button onClick={handleSearch} variant="secondary" size="sm" className="h-9">
-              <Search className="h-4 w-4 mr-1" />
-              <span className="whitespace-nowrap">Buscar</span>
-            </Button>
-            
-            <Button 
-              onClick={toggleHighlightMode} 
-              variant="ghost" 
-              size="sm"
-              className="h-9 flex items-center gap-1"
-            >
-              <PaintBucket className="h-4 w-4" />
-              <span className="whitespace-nowrap">Resaltar</span>
-            </Button>
-          </div>
-        </div>
-        
-        {searchResults.length > 0 && (
-          <div className="flex items-center gap-1 w-full sm:w-auto mt-2 sm:mt-0">
-            <Button 
-              onClick={() => navigateSearch('prev')} 
-              variant="outline" 
-              size="sm"
-              className="h-8 px-2"
-            >
-              Anterior
-            </Button>
-            <span className="text-xs">
-              {currentSearchIndex + 1}/{searchResults.length}
-            </span>
-            <Button 
-              onClick={() => navigateSearch('next')} 
-              variant="outline" 
-              size="sm"
-              className="h-8 px-2"
-            >
-              Siguiente
-            </Button>
-          </div>
-        )}
-      </div>
+      <SearchBar
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        handleSearch={handleSearch}
+        toggleHighlightMode={toggleHighlightMode}
+        searchResults={searchResults}
+        currentSearchIndex={currentSearchIndex}
+        navigateSearch={navigateSearch}
+      />
       
       <div className="p-4 bg-muted/20 rounded-md w-full">
         <ScrollArea className="h-[40vh] overflow-y-auto w-full custom-scrollbar">
           <div className="pr-2 max-w-full overflow-x-hidden">
             {isEditingOutput ? (
-              <div className="space-y-4 w-full">
-                <Textarea 
-                  value={editedOutput}
-                  onChange={e => setEditedOutput(e.target.value)}
-                  className="min-h-[200px] sm:min-h-[300px] font-mono text-sm w-full resize-y"
-                />
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={handleCancelOutputEdit}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleSaveOutput}>
-                    Guardar
-                  </Button>
-                </div>
-              </div>
+              <OutputEditor
+                editedOutput={editedOutput}
+                setEditedOutput={setEditedOutput}
+                handleSaveOutput={handleSaveOutput}
+                handleCancelOutputEdit={handleCancelOutputEdit}
+              />
             ) : (
               <div className="relative max-w-full overflow-x-hidden">
-                <pre 
-                  ref={transcriptionRef} 
-                  className="whitespace-pre-wrap text-sm break-words max-w-full overflow-x-hidden overflow-wrap-anywhere transcription-text" 
-                  onMouseUp={onTextSelection}
-                >
-                  {data.recording.output ? (
-                    data.renderHighlightedText()
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-10 space-y-4">
-                      <p className="text-muted-foreground text-center">
-                        No hay transcripción disponible para esta grabación.
-                      </p>
-                      <Button 
-                        onClick={generateOutputWithGroq} 
-                        disabled={isGeneratingOutput}
-                      >
-                        {isGeneratingOutput ? (
-                          <>
-                            <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
-                            Generando...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="h-4 w-4 mr-2" />
-                            Generar con IA
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </pre>
-                
-                {data.recording.output && (
-                  <div className="flex justify-end mt-4">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setIsEditingOutput(true)}
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Editar
-                    </Button>
-                  </div>
-                )}
+                <TranscriptionContent
+                  output={data.recording.output}
+                  transcriptionRef={transcriptionRef}
+                  onTextSelection={onTextSelection}
+                  renderHighlightedText={data.renderHighlightedText}
+                  isEditingOutput={isEditingOutput}
+                  setIsEditingOutput={setIsEditingOutput}
+                  generateOutputWithGroq={generateOutputWithGroq}
+                  isGeneratingOutput={isGeneratingOutput}
+                />
               </div>
             )}
           </div>
