@@ -3,12 +3,15 @@ import { Clock } from "lucide-react";
 import { AudioChaptersList } from "@/components/AudioChapter";
 import { ChaptersTabProps } from "../types";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function ChaptersTab({
   data,
   onEditChapter,
   onDeleteChapter
 }: ChaptersTabProps) {
+  const isMobile = useIsMobile();
+  
   const formatTimeNoMs = (seconds: number): string => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -20,7 +23,7 @@ export function ChaptersTab({
   };
 
   return (
-    <div className="grid gap-4 w-full">
+    <div className="grid gap-2 sm:gap-4 w-full">
       <div className="flex items-center justify-between p-2 bg-muted/20 rounded-md">
         <h3 className="text-sm font-medium">Capítulos de audio</h3>
         <div className="flex items-center gap-2">
@@ -31,8 +34,8 @@ export function ChaptersTab({
         </div>
       </div>
       
-      <div className="bg-muted/20 rounded-md p-4 w-full">
-        <ScrollArea className="h-[40vh] overflow-y-auto w-full custom-scrollbar">
+      <div className={`bg-muted/20 rounded-md ${isMobile ? 'p-2' : 'p-4'} w-full`}>
+        <ScrollArea className={`${isMobile ? 'h-[35vh]' : 'h-[40vh]'} overflow-y-auto w-full custom-scrollbar`}>
           <div className="pr-2 max-w-full overflow-x-hidden">
             <AudioChaptersList 
               chapters={data.chapters}

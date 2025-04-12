@@ -181,6 +181,25 @@ pre {
   word-break: break-word;
 }
 
+/* Dialog responsive styles */
+.responsive-dialog {
+  width: 95vw;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Responsive tab panel styles */
+.responsive-tabs-panel {
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+@media (min-width: 768px) {
+  .responsive-tabs-panel {
+    max-height: 50vh;
+  }
+}
+
 /* Audio player responsive adjustments */
 @media (max-width: 640px) {
   /* Make audio controls stack on mobile */
@@ -197,5 +216,33 @@ pre {
   /* Adjust volume slider width on mobile */
   .volume-slider {
     width: 50px;
+  }
+
+  /* Adjust tab panels for mobile */
+  .tab-panel-mobile {
+    padding: 0.5rem;
+  }
+}
+
+/* Fix for dialog content overflow */
+.dialog-content-fix {
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+/* Responsive padding for content containers */
+.content-container {
+  padding: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .content-container {
+    padding: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .content-container {
+    padding: 1.5rem;
   }
 }

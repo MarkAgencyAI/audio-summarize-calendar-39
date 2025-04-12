@@ -5,6 +5,7 @@ import { RecordingTabsProps } from "./types";
 import { TranscriptionTab } from "./tabs/TranscriptionTab";
 import { WebhookTab } from "./tabs/WebhookTab";
 import { ChaptersTab } from "./tabs/ChaptersTab";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function RecordingTabs({
   data,
@@ -14,6 +15,7 @@ export function RecordingTabs({
   onDeleteChapter
 }: RecordingTabsProps) {
   const hasWebhookData = !!data.recording.webhookData;
+  const isMobile = useIsMobile();
   
   return (
     <Tabs value={data.activeTab} onValueChange={onTabChange} className="w-full">
@@ -39,7 +41,7 @@ export function RecordingTabs({
       </TabsList>
       
       <div className="relative w-full">
-        <div className="max-h-[50vh] overflow-hidden w-full">
+        <div className={`${isMobile ? 'max-h-[40vh]' : 'max-h-[50vh]'} overflow-hidden w-full`}>
           <TabsContent value="webhook" className="h-full mt-0 w-full">
             <WebhookTab data={data} />
           </TabsContent>

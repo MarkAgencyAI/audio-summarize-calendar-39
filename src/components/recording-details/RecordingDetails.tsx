@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -13,11 +14,13 @@ import { RecordingTabs } from "./RecordingTabs";
 import { AudioChaptersTimeline } from "@/components/AudioChapter";
 import { ChapterDialog } from "./ChapterDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
+
 interface RecordingDetailsProps {
   recording: Recording;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
+
 export function RecordingDetails({
   recording,
   isOpen: propIsOpen,
@@ -122,19 +125,17 @@ export function RecordingDetails({
     updateRecording
   };
 
-  // Responsive layout classes
-  const dialogSizeClass = isMobile ? "w-[95vw]" : "max-w-4xl md:w-auto";
-  const contentPaddingClass = isMobile ? "px-2 py-3" : "px-2 sm:px-4 py-4";
-  return <>
+  return (
+    <>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className={`${dialogSizeClass} h-[90vh] flex flex-col dark:bg-[#001A29] dark:border-custom-secondary overflow-hidden`}>
+        <DialogContent className="h-[90vh] flex flex-col dark:bg-[#001A29] dark:border-custom-secondary overflow-hidden max-w-full md:max-w-4xl w-[95vw] md:w-full">
           <ScrollArea className="flex-1 w-full pr-2 custom-scrollbar">
-            <div className="w-[71%]">
-              <DialogHeader>
-                <DialogTitle className="flex items-center justify-between">
+            <div className="w-full max-w-full px-2 sm:px-4">
+              <DialogHeader className="mb-2">
+                <DialogTitle className="flex flex-wrap items-center justify-between gap-2">
                   <RecordingHeader recording={recording} />
                 </DialogTitle>
-                <DialogDescription className="text-sm text-muted-foreground">
+                <DialogDescription className="text-sm text-muted-foreground mt-1">
                   Detalles de la grabación y datos procesados
                 </DialogDescription>
               </DialogHeader>
@@ -142,21 +143,52 @@ export function RecordingDetails({
               <Separator className="my-2 dark:bg-custom-secondary/40" />
               
               <div className="my-4 w-full max-w-full overflow-hidden">
-                <AudioPlayer audioUrl={recording.audioUrl} audioBlob={audioBlob || undefined} initialDuration={recording.duration} onTimeUpdate={handleTimeUpdate} ref={audioPlayerRef} onDurationChange={setAudioDuration} onAddChapter={handleAddChapter} />
+                <AudioPlayer 
+                  audioUrl={recording.audioUrl} 
+                  audioBlob={audioBlob || undefined} 
+                  initialDuration={recording.duration} 
+                  onTimeUpdate={handleTimeUpdate} 
+                  ref={audioPlayerRef} 
+                  onDurationChange={setAudioDuration} 
+                  onAddChapter={handleAddChapter} 
+                />
                 
                 <div className="mt-2 max-w-full overflow-hidden">
-                  <AudioChaptersTimeline chapters={chapters} duration={audioDuration} currentTime={currentAudioTime} onChapterClick={handleChapterClick} />
+                  <AudioChaptersTimeline 
+                    chapters={chapters} 
+                    duration={audioDuration} 
+                    currentTime={currentAudioTime} 
+                    onChapterClick={handleChapterClick} 
+                  />
                 </div>
               </div>
               
               <div className="pt-2 sm:pt-4 w-full max-w-full overflow-hidden">
-                <RecordingTabs data={recordingDetailsData} onTabChange={setActiveTab} onTextSelection={handleTextSelection} onEditChapter={handleEditChapter} onDeleteChapter={handleDeleteChapter} />
+                <RecordingTabs 
+                  data={recordingDetailsData} 
+                  onTabChange={setActiveTab} 
+                  onTextSelection={handleTextSelection} 
+                  onEditChapter={handleEditChapter} 
+                  onDeleteChapter={handleDeleteChapter} 
+                />
               </div>
             </div>
           </ScrollArea>
         </DialogContent>
       </Dialog>
       
-      <ChapterDialog isOpen={showChapterDialog} onOpenChange={setShowChapterDialog} currentChapter={currentChapter} chapters={chapters} title={newChapterTitle} setTitle={setNewChapterTitle} color={newChapterColor} setColor={setNewChapterColor} onSave={handleSaveChapter} currentTime={currentAudioTime} />
-    </>;
+      <ChapterDialog 
+        isOpen={showChapterDialog} 
+        onOpenChange={setShowChapterDialog} 
+        currentChapter={currentChapter} 
+        chapters={chapters} 
+        title={newChapterTitle} 
+        setTitle={setNewChapterTitle} 
+        color={newChapterColor} 
+        setColor={setNewChapterColor} 
+        onSave={handleSaveChapter} 
+        currentTime={currentAudioTime} 
+      />
+    </>
+  );
 }
