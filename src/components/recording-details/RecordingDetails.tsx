@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -129,7 +128,7 @@ export function RecordingDetails({
 
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <DialogContent className="p-0 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg w-[95vw] md:w-[90vw] lg:w-[80vw] max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="p-0 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg w-[95vw] md:w-[90vw] lg:w-[80vw] max-w-6xl max-h-[90vh] overflow-auto flex flex-col">
         <div className="flex flex-col w-full h-full overflow-hidden">
           {/* Header Area */}
           <div className="p-5 pb-3 border-b border-slate-200 dark:border-slate-800">

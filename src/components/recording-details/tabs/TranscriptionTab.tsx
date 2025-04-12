@@ -1,237 +1,326 @@
-
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { TranscriptionTabProps, HighlightMenuPosition, SelectionRange } from "../types";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "sonner";
-import { TranscriptionTabProps } from "../types";
-import { useSearch } from "../hooks/useSearch";
-import { useGroq } from "@/lib/groq";
-import { sendToWebhook } from "@/lib/webhook";
-import { OutputEditor } from "./transcription/OutputEditor";
-import { SearchBar } from "./transcription/SearchBar";
-import { TranscriptionContent } from "./transcription/TranscriptionContent";
-import { FileText, Edit, Bot } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Separator } from "@/components/ui/separator";
+import { Slider } from "@/components/ui/slider";
+import { PlayCircle, PauseCircle, Rewind, Forward, Copy, Highlight, Edit, Trash2, ChevronsUpDown, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-const WEBHOOK_URL = "https://ssn8nss.maettiai.tech/webhook-test/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
+import { highlightColors } from "../types";
+import { toast } from "sonner";
 
 export function TranscriptionTab({
   data,
   onTextSelection
 }: TranscriptionTabProps) {
-  const { updateRecording } = data;
-  const { llama3 } = useGroq();
-  const [isEditingOutput, setIsEditingOutput] = useState(false);
-  const [editedOutput, setEditedOutput] = useState(data.recording.output || "");
-  const [isGeneratingOutput, setIsGeneratingOutput] = useState(false);
+  const [selectedText, setSelectedText] = useState("");
+  const [highlightMenuPosition, setHighlightMenuPosition] = useState<HighlightMenuPosition | null>(null);
+  const [selectionRange, setSelectionRange] = useState<SelectionRange | null>(null);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [selectedColor, setSelectedColor] = useState(highlightColors[0].value);
+  const [transcriptionSpeed, setTranscriptionSpeed] = useState(1);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const transcriptionRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
   
-  const {
-    searchQuery,
-    setSearchQuery,
-    searchResults,
-    currentSearchIndex,
-    transcriptionRef,
-    handleSearch,
-    navigateSearch
-  } = useSearch(data.recording.output);
+  const toggleExpanded = () => {
+    setIsExpanded(!isExpanded);
+  };
   
-  const toggleHighlightMode = () => {
+  const toggleAudioPlayback = () => {
+    setIsAudioPlaying(!isAudioPlaying);
+  };
+  
+  const handleSpeedChange = (value: number[]) => {
+    setTranscriptionSpeed(value[0]);
+  };
+  
+  const handleTextSelect = () => {
     const selection = window.getSelection();
-    if (selection && selection.toString().trim() !== "") {
-      onTextSelection();
-    } else {
-      toast.info("Selecciona texto para resaltar");
-    }
-  };
-  
-  const handleSaveOutput = async () => {
-    await sendToWebhook(WEBHOOK_URL, {
-      type: "output_update",
-      recordingId: data.recording.id,
-      output: editedOutput,
-      timestamp: new Date().toISOString()
-    });
+    if (!selection) return;
     
-    updateRecording(data.recording.id, {
-      output: editedOutput
-    });
-    setIsEditingOutput(false);
-    toast.success("Contenido actualizado");
-  };
-  
-  const handleCancelOutputEdit = () => {
-    setEditedOutput(data.recording.output || "");
-    setIsEditingOutput(false);
-  };
-  
-  const generateOutputWithGroq = async () => {
-    try {
-      setIsGeneratingOutput(true);
-      toast.info("Generando contenido con IA...");
-
-      await sendToWebhook(WEBHOOK_URL, {
-        type: "generating_output",
-        recordingId: data.recording.id,
-        audioUrl: data.recording.audioUrl,
-        timestamp: new Date().toISOString()
-      });
-
-      const prompt = `Genera un análisis del siguiente audio. Destaca los puntos principales, las fechas importantes si las hay, y organiza la información de forma clara y coherente. Si hay temas educativos, enfócate en explicarlos de manera didáctica.
-
-Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 oraciones.`;
-
-      const response = await llama3({
-        messages: [
-          {
-            role: "user",
-            content: prompt
+    const text = selection.toString();
+    if (text && text.length > 0) {
+      setSelectedText(text);
+      
+      const range = selection.getRangeAt(0);
+      const { startOffset, endOffset } = range;
+      
+      // Calculate the start and end indices based on the current transcription content
+      if (transcriptionRef.current) {
+        const startContainer = range.startContainer;
+        const endContainer = range.endContainer;
+        
+        let startIndex = 0;
+        let endIndex = 0;
+        
+        // Function to traverse nodes and calculate the index
+        const calculateIndex = (node: Node, offset: number): number => {
+          let index = 0;
+          let currentNode: Node | null = transcriptionRef.current;
+          
+          while (currentNode) {
+            if (currentNode === node) {
+              return index + offset;
+            }
+            
+            if (currentNode.textContent) {
+              index += currentNode.textContent.length;
+            }
+            
+            currentNode = currentNode.nextSibling;
           }
-        ],
-        temperature: 0.7,
-        max_tokens: 800,
-      });
-
-      if (response && response.choices && response.choices[0]?.message?.content) {
-        const output = response.choices[0].message.content;
+          
+          return -1; // Should not happen if the node is within the transcriptionRef
+        };
         
-        await sendToWebhook(WEBHOOK_URL, {
-          type: "generated_output",
-          recordingId: data.recording.id,
-          output: output,
-          timestamp: new Date().toISOString()
-        });
+        startIndex = calculateIndex(startContainer, startOffset);
+        endIndex = calculateIndex(endContainer, endOffset);
         
-        updateRecording(data.recording.id, {
-          output: output
-        });
-        
-        setEditedOutput(output);
-        
-        toast.success("Contenido generado exitosamente");
-      } else {
-        const simpleOutput = `Contenido generado localmente: Este es un análisis básico de la grabación "${data.recording.name}" que contiene aproximadamente ${data.recording.audioData.length} caracteres.`;
-        
-        await sendToWebhook(WEBHOOK_URL, {
-          type: "fallback_output",
-          recordingId: data.recording.id,
-          output: simpleOutput,
-          error: "No se pudo obtener respuesta de la API",
-          timestamp: new Date().toISOString()
-        });
-        
-        updateRecording(data.recording.id, {
-          output: simpleOutput
-        });
-        
-        setEditedOutput(simpleOutput);
-        
-        toast.warning("Se generó un contenido básico debido a problemas con la API");
+        if (startIndex !== -1 && endIndex !== -1) {
+          setSelectionRange({ start: startIndex, end: endIndex });
+          
+          // Get the coordinates of the selected text
+          const rect = range.getBoundingClientRect();
+          setHighlightMenuPosition({
+            x: rect.left + rect.width / 2,
+            y: rect.top + window.scrollY - 10, // Position above the text
+          });
+          setIsPopoverOpen(true);
+          onTextSelection();
+        }
       }
-    } catch (error) {
-      console.error("Error al generar el contenido:", error);
-      
-      await sendToWebhook(WEBHOOK_URL, {
-        type: "output_generation_error",
-        recordingId: data.recording.id,
-        error: String(error),
-        timestamp: new Date().toISOString()
-      });
-      
-      toast.error("Error al generar el contenido");
-      
-      const errorOutput = "No se pudo generar un análisis automático. Por favor, intente más tarde o edite manualmente el contenido.";
-      setEditedOutput(errorOutput);
-      updateRecording(data.recording.id, {
-        output: errorOutput
-      });
-    } finally {
-      setIsGeneratingOutput(false);
+    } else {
+      // Clear selection
+      setSelectedText("");
+      setHighlightMenuPosition(null);
+      setSelectionRange(null);
+      setIsPopoverOpen(false);
     }
   };
-
+  
+  const handleHighlight = () => {
+    if (selectionRange) {
+      data.updateRecording(data.recording.id, {
+        highlights: [
+          ...(data.highlights || []),
+          {
+            id: Date.now().toString(),
+            start: selectionRange.start,
+            end: selectionRange.end,
+            color: selectedColor,
+          },
+        ],
+      });
+      
+      setIsPopoverOpen(false);
+      setSelectedText("");
+      setSelectionRange(null);
+      toast.success("Texto resaltado");
+    }
+  };
+  
+  const handleColorSelect = (color: string) => {
+    setSelectedColor(color);
+  };
+  
+  const handleCopy = () => {
+    if (selectedText) {
+      navigator.clipboard.writeText(selectedText);
+      toast.success("Texto copiado al portapapeles");
+    }
+  };
+  
+  const clearHighlight = (highlightId: string) => {
+    data.updateRecording(data.recording.id, {
+      highlights: data.highlights.filter((h) => h.id !== highlightId),
+    });
+  };
+  
+  const getHighlightStyle = (highlight: any) => {
+    return {
+      backgroundColor: highlight.color,
+      borderRadius: "0.25rem",
+      padding: "0.125rem 0.25rem",
+      margin: "0 -0.25rem",
+      display: "inline",
+    };
+  };
+  
+  const renderHighlightedText = () => {
+    let transcription = data.recording.transcription || "";
+    let highlights = data.highlights || [];
+    let parts = [];
+    let lastIndex = 0;
+    
+    // Sort highlights by start index
+    highlights.sort((a, b) => a.start - b.start);
+    
+    for (const highlight of highlights) {
+      if (highlight.end <= lastIndex) {
+        // Skip overlapping highlights
+        continue;
+      }
+      
+      // Add the text before the highlight
+      if (highlight.start > lastIndex) {
+        parts.push(
+          <React.Fragment key={`text-${lastIndex}`}>
+            {transcription.substring(lastIndex, highlight.start)}
+          </React.Fragment>
+        );
+      }
+      
+      // Add the highlighted text
+      const highlightText = transcription.substring(highlight.start, highlight.end);
+      parts.push(
+        <mark
+          key={highlight.id}
+          style={getHighlightStyle(highlight)}
+          className="highlighted-text relative"
+        >
+          {highlightText}
+          <div className="absolute top-0 left-0 w-full h-full opacity-0 hover:opacity-100 transition-opacity">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded shadow-md p-2 flex gap-1 items-center">
+              <button onClick={() => clearHighlight(highlight.id)} className="hover:bg-slate-700 dark:hover:bg-slate-300 p-1 rounded">
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </mark>
+      );
+      
+      lastIndex = highlight.end;
+    }
+    
+    // Add the remaining text after the last highlight
+    if (lastIndex < transcription.length) {
+      parts.push(
+        <React.Fragment key={`text-${lastIndex}`}>
+          {transcription.substring(lastIndex)}
+        </React.Fragment>
+      );
+    }
+    
+    return parts;
+  };
+  
   return (
     <div className="h-full flex flex-col p-4">
       <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-violet-500" />
-          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200">
-            Transcripción
-          </h3>
-        </div>
+        <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200">
+          Transcripción
+        </h3>
         
-        {!isEditingOutput && data.recording.output && (
+        <div className="flex items-center gap-2">
           <Button 
             variant="outline" 
-            size="sm" 
-            onClick={() => setIsEditingOutput(true)}
-            className="border-slate-200 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+            size="icon" 
+            className="h-8 w-8 border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/70"
+            onClick={toggleAudioPlayback}
           >
-            <Edit className="h-3.5 w-3.5 mr-1.5" />
-            <span className="text-xs">Editar</span>
+            {isAudioPlaying ? <PauseCircle className="h-4 w-4" /> : <PlayCircle className="h-4 w-4" />}
+            <span className="sr-only">{isAudioPlaying ? 'Pause' : 'Play'}</span>
           </Button>
-        )}
-      </div>
-      
-      <div className="mb-3">
-        <SearchBar
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          handleSearch={handleSearch}
-          toggleHighlightMode={toggleHighlightMode}
-          searchResults={searchResults}
-          currentSearchIndex={currentSearchIndex}
-          navigateSearch={navigateSearch}
-        />
-      </div>
-      
-      <div className="flex-1 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/30">
-        <ScrollArea className="h-full w-full p-4">
-          {isEditingOutput ? (
-            <OutputEditor
-              editedOutput={editedOutput}
-              setEditedOutput={setEditedOutput}
-              handleSaveOutput={handleSaveOutput}
-              handleCancelOutputEdit={handleCancelOutputEdit}
-            />
-          ) : !data.recording.output ? (
-            <div className="h-full flex flex-col items-center justify-center text-center p-8">
-              <div className="w-16 h-16 mb-4 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-                <Bot className="h-8 w-8 text-violet-500 dark:text-violet-400" />
-              </div>
-              <h4 className="text-lg font-medium text-slate-800 dark:text-slate-200 mb-2">
-                No hay transcripción disponible
-              </h4>
-              <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mb-6">
-                Puedes generar una transcripción automática utilizando inteligencia artificial
-              </p>
-              <Button
-                onClick={generateOutputWithGroq}
-                disabled={isGeneratingOutput}
-                className="bg-violet-500 hover:bg-violet-600 text-white"
+          
+          <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-8 w-8 border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/70"
+                disabled={!selectedText}
               >
-                {isGeneratingOutput ? (
-                  <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    Generando...
-                  </>
-                ) : (
-                  <>
-                    <Bot className="h-4 w-4 mr-2" />
-                    Generar con IA
-                  </>
-                )}
+                <Highlight className="h-4 w-4" />
+                <span className="sr-only">Resaltar</span>
               </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64">
+              <p className="text-sm font-medium">Selecciona un color</p>
+              <div className="grid grid-cols-6 gap-2 mt-2">
+                {highlightColors.map((color) => (
+                  <button
+                    key={color.value}
+                    className={`h-6 w-6 rounded-full border border-slate-300 dark:border-slate-600 shadow-sm`}
+                    style={{ backgroundColor: color.value }}
+                    onClick={() => handleColorSelect(color.value)}
+                  />
+                ))}
+              </div>
+              <Button className="w-full mt-3" onClick={handleHighlight}>
+                Resaltar
+              </Button>
+            </PopoverContent>
+          </Popover>
+          
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="h-8 w-8 border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/70"
+            disabled={!selectedText}
+            onClick={handleCopy}
+          >
+            <Copy className="h-4 w-4" />
+            <span className="sr-only">Copiar</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="h-8 w-8 border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/70"
+            onClick={toggleExpanded}
+          >
+            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            <span className="sr-only">{isExpanded ? 'Contraer' : 'Expandir'}</span>
+          </Button>
+        </div>
+      </div>
+      
+      <div className="flex flex-col border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-800/30">
+        {isExpanded && (
+          <div className="p-3 border-b border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Velocidad de reproducción
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">
+                {transcriptionSpeed}x
+              </div>
             </div>
-          ) : (
-            <div className="max-w-full">
-              <pre 
-                ref={transcriptionRef} 
-                className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700 dark:text-slate-300 break-words" 
-                onMouseUp={onTextSelection}
-              >
-                {data.renderHighlightedText()}
-              </pre>
-            </div>
-          )}
+            <Slider 
+              defaultValue={[1]} 
+              max={2} 
+              min={0.5} 
+              step={0.1} 
+              onValueChange={handleSpeedChange} 
+            />
+          </div>
+        )}
+        
+        <ScrollArea className="flex-1 h-full">
+          <div 
+            className="p-4 flex-1 overflow-wrap-anywhere transcription-text"
+            ref={transcriptionRef}
+            onMouseUp={handleTextSelect}
+          >
+            {data.recording.transcription ? (
+              renderHighlightedText()
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                <div className="w-16 h-16 mb-4 rounded-full bg-slate-100 dark:bg-slate-900/30 flex items-center justify-center">
+                  <FileText className="h-8 w-8 text-slate-500 dark:text-slate-400" />
+                </div>
+                <h4 className="text-lg font-medium text-slate-800 dark:text-slate-200 mb-2">No hay transcripción</h4>
+                <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md">
+                  La transcripción se generará automáticamente.
+                </p>
+              </div>
+            )}
+          </div>
         </ScrollArea>
       </div>
     </div>
