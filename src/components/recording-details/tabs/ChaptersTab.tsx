@@ -1,7 +1,6 @@
 
 import { useState } from "react";
-import { Clock, Bookmark, Search, Plus, Edit, Trash2 } from "lucide-react";
-import { AudioChaptersList } from "@/components/AudioChapter";
+import { Clock, Bookmark, Search, Plus, Edit, Trash2, Info } from "lucide-react";
 import { ChaptersTabProps } from "../types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -27,11 +26,6 @@ export function ChaptersTab({
       )
     : allChapters;
   
-  // Chapter click handler
-  const handleChapterClick = (chapterId: string) => {
-    // Implementation will come from parent component
-  };
-  
   // Helper to format time without milliseconds
   const formatTimeNoMs = (seconds: number): string => {
     const h = Math.floor(seconds / 3600);
@@ -42,6 +36,14 @@ export function ChaptersTab({
       ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
       : `${m}:${s.toString().padStart(2, '0')}`;
   };
+  
+  // Debug log to verify chapter data
+  console.log("Chapters tab data:", {
+    allChapters: allChapters.length,
+    filteredChapters: filteredChapters.length,
+    activeChapterId: data.activeChapterId,
+    firstChapter: allChapters[0]
+  });
 
   return (
     <div className="h-full flex flex-col p-4 overflow-hidden">
@@ -140,7 +142,7 @@ export function ChaptersTab({
                   <div 
                     key={chapter.id}
                     className={cn(
-                      "group p-3 rounded-md border border-slate-200 dark:border-slate-700 transition-colors",
+                      "group relative p-3 rounded-md border border-slate-200 dark:border-slate-700 transition-colors",
                       chapter.id === data.activeChapterId ? 
                         "bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/50" : 
                         "hover:bg-slate-50 dark:hover:bg-slate-800/70"
@@ -173,8 +175,8 @@ export function ChaptersTab({
                         </div>
                       </div>
                       
-                      {/* Controls (only visible on hover) */}
-                      <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {/* Controls */}
+                      <div className="absolute top-3 right-3 flex gap-1">
                         <Button 
                           variant="ghost" 
                           size="icon" 

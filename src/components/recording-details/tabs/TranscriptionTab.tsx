@@ -1,22 +1,18 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { TranscriptionTabProps, HighlightMenuPosition, SelectionRange } from "../types";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Slider } from "@/components/ui/slider";
 import { 
-  PlayCircle, PauseCircle, Copy, Highlighter, FileText, 
-  Info, CheckCircle, Bookmark, Search, Settings, AlignJustify
+  FileText, Search, Copy, Highlighter, Info, 
+  Settings, Play, Pause, Settings2 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { 
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { highlightColors } from "../types";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 
 export function TranscriptionTab({
   data,
@@ -27,47 +23,22 @@ export function TranscriptionTab({
   const [selectionRange, setSelectionRange] = useState<SelectionRange | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [selectedColor, setSelectedColor] = useState(highlightColors[0].value);
-  const [transcriptionSpeed, setTranscriptionSpeed] = useState(1);
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [showSettings, setShowSettings] = useState(false);
+  const [fontSize, setFontSize] = useState(16);
   
   const transcriptionRef = useRef<HTMLDivElement>(null);
   
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
-  
-  function useDebounce<T>(value: T, delay: number): T {
-    const [debouncedValue, setDebouncedValue] = useState<T>(value);
-  
-    useEffect(() => {
-      const handler = setTimeout(() => {
-        setDebouncedValue(value);
-      }, delay);
-  
-      return () => {
-        clearTimeout(handler);
-      };
-    }, [value, delay]);
-  
-    return debouncedValue;
-  }
-  
+  // Log transcription data for debugging
   useEffect(() => {
-    console.log("Transcription data loaded:", {
+    console.log("Transcription data:", {
       hasOutput: !!data.recording.output,
       outputLength: data.recording.output?.length || 0,
-      hasHighlights: data.highlights?.length > 0
+      firstChars: data.recording.output?.substring(0, 50),
+      highlights: data.highlights?.length || 0
     });
-  }, [data.recording.output, data.highlights]);
-  
-  const toggleAudioPlayback = () => {
-    setIsAudioPlaying(!isAudioPlaying);
-  };
-  
-  const handleSpeedChange = (value: number[]) => {
-    setTranscriptionSpeed(value[0]);
-  };
-  
+  }, [data]);
+
   const handleTextSelect = () => {
     const selection = window.getSelection();
     if (!selection) return;
@@ -137,6 +108,7 @@ export function TranscriptionTab({
     if (selectedText) {
       navigator.clipboard.writeText(selectedText);
       toast.success("Texto copiado al portapapeles");
+      setIsPopoverOpen(false);
     }
   };
   
@@ -146,10 +118,9 @@ export function TranscriptionTab({
     });
     toast.success("Resaltado eliminado");
   };
-  
-  const renderHighlightedText = () => {
-    let transcription = data.recording.output || "";
-    const highlights = data.highlights || [];
+
+  const renderTranscriptionContent = () => {
+    const transcription = data.recording.output || "";
     
     if (!transcription || transcription.trim() === "") {
       return (
@@ -165,27 +136,27 @@ export function TranscriptionTab({
       );
     }
     
-    if (highlights.length === 0) {
-      if (debouncedSearchTerm) {
-        return highlightSearchMatches(transcription, debouncedSearchTerm);
+    // If we have transcription content but no highlights
+    if (!data.highlights || data.highlights.length === 0) {
+      // Search functionality
+      if (searchTerm.trim()) {
+        return highlightSearchMatches(transcription, searchTerm);
       }
-      
-      return <p className="whitespace-pre-wrap">{transcription}</p>;
+      return <p className="whitespace-pre-wrap" style={{ fontSize: `${fontSize}px` }}>{transcription}</p>;
     }
     
-    const sortedHighlights = [...highlights].sort((a, b) => a.startPosition - b.startPosition);
-    
+    // With highlights
+    const sortedHighlights = [...data.highlights].sort((a, b) => a.startPosition - b.startPosition);
     let parts = [];
     let lastIndex = 0;
     
     for (const highlight of sortedHighlights) {
       if (highlight.startPosition > lastIndex) {
         const textBefore = transcription.substring(lastIndex, highlight.startPosition);
-        
-        if (debouncedSearchTerm) {
+        if (searchTerm.trim()) {
           parts.push(
             <React.Fragment key={`before-${lastIndex}`}>
-              {highlightSearchMatches(textBefore, debouncedSearchTerm)}
+              {highlightSearchMatches(textBefore, searchTerm)}
             </React.Fragment>
           );
         } else {
@@ -220,11 +191,10 @@ export function TranscriptionTab({
     
     if (lastIndex < transcription.length) {
       const remainingText = transcription.substring(lastIndex);
-      
-      if (debouncedSearchTerm) {
+      if (searchTerm.trim()) {
         parts.push(
           <React.Fragment key={`after-${lastIndex}`}>
-            {highlightSearchMatches(remainingText, debouncedSearchTerm)}
+            {highlightSearchMatches(remainingText, searchTerm)}
           </React.Fragment>
         );
       } else {
@@ -232,7 +202,7 @@ export function TranscriptionTab({
       }
     }
     
-    return <div className="whitespace-pre-wrap">{parts}</div>;
+    return <div className="whitespace-pre-wrap" style={{ fontSize: `${fontSize}px` }}>{parts}</div>;
   };
   
   const highlightSearchMatches = (text: string, searchTerm: string) => {
@@ -258,7 +228,7 @@ export function TranscriptionTab({
 
   return (
     <div className="h-full flex flex-col p-4 overflow-hidden">
-      <div className="flex items-center justify-between mb-4 flex-shrink-0">
+      <div className="mb-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-md">
             <FileText className="h-5 w-5 text-blue-500" />
@@ -295,56 +265,44 @@ export function TranscriptionTab({
             )}
           </div>
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-8 w-8 border-slate-200 dark:border-slate-700"
-              >
-                <Settings className="h-4 w-4" />
-                <span className="sr-only">Opciones</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem onClick={() => setShowSettings(!showSettings)}>
-                <AlignJustify className="h-4 w-4 mr-2" />
-                <span>Opciones de vista</span>
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem onClick={toggleAudioPlayback}>
-                {isAudioPlaying ? <PauseCircle className="h-4 w-4 mr-2" /> : <PlayCircle className="h-4 w-4 mr-2" />}
-                <span>{isAudioPlaying ? "Pausar" : "Reproducir"}</span>
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem 
-                onClick={() => {
-                  if (data.recording.output) {
-                    navigator.clipboard.writeText(data.recording.output);
-                    toast.success("Transcripción copiada al portapapeles");
-                  }
-                }}
-                disabled={!data.recording.output}
-              >
-                <Copy className="h-4 w-4 mr-2" />
-                <span>Copiar todo</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5"
+            onClick={() => setShowSettings(!showSettings)}
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+            <span className="sr-only sm:not-sr-only sm:inline-block">Opciones</span>
+          </Button>
+          
+          {data.recording.output && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5"
+              onClick={() => {
+                navigator.clipboard.writeText(data.recording.output || "");
+                toast.success("Transcripción copiada al portapapeles");
+              }}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              <span className="sr-only sm:not-sr-only sm:inline-block">Copiar</span>
+            </Button>
+          )}
           
           <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
             <PopoverTrigger asChild>
               <Button 
                 variant="outline" 
-                size="icon" 
+                size="sm" 
                 className={cn(
-                  "h-8 w-8 border-slate-200 dark:border-slate-700",
+                  "h-8 gap-1.5",
                   selectedText ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400" : ""
                 )}
                 disabled={!selectedText}
               >
-                <Highlighter className="h-4 w-4" />
-                <span className="sr-only">Resaltar</span>
+                <Highlighter className="h-3.5 w-3.5" />
+                <span className="sr-only sm:not-sr-only sm:inline-block">Resaltar</span>
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-64">
@@ -380,33 +338,21 @@ export function TranscriptionTab({
       </div>
       
       {showSettings && (
-        <div className="mb-4 p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/30 flex flex-col gap-2">
-          <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300">Opciones de reproducción</h4>
+        <div className="mb-4 p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/30">
           <div className="flex items-center gap-4">
             <div className="flex-1">
               <div className="flex justify-between text-xs text-slate-500 mb-1">
-                <span>Velocidad</span>
-                <span>{transcriptionSpeed}x</span>
+                <span>Tamaño de texto</span>
+                <span>{fontSize}px</span>
               </div>
               <Slider 
-                value={[transcriptionSpeed]} 
-                min={0.5} 
-                max={2} 
-                step={0.1} 
-                onValueChange={handleSpeedChange} 
+                value={[fontSize]} 
+                min={12} 
+                max={24} 
+                step={1} 
+                onValueChange={(value) => setFontSize(value[0])} 
               />
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="h-8 w-8"
-              onClick={toggleAudioPlayback}
-            >
-              {isAudioPlaying ? 
-                <PauseCircle className="h-4 w-4" /> : 
-                <PlayCircle className="h-4 w-4" />
-              }
-            </Button>
           </div>
         </div>
       )}
@@ -419,7 +365,7 @@ export function TranscriptionTab({
             onMouseUp={handleTextSelect}
           >
             <div className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-              {renderHighlightedText()}
+              {renderTranscriptionContent()}
             </div>
           </div>
         </ScrollArea>

@@ -1,81 +1,116 @@
 
 import { WebhookTabProps } from "../types";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { Sparkles, CheckSquare, Info, Lightbulb, AlertCircle } from "lucide-react";
+import { Sparkles, Info, Lightbulb, AlertCircle, CheckSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 
 export function SummaryTab({ data }: WebhookTabProps) {
-  const isMobile = useIsMobile();
   const [summaryContent, setSummaryContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
     setIsLoading(true);
     
-    if (!data.recording.webhookData) {
-      setSummaryContent(null);
-      setIsLoading(false);
-      return;
-    }
-    
-    try {
-      if (typeof data.recording.webhookData === 'string') {
-        setSummaryContent(data.recording.webhookData);
-      } else {
-        setSummaryContent(JSON.stringify(data.recording.webhookData, null, 2));
+    setTimeout(() => {
+      try {
+        if (!data.recording.webhookData) {
+          setSummaryContent(null);
+        } else if (typeof data.recording.webhookData === 'string') {
+          setSummaryContent(data.recording.webhookData);
+        } else {
+          setSummaryContent(JSON.stringify(data.recording.webhookData, null, 2));
+        }
+      } catch (error) {
+        console.error("Error processing summary:", error);
+        setSummaryContent("Error al procesar el resumen");
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Error al formatear resumen:", error);
-      setSummaryContent("Error al formatear el resumen de la grabación");
-    } finally {
-      setIsLoading(false);
-    }
+    }, 300);
   }, [data.recording.webhookData]);
 
-  // Renderiza secciones del resumen con iconos visuales
-  const renderSummaryWithFormatting = (text: string) => {
-    if (!text) return null;
+  const renderSummaryContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-pulse text-center p-8">
+            <Sparkles className="h-10 w-10 mx-auto mb-4 text-amber-400/50" />
+            <p className="text-slate-400 dark:text-slate-500">Cargando resumen...</p>
+          </div>
+        </div>
+      );
+    }
     
-    // Simple formatting for key points - this could be enhanced with actual parser logic
-    return text.split('\n').map((line, index) => {
-      // Identify different types of content based on prefixes or keywords
-      const isKeyPoint = line.includes("Punto clave") || line.includes("Key point");
-      const isImportant = line.includes("Importante") || line.includes("Important");
-      const isTitle = line.length < 50 && (line.endsWith(':') || line.startsWith('#'));
-      
-      if (isTitle) {
-        return (
-          <h3 key={index} className="text-base font-medium text-slate-800 dark:text-slate-200 mt-4 mb-2">
-            {line}
-          </h3>
-        );
-      } else if (isKeyPoint) {
-        return (
-          <div key={index} className="flex items-start gap-2 mb-2 pb-2 border-b border-dashed border-slate-200 dark:border-slate-700">
-            <CheckSquare className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
-            <p className="text-sm text-slate-700 dark:text-slate-300">{line}</p>
+    if (!summaryContent) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center text-center p-8">
+          <div className="w-16 h-16 mb-4 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+            <Info className="h-8 w-8 text-amber-500 dark:text-amber-400" />
           </div>
-        );
-      } else if (isImportant) {
-        return (
-          <div key={index} className="flex items-start gap-2 mb-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded-md">
-            <AlertCircle className="h-4 w-4 text-amber-500 mt-1 flex-shrink-0" />
-            <p className="text-sm text-amber-700 dark:text-amber-300">{line}</p>
-          </div>
-        );
-      } else if (line.trim() === '') {
-        return <div key={index} className="h-2" />;
-      } else {
-        return (
-          <div key={index} className="flex items-start gap-2 mb-2">
-            <Lightbulb className="h-4 w-4 text-blue-500 mt-1 opacity-70 flex-shrink-0" />
-            <p className="text-sm text-slate-700 dark:text-slate-300">{line}</p>
-          </div>
-        );
-      }
-    });
+          <h4 className="text-lg font-medium text-slate-800 dark:text-slate-200 mb-2">No hay resumen disponible</h4>
+          <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md">
+            El resumen se genera automáticamente cuando se procesa la grabación con IA.
+          </p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="mt-4"
+            onClick={() => console.log("Request summary generation")}
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            Generar resumen
+          </Button>
+        </div>
+      );
+    }
+    
+    // Format the summary content for better readability
+    return formatSummaryContent(summaryContent);
+  };
+  
+  const formatSummaryContent = (content: string) => {
+    const lines = content.split('\n');
+    
+    return (
+      <div className="space-y-4">
+        {lines.map((line, index) => {
+          // Empty lines
+          if (!line.trim()) return <div key={index} className="h-2" />;
+          
+          // Headings (lines ending with colon or starting with # or ##)
+          if (line.trim().endsWith(':') || /^#+\s/.test(line)) {
+            return (
+              <h3 key={index} className="text-base font-medium text-slate-800 dark:text-slate-200 mt-6 mb-2 flex items-center">
+                <Sparkles className="h-4 w-4 mr-2 text-amber-500" />
+                {line}
+              </h3>
+            );
+          }
+          
+          // Key points or important information
+          if (line.toLowerCase().includes('punto clave') || 
+              line.toLowerCase().includes('key point') ||
+              line.toLowerCase().includes('importante')) {
+            return (
+              <div key={index} className="flex items-start gap-2 p-2 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30">
+                <CheckSquare className="h-4 w-4 text-amber-500 mt-1 flex-shrink-0" />
+                <p className="text-sm text-amber-700 dark:text-amber-300">{line}</p>
+              </div>
+            );
+          }
+          
+          // Regular content
+          return (
+            <div key={index} className="flex items-start gap-2">
+              <Lightbulb className="h-4 w-4 text-slate-400 mt-1 flex-shrink-0" />
+              <p className="text-sm text-slate-700 dark:text-slate-300">{line}</p>
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   return (
@@ -99,30 +134,9 @@ export function SummaryTab({ data }: WebhookTabProps) {
       
       <div className="flex-1 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/30 min-h-0">
         <ScrollArea className="h-full w-full">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="animate-pulse text-center p-8">
-                <Sparkles className="h-10 w-10 mx-auto mb-4 text-amber-400/50" />
-                <p className="text-slate-400 dark:text-slate-500">Cargando resumen...</p>
-              </div>
-            </div>
-          ) : !summaryContent ? (
-            <div className="h-full flex flex-col items-center justify-center text-center p-8">
-              <div className="w-16 h-16 mb-4 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                <Info className="h-8 w-8 text-amber-500 dark:text-amber-400" />
-              </div>
-              <h4 className="text-lg font-medium text-slate-800 dark:text-slate-200 mb-2">No hay resumen disponible</h4>
-              <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md">
-                El resumen se genera automáticamente a partir del análisis de la transcripción.
-              </p>
-            </div>
-          ) : (
-            <div className="p-5 max-w-full">
-              <div className="prose prose-slate dark:prose-invert prose-sm max-w-none">
-                {renderSummaryWithFormatting(summaryContent)}
-              </div>
-            </div>
-          )}
+          <div className="p-5 max-w-full">
+            {renderSummaryContent()}
+          </div>
         </ScrollArea>
       </div>
     </div>

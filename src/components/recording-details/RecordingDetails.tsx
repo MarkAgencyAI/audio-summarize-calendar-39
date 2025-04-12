@@ -1,8 +1,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { loadAudioFromStorage, saveAudioToStorage } from "@/lib/storage";
 import { RecordingHeader } from "./RecordingHeader";
 import { RecordingDetails as RecordingDetailsType } from "./types";
@@ -14,7 +13,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { AudioPlayerV2 } from "./AudioPlayerV2";
 import { AudioChaptersTimeline } from "@/components/AudioChapter";
 import { AudioPlayerHandle } from "./types";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { toast } from "sonner";
 
 interface RecordingDetailsProps {
@@ -36,6 +34,17 @@ export function RecordingDetails({
   const [audioDuration, setAudioDuration] = useState(recording.duration || 0);
   const audioPlayerRef = useRef<AudioPlayerHandle>(null);
   const isMobile = useIsMobile();
+
+  // Debugging logs
+  useEffect(() => {
+    console.log("Recording details mounted:", {
+      id: recording.id,
+      duration: recording.duration,
+      hasOutput: !!recording.output,
+      outputLength: recording.output?.length,
+      audioUrl: !!recording.audioUrl
+    });
+  }, [recording]);
 
   // Custom hooks for chapters and highlights
   const {
@@ -66,17 +75,6 @@ export function RecordingDetails({
   const dialogOpen = propIsOpen !== undefined ? propIsOpen : isOpen;
   const setDialogOpen = onOpenChange || setIsOpenState;
 
-  // Debug para verificar si hay datos
-  useEffect(() => {
-    console.log("Recording details:", {
-      id: recording.id,
-      chapters: recording.chapters || [],
-      output: recording.output ? recording.output.substring(0, 100) + "..." : "No output",
-      highlights: recording.highlights || [],
-      audioUrl: recording.audioUrl || "No URL"
-    });
-  }, [recording]);
-
   // Load audio from storage
   useEffect(() => {
     const loadAudio = async () => {
@@ -84,6 +82,9 @@ export function RecordingDetails({
         const blob = await loadAudioFromStorage(recording.id);
         if (blob) {
           setAudioBlob(blob);
+          console.log("Audio loaded from storage successfully");
+        } else {
+          console.log("No audio in storage, will try to download from URL");
         }
       } catch (error) {
         console.error("Error loading audio from storage:", error);
@@ -97,11 +98,15 @@ export function RecordingDetails({
     const saveAudio = async () => {
       if (recording.audioUrl && !audioBlob) {
         try {
+          console.log("Downloading audio from URL:", recording.audioUrl);
           const response = await fetch(recording.audioUrl);
           if (response.ok) {
             const blob = await response.blob();
             await saveAudioToStorage(recording.id, blob);
             setAudioBlob(blob);
+            console.log("Audio downloaded and saved to storage");
+          } else {
+            console.error("Failed to download audio:", response.status);
           }
         } catch (error) {
           console.error("Error saving audio to storage:", error);
@@ -133,13 +138,6 @@ export function RecordingDetails({
     toast.success("Fragmento seleccionado para crear capítulo");
   };
 
-  // Make sure we have the chapters from the recording if they exist
-  useEffect(() => {
-    if (recording.chapters && recording.chapters.length > 0) {
-      console.log("Loading saved chapters:", recording.chapters);
-    }
-  }, [recording.chapters]);
-
   // Prepare data for child components
   const recordingDetailsData: RecordingDetailsType = {
     recording,
@@ -156,11 +154,6 @@ export function RecordingDetails({
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogContent className="p-0 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg w-[95vw] md:w-[90vw] lg:w-[80vw] max-w-6xl h-[90vh] flex flex-col overflow-hidden">
-        {/* Adding DialogTitle for accessibility but visually hidden */}
-        <VisuallyHidden>
-          <DialogTitle>Detalles de grabación</DialogTitle>
-        </VisuallyHidden>
-        
         <div className="flex flex-col w-full h-full">
           {/* Header Area */}
           <div className="p-5 pb-3 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
