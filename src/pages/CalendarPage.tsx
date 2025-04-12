@@ -1,8 +1,8 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { Calendar, CalendarEvent } from "@/components/Calendar";
+import { MobileCalendar } from "@/components/MobileCalendar";
 import { useAuth } from "@/context/AuthContext";
 import { format, addHours } from "date-fns";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { loadFromStorage, saveToStorage } from "@/lib/storage";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function CalendarPage() {
   const navigate = useNavigate();
@@ -34,6 +35,7 @@ export default function CalendarPage() {
     type: "other" as "exam" | "assignment" | "study" | "class" | "meeting" | "other",
     repeat: "none" as "none" | "daily" | "weekly" | "monthly"
   });
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!user) {
@@ -165,6 +167,7 @@ export default function CalendarPage() {
         saveToStorage("calendarEvents", updatedEvents);
         return updatedEvents;
       });
+      toast.success("Evento eliminado");
     }
   };
 
@@ -303,26 +306,51 @@ export default function CalendarPage() {
         
         <div className="glassmorphism rounded-xl p-3 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40 w-full overflow-hidden">
           <div className="w-full overflow-x-auto">
-            <Calendar 
-              events={events} 
-              onAddEvent={() => setShowAddEventDialog(true)}
-              onEditEvent={(event) => handleAddEvent(event)}
-              onDeleteEvent={handleDeleteEvent}
-              activeFilter={activeFilter}
-              onFilterChange={handleFilterChange}
-            />
+            {isMobile ? (
+              <MobileCalendar 
+                events={events}
+                onAddEvent={() => setShowAddEventDialog(true)}
+                onEventClick={(event) => {
+                  setNewEvent({
+                    title: event.title,
+                    description: event.description || "",
+                    date: event.date,
+                    endDate: event.endDate || format(addHours(new Date(event.date), 1), "yyyy-MM-dd'T'HH:mm"),
+                    folderId: event.folderId || "",
+                    type: event.type,
+                    repeat: "none"
+                  });
+                  setShowAddEventDialog(true);
+                }}
+                onEditEvent={(event) => handleAddEvent(event)}
+                onDeleteEvent={handleDeleteEvent}
+                activeFilter={activeFilter}
+                onFilterChange={handleFilterChange}
+              />
+            ) : (
+              <Calendar 
+                events={events} 
+                onAddEvent={() => setShowAddEventDialog(true)}
+                onEditEvent={(event) => handleAddEvent(event)}
+                onDeleteEvent={handleDeleteEvent}
+                activeFilter={activeFilter}
+                onFilterChange={handleFilterChange}
+              />
+            )}
           </div>
         </div>
       </div>
       
-      <div className="fixed bottom-6 right-6">
-        <Button 
-          onClick={() => setShowAddEventDialog(true)}
-          className="rounded-full shadow-lg w-14 h-14 p-4"
-        >
-          <Plus className="h-6 w-6" />
-        </Button>
-      </div>
+      {!isMobile && (
+        <div className="fixed bottom-6 right-6">
+          <Button 
+            onClick={() => setShowAddEventDialog(true)}
+            className="rounded-full shadow-lg w-14 h-14 p-4"
+          >
+            <Plus className="h-6 w-6" />
+          </Button>
+        </div>
+      )}
       
       <Dialog open={showAddEventDialog} onOpenChange={setShowAddEventDialog}>
         <DialogContent className="max-w-[95vw] sm:max-w-[450px]">
