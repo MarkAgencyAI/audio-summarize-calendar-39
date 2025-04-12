@@ -1,10 +1,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { TranscriptionTabProps } from "../types";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  FileText, Search, Copy, Highlighter, Settings2, X 
-} from "lucide-react";
+import { FileText, Search, Copy, Highlighter, Settings2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
@@ -37,15 +34,6 @@ export function TranscriptionTab({
   // Setup highlights from recording data
   const highlights = data.highlights || [];
   
-  // Log transcription data for debugging
-  useEffect(() => {
-    console.log("Transcription component rendered:", {
-      hasOutput: !!data.recording.output,
-      outputLength: data.recording.output?.length || 0,
-      highlights: highlights.length
-    });
-  }, [data.recording.output, highlights.length]);
-
   // Handle text selection
   const handleTextSelection = () => {
     const selection = window.getSelection();
@@ -143,12 +131,12 @@ export function TranscriptionTab({
     // If no transcription is available
     if (!transcription || transcription.trim() === "") {
       return (
-        <div className="h-full flex flex-col items-center justify-center text-center p-8">
-          <div className="w-16 h-16 mb-4 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+        <div className="text-center p-6">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
             <FileText className="h-8 w-8 text-blue-500 dark:text-blue-400" />
           </div>
           <h4 className="text-lg font-medium text-slate-800 dark:text-slate-200 mb-2">No hay transcripción</h4>
-          <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md">
+          <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto">
             La transcripción se generará automáticamente cuando proceses audio.
           </p>
         </div>
@@ -251,8 +239,8 @@ export function TranscriptionTab({
   };
 
   return (
-    <div className="h-full flex flex-col p-4 overflow-hidden">
-      <div className="mb-4 flex items-center justify-between flex-shrink-0">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-md">
             <FileText className="h-5 w-5 text-blue-500" />
@@ -437,7 +425,7 @@ export function TranscriptionTab({
       
       {/* Settings Panel */}
       {showSettings && (
-        <div className="mb-4 p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/30">
+        <div className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/30">
           <div className="flex items-center gap-4">
             <div className="flex-1">
               <div className="flex justify-between text-xs text-slate-500 mb-1">
@@ -457,18 +445,14 @@ export function TranscriptionTab({
       )}
       
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden min-h-0 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800/30 relative">
-        <ScrollArea className="h-full w-full">
-          <div 
-            className="p-4 md:p-5"
-            ref={transcriptionRef}
-            onMouseUp={handleTextSelection}
-          >
-            <div className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-              {renderTranscriptionContent()}
-            </div>
-          </div>
-        </ScrollArea>
+      <div className="border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800/30 p-5">
+        <div
+          ref={transcriptionRef}
+          onMouseUp={handleTextSelection}
+          className="text-sm leading-relaxed text-slate-700 dark:text-slate-300"
+        >
+          {renderTranscriptionContent()}
+        </div>
       </div>
     </div>
   );

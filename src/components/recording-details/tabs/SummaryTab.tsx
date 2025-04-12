@@ -1,7 +1,6 @@
 
 import { WebhookTabProps } from "../types";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Info, Lightbulb, AlertCircle, CheckSquare } from "lucide-react";
+import { Sparkles, Info, Lightbulb, CheckSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -34,8 +33,8 @@ export function SummaryTab({ data }: WebhookTabProps) {
   const renderSummaryContent = () => {
     if (isLoading) {
       return (
-        <div className="flex items-center justify-center h-full">
-          <div className="animate-pulse text-center p-8">
+        <div className="text-center p-4">
+          <div className="animate-pulse">
             <Sparkles className="h-10 w-10 mx-auto mb-4 text-amber-400/50" />
             <p className="text-slate-400 dark:text-slate-500">Cargando resumen...</p>
           </div>
@@ -45,12 +44,12 @@ export function SummaryTab({ data }: WebhookTabProps) {
     
     if (!summaryContent) {
       return (
-        <div className="h-full flex flex-col items-center justify-center text-center p-8">
-          <div className="w-16 h-16 mb-4 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+        <div className="text-center p-6">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
             <Info className="h-8 w-8 text-amber-500 dark:text-amber-400" />
           </div>
           <h4 className="text-lg font-medium text-slate-800 dark:text-slate-200 mb-2">No hay resumen disponible</h4>
-          <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md">
+          <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto">
             El resumen se genera automáticamente cuando se procesa la grabación con IA.
           </p>
           <Button 
@@ -114,30 +113,24 @@ export function SummaryTab({ data }: WebhookTabProps) {
   };
 
   return (
-    <div className="flex-grow flex flex-col p-4 overflow-hidden h-full">
-      <div className="mb-4 flex flex-col gap-2 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-md">
-            <Sparkles className="h-5 w-5 text-amber-500" />
-          </div>
-          <div>
-            <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200">Resumen y puntos clave</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Información procesada automáticamente mediante IA
-            </p>
-          </div>
-          <Badge variant="outline" className="ml-auto bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800">
-            IA
-          </Badge>
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-md">
+          <Sparkles className="h-5 w-5 text-amber-500" />
         </div>
+        <div>
+          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200">Resumen y puntos clave</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Información procesada automáticamente mediante IA
+          </p>
+        </div>
+        <Badge variant="outline" className="ml-auto bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800">
+          IA
+        </Badge>
       </div>
       
-      <div className="flex-1 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/30">
-        <ScrollArea className="h-full">
-          <div className="p-5">
-            {renderSummaryContent()}
-          </div>
-        </ScrollArea>
+      <div className="border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800/30 p-5">
+        {renderSummaryContent()}
       </div>
     </div>
   );

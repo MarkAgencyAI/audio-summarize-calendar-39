@@ -1,11 +1,10 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, FileText, Bookmark, Clock } from "lucide-react";
+import { Sparkles, FileText, Bookmark } from "lucide-react";
 import { RecordingTabsProps } from "./types";
 import { TranscriptionTab } from "./tabs/TranscriptionTab";
 import { SummaryTab } from "./tabs/SummaryTab";
 import { ChaptersTab } from "./tabs/ChaptersTab";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 
 export function RecordingTabs({
@@ -17,14 +16,11 @@ export function RecordingTabs({
 }: RecordingTabsProps) {
   const hasSummaryData = !!data.recording.webhookData;
   const hasTranscription = !!data.recording.output && data.recording.output.trim().length > 0;
-  const isMobile = useIsMobile();
-
-  // Ensure chapters is initialized
   const chapters = data.chapters || [];
   
   return (
-    <Tabs value={data.activeTab} onValueChange={onTabChange} className="h-full flex flex-col">
-      <div className="px-4 pt-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
+    <div className="flex flex-col">
+      <div className="px-4 pt-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
         <TabsList className="grid grid-cols-3 gap-1 w-full bg-slate-100 dark:bg-slate-800/50 p-1 rounded-lg">
           <TabsTrigger value="webhook" className="flex items-center gap-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm rounded-md">
             <Sparkles className="h-4 w-4" />
@@ -52,7 +48,7 @@ export function RecordingTabs({
         </TabsList>
       </div>
       
-      <div className="flex-grow overflow-hidden min-h-0">
+      <div className="overflow-auto p-4">
         {data.activeTab === 'webhook' && (
           <SummaryTab data={data} />
         )}
@@ -65,6 +61,6 @@ export function RecordingTabs({
           <ChaptersTab data={data} onEditChapter={onEditChapter} onDeleteChapter={onDeleteChapter} />
         )}
       </div>
-    </Tabs>
+    </div>
   );
 }

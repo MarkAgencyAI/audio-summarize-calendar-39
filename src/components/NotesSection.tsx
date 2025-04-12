@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Plus } from "lucide-react";
+import { FileText, Plus, BookOpen, PenLine } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
 import { NoteItem } from "@/components/NoteItem";
 
@@ -51,12 +51,15 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
     
     if (folderNotes.length === 0) {
       return (
-        <div className="text-center py-8 text-muted-foreground">
-          <FileText className="h-12 w-12 mx-auto mb-2 opacity-20" />
-          <p>No hay notas en esta carpeta</p>
-          <Button onClick={() => setShowNewNoteDialog(true)} className="mt-4" variant="outline">
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva nota
+        <div className="text-center p-8 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-700">
+          <BookOpen className="h-12 w-12 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
+          <h4 className="text-lg font-medium mb-2 text-slate-700 dark:text-slate-300">No hay apuntes todavía</h4>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+            Crea tu primer apunte para esta grabación
+          </p>
+          <Button onClick={() => setShowNewNoteDialog(true)} variant="default">
+            <PenLine className="h-4 w-4 mr-2" />
+            Crear apunte
           </Button>
         </div>
       );
@@ -83,12 +86,17 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
   };
   
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 p-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-lg font-medium">{sectionTitle}</h2>
+        <div className="flex items-center gap-2">
+          <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-md">
+            <PenLine className="h-5 w-5 text-emerald-500" />
+          </div>
+          <h2 className="text-lg font-medium text-slate-800 dark:text-slate-200">{sectionTitle}</h2>
+        </div>
         <Button onClick={() => setShowNewNoteDialog(true)} size="sm">
           <Plus className="h-4 w-4 mr-2" />
-          Nueva nota
+          Nuevo apunte
         </Button>
       </div>
       
@@ -97,7 +105,7 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
       <Dialog open={showNewNoteDialog} onOpenChange={setShowNewNoteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nueva nota</DialogTitle>
+            <DialogTitle>Nuevo apunte</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <Label htmlFor="title">Título</Label>
@@ -105,7 +113,7 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
               id="title"
               value={newNoteTitle}
               onChange={(e) => setNewNoteTitle(e.target.value)}
-              placeholder="Título de la nota"
+              placeholder="Título del apunte"
               className="mt-2"
             />
           </div>

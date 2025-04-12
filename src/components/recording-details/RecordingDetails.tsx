@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -38,16 +39,6 @@ export function RecordingDetails({
   const audioPlayerRef = useRef<AudioPlayerHandle>(null);
   const isMobile = useIsMobile();
 
-  useEffect(() => {
-    console.log("Recording details mounted:", {
-      id: recording.id,
-      duration: recording.duration,
-      hasOutput: !!recording.output,
-      outputLength: recording.output?.length,
-      audioUrl: !!recording.audioUrl
-    });
-  }, [recording]);
-
   const {
     chapters,
     activeChapterId,
@@ -81,9 +72,6 @@ export function RecordingDetails({
         const blob = await loadAudioFromStorage(recording.id);
         if (blob) {
           setAudioBlob(blob);
-          console.log("Audio loaded from storage successfully");
-        } else {
-          console.log("No audio in storage, will try to download from URL");
         }
       } catch (error) {
         console.error("Error loading audio from storage:", error);
@@ -96,15 +84,11 @@ export function RecordingDetails({
     const saveAudio = async () => {
       if (recording.audioUrl && !audioBlob) {
         try {
-          console.log("Downloading audio from URL:", recording.audioUrl);
           const response = await fetch(recording.audioUrl);
           if (response.ok) {
             const blob = await response.blob();
             await saveAudioToStorage(recording.id, blob);
             setAudioBlob(blob);
-            console.log("Audio downloaded and saved to storage");
-          } else {
-            console.error("Failed to download audio:", response.status);
           }
         } catch (error) {
           console.error("Error saving audio to storage:", error);
@@ -146,7 +130,7 @@ export function RecordingDetails({
   };
 
   const renderPlayerContent = () => (
-    <div className="p-4 flex flex-col h-full">
+    <div className="p-4 flex flex-col">
       <h3 className="text-lg font-semibold mb-4">Reproductor de Audio</h3>
       <AudioPlayerV2 
         audioUrl={recording.audioUrl} 
@@ -202,14 +186,12 @@ export function RecordingDetails({
               </TabsList>
             </div>
             
-            <div className="flex-grow overflow-hidden min-h-0">
-              <TabsContent value="player" className="h-full m-0 flex flex-col">
-                <div className="bg-slate-50 dark:bg-slate-800/40 flex-grow overflow-auto">
-                  {renderPlayerContent()}
-                </div>
+            <div className="flex-grow overflow-auto">
+              <TabsContent value="player" className="m-0 p-0">
+                {renderPlayerContent()}
               </TabsContent>
               
-              <TabsContent value="content" className="h-full m-0 flex flex-col">
+              <TabsContent value="content" className="m-0 p-0">
                 <RecordingTabs 
                   data={recordingDetailsData} 
                   onTabChange={setActiveTab} 
@@ -219,7 +201,7 @@ export function RecordingDetails({
                 />
               </TabsContent>
 
-              <TabsContent value="notes">
+              <TabsContent value="notes" className="m-0 p-0">
                 <NotesSection 
                   folderId={recording.folderId} 
                   sectionTitle="Apuntes de esta grabación" 
