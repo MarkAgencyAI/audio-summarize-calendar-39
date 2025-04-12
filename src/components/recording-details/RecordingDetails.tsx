@@ -165,12 +165,10 @@ export function RecordingDetails({
               </TabsList>
             </div>
             
-            <div className="flex-grow overflow-hidden min-h-0">
+            <div className="flex-grow overflow-hidden min-h-0 px-4">
               
               
-              <TabsContent value="content" className="h-full m-0 flex flex-col">
-                <RecordingTabs data={recordingDetailsData} onTabChange={setActiveTab} onTextSelection={handleTextSelection} onEditChapter={handleEditChapter} onDeleteChapter={handleDeleteChapter} />
-              </TabsContent>
+              
 
               <TabsContent value="notes">
                 <NotesSection folderId={recording.folderId} sectionTitle="Apuntes de esta grabación" />
