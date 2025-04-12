@@ -310,7 +310,7 @@ export function AudioRecorderV2({
       </div>;
   }
   return <>
-      <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-[0_0px_35px_rgba(0,0,0,0.25)] backdrop-blur-xl border border-white/10 dark:border-white/5 bg-white/5">
+      <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-[0_0px_10px_rgba(0,0,0,0.25)] backdrop-blur-xl border border-white/10 dark:border-white/5 bg-white/5">
         <h2 className="text-xl font-semibold mb-4 text-custom-primary">Nueva grabación</h2>
         
         <div className="space-y-4">
