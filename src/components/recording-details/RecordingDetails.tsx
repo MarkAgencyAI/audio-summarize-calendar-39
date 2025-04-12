@@ -14,6 +14,7 @@ import { AudioPlayerV2 } from "./AudioPlayerV2";
 import { AudioChaptersTimeline } from "@/components/AudioChapter";
 import { AudioPlayerHandle } from "./types";
 import { toast } from "sonner";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 
 interface RecordingDetailsProps {
   recording: Recording;
@@ -160,40 +161,51 @@ export function RecordingDetails({
             <RecordingHeader recording={recording} />
           </div>
           
-          {/* Audio Player Section */}
-          <div className="p-4 bg-slate-50 dark:bg-slate-800/40 flex-shrink-0">
-            <AudioPlayerV2 
-              audioUrl={recording.audioUrl} 
-              audioBlob={audioBlob || undefined}
-              initialDuration={recording.duration} 
-              onTimeUpdate={handleTimeUpdate} 
-              ref={audioPlayerRef}
-              onDurationChange={setAudioDuration}
-              onAddChapter={handleAddChapterFromPlayer}
-            />
+          {/* Resizable Panel Layout */}
+          <ResizablePanelGroup direction={isMobile ? "vertical" : "horizontal"} className="flex-grow overflow-hidden min-h-0">
+            {/* Audio Player Panel */}
+            <ResizablePanel defaultSize={40} minSize={30} className="bg-slate-50 dark:bg-slate-800/40 flex flex-col">
+              <div className="p-4 flex-grow overflow-auto">
+                <h3 className="text-lg font-semibold mb-4">Reproductor de Audio</h3>
+                <AudioPlayerV2 
+                  audioUrl={recording.audioUrl} 
+                  audioBlob={audioBlob || undefined}
+                  initialDuration={recording.duration} 
+                  onTimeUpdate={handleTimeUpdate} 
+                  ref={audioPlayerRef}
+                  onDurationChange={setAudioDuration}
+                  onAddChapter={handleAddChapterFromPlayer}
+                />
+                
+                {chapters && chapters.length > 0 && (
+                  <div className="mt-3 max-w-full overflow-hidden">
+                    <h4 className="text-sm font-medium mb-2">Capítulos</h4>
+                    <AudioChaptersTimeline 
+                      chapters={chapters} 
+                      duration={audioDuration} 
+                      currentTime={currentAudioTime} 
+                      onChapterClick={handleChapterClick}
+                    />
+                  </div>
+                )}
+              </div>
+            </ResizablePanel>
             
-            {chapters && chapters.length > 0 && (
-              <div className="mt-3 max-w-full overflow-hidden">
-                <AudioChaptersTimeline 
-                  chapters={chapters} 
-                  duration={audioDuration} 
-                  currentTime={currentAudioTime} 
-                  onChapterClick={handleChapterClick}
+            <ResizableHandle />
+            
+            {/* Content Panel */}
+            <ResizablePanel defaultSize={60} minSize={40} className="flex flex-col">
+              <div className="flex-grow overflow-hidden min-h-0">
+                <RecordingTabs 
+                  data={recordingDetailsData} 
+                  onTabChange={setActiveTab} 
+                  onTextSelection={handleTextSelection} 
+                  onEditChapter={handleEditChapter} 
+                  onDeleteChapter={handleDeleteChapter} 
                 />
               </div>
-            )}
-          </div>
-          
-          {/* Content Area */}
-          <div className="flex-grow overflow-hidden min-h-0">
-            <RecordingTabs 
-              data={recordingDetailsData} 
-              onTabChange={setActiveTab} 
-              onTextSelection={handleTextSelection} 
-              onEditChapter={handleEditChapter} 
-              onDeleteChapter={handleDeleteChapter} 
-            />
-          </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
       </DialogContent>
       

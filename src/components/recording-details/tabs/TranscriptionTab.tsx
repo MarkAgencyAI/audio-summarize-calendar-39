@@ -4,15 +4,29 @@ import { TranscriptionTabProps, HighlightMenuPosition, SelectionRange } from "..
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   FileText, Search, Copy, Highlighter, Info, 
-  Settings, Play, Pause, Settings2 
+  Settings, Play, Pause, Settings2, Check, X 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
-import { highlightColors } from "../types";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
+import { HexColorPicker } from "react-colorful";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+// Define available highlight colors
+const DEFAULT_HIGHLIGHT_COLORS = [
+  { name: "Amarillo", value: "#FEF7CD" },
+  { name: "Verde", value: "#F2FCE2" },
+  { name: "Azul", value: "#D3E4FD" },
+  { name: "Naranja", value: "#FEC6A1" },
+  { name: "Rosa", value: "#FFDEE2" },
+  { name: "Lila", value: "#E5DEFF" },
+  { name: "Durazno", value: "#FDE1D3" },
+  { name: "Gris", value: "#F1F0FB" },
+];
 
 export function TranscriptionTab({
   data,
@@ -22,12 +36,15 @@ export function TranscriptionTab({
   const [highlightMenuPosition, setHighlightMenuPosition] = useState<HighlightMenuPosition | null>(null);
   const [selectionRange, setSelectionRange] = useState<SelectionRange | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [selectedColor, setSelectedColor] = useState(highlightColors[0].value);
+  const [selectedColor, setSelectedColor] = useState(DEFAULT_HIGHLIGHT_COLORS[0].value);
   const [searchTerm, setSearchTerm] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [fontSize, setFontSize] = useState(16);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const [customColor, setCustomColor] = useState("#FEF7CD");
   
   const transcriptionRef = useRef<HTMLDivElement>(null);
+  const selectionTimeout = useRef<NodeJS.Timeout | null>(null);
   
   // Log transcription data for debugging
   useEffect(() => {
@@ -39,37 +56,64 @@ export function TranscriptionTab({
     });
   }, [data]);
 
-  const handleTextSelect = () => {
-    const selection = window.getSelection();
-    if (!selection) return;
-    
-    const text = selection.toString().trim();
-    if (text && text.length > 0) {
-      setSelectedText(text);
-      
-      const range = selection.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-      
-      if (transcriptionRef.current) {
-        const transcriptionRect = transcriptionRef.current.getBoundingClientRect();
-        setHighlightMenuPosition({
-          x: rect.left + rect.width / 2 - transcriptionRect.left,
-          y: rect.top - transcriptionRect.top - 10
-        });
-        
-        const content = data.recording.output || "";
-        const startPos = content.indexOf(text);
-        if (startPos !== -1) {
-          setSelectionRange({
-            start: startPos,
-            end: startPos + text.length
-          });
-          setIsPopoverOpen(true);
-        }
+  useEffect(() => {
+    // Clean up timeout on unmount
+    return () => {
+      if (selectionTimeout.current) {
+        clearTimeout(selectionTimeout.current);
       }
-    } else {
-      clearSelection();
+    };
+  }, []);
+
+  const handleTextSelect = () => {
+    // Clear any existing timeout
+    if (selectionTimeout.current) {
+      clearTimeout(selectionTimeout.current);
     }
+    
+    // Set a small delay to handle selection properly
+    selectionTimeout.current = setTimeout(() => {
+      const selection = window.getSelection();
+      if (!selection) return;
+      
+      const text = selection.toString().trim();
+      
+      if (text && text.length > 0) {
+        setSelectedText(text);
+        
+        if (selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          
+          // Check if selection is within our transcription element
+          if (transcriptionRef.current && transcriptionRef.current.contains(range.commonAncestorContainer)) {
+            const rect = range.getBoundingClientRect();
+            const transcriptionRect = transcriptionRef.current.getBoundingClientRect();
+            
+            // Calculate position for the highlight menu
+            setHighlightMenuPosition({
+              x: rect.left + rect.width / 2 - transcriptionRect.left,
+              y: rect.top - transcriptionRect.top - 10
+            });
+            
+            // Calculate selection range within text
+            const content = data.recording.output || "";
+            const preSelectionRange = range.cloneRange();
+            preSelectionRange.selectNodeContents(transcriptionRef.current);
+            preSelectionRange.setEnd(range.startContainer, range.startOffset);
+            const startPos = preSelectionRange.toString().length;
+            
+            setSelectionRange({
+              start: startPos,
+              end: startPos + text.length
+            });
+            
+            setIsPopoverOpen(true);
+          }
+        }
+      } else {
+        clearSelection();
+      }
+    }, 100);
   };
   
   const clearSelection = () => {
@@ -81,13 +125,15 @@ export function TranscriptionTab({
   
   const handleHighlight = () => {
     if (selectionRange && selectedText) {
+      const color = colorPickerOpen ? customColor : selectedColor;
+      
       data.updateRecording(data.recording.id, {
         highlights: [
           ...(data.highlights || []),
           {
-            id: Date.now().toString(),
+            id: crypto.randomUUID(),
             text: selectedText,
-            color: selectedColor,
+            color: color,
             startPosition: selectionRange.start,
             endPosition: selectionRange.end,
           },
@@ -96,12 +142,14 @@ export function TranscriptionTab({
       
       setIsPopoverOpen(false);
       clearSelection();
+      window.getSelection()?.removeAllRanges();
       toast.success("Texto resaltado correctamente");
     }
   };
   
   const handleColorSelect = (color: string) => {
     setSelectedColor(color);
+    setColorPickerOpen(false);
   };
   
   const handleCopy = () => {
@@ -180,7 +228,7 @@ export function TranscriptionTab({
               onClick={() => clearHighlight(highlight.id)}
             >
               <span className="sr-only">Eliminar resaltado</span>
-              ×
+              <X className="h-3 w-3" />
             </Button>
           </span>
         </mark>
@@ -223,6 +271,48 @@ export function TranscriptionTab({
           );
         })}
       </>
+    );
+  };
+
+  // Create the highlight menu popup
+  const renderHighlightMenu = () => {
+    if (!highlightMenuPosition) return null;
+    
+    return (
+      <div
+        className="absolute bg-white dark:bg-slate-800 rounded-lg shadow-lg p-3 border border-slate-200 dark:border-slate-700 transform -translate-x-1/2 -translate-y-full z-50 min-w-[160px]"
+        style={{
+          left: `${highlightMenuPosition.x}px`,
+          top: `${highlightMenuPosition.y}px`,
+        }}
+      >
+        <div className="flex gap-2 mb-2">
+          <Button size="sm" variant="outline" onClick={handleCopy} className="flex-1">
+            <Copy className="h-3.5 w-3.5 mr-1.5" />
+            Copiar
+          </Button>
+          <Button size="sm" onClick={handleHighlight} className="flex-1">
+            <Highlighter className="h-3.5 w-3.5 mr-1.5" />
+            Resaltar
+          </Button>
+        </div>
+        <div className="grid grid-cols-4 gap-1">
+          {DEFAULT_HIGHLIGHT_COLORS.map((color) => (
+            <button
+              key={color.value}
+              className={cn(
+                "h-6 w-6 rounded-full border",
+                selectedColor === color.value
+                  ? "ring-2 ring-blue-500 ring-offset-1"
+                  : "border-slate-200 dark:border-slate-700"
+              )}
+              style={{ backgroundColor: color.value }}
+              onClick={() => handleColorSelect(color.value)}
+              title={color.name}
+            />
+          ))}
+        </div>
+      </div>
     );
   };
 
@@ -305,32 +395,92 @@ export function TranscriptionTab({
                 <span className="sr-only sm:not-sr-only sm:inline-block">Resaltar</span>
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-64">
-              <h4 className="text-sm font-medium mb-2">Resaltar texto seleccionado</h4>
-              <div className="grid grid-cols-4 gap-2 mb-3">
-                {highlightColors.map((color) => (
-                  <button
-                    key={color.value}
-                    className={cn(
-                      "h-8 w-8 rounded-full border border-slate-200 dark:border-slate-700",
-                      selectedColor === color.value ? "ring-2 ring-offset-2 ring-blue-500" : ""
-                    )}
-                    style={{ backgroundColor: color.value }}
-                    onClick={() => handleColorSelect(color.value)}
-                  />
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  className="flex-1" 
-                  variant="outline" 
-                  onClick={handleCopy}
-                >
-                  Copiar
-                </Button>
-                <Button className="flex-1" onClick={handleHighlight}>
-                  Resaltar
-                </Button>
+            <PopoverContent className="w-64 p-4">
+              <h4 className="text-sm font-medium mb-3">Resaltar texto seleccionado</h4>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  {!colorPickerOpen ? (
+                    <>
+                      <Label className="text-xs">Colores predefinidos</Label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {DEFAULT_HIGHLIGHT_COLORS.map((color) => (
+                          <button
+                            key={color.value}
+                            className={cn(
+                              "h-8 w-8 rounded-full border border-slate-200 dark:border-slate-700",
+                              selectedColor === color.value ? "ring-2 ring-offset-2 ring-blue-500" : ""
+                            )}
+                            style={{ backgroundColor: color.value }}
+                            onClick={() => handleColorSelect(color.value)}
+                            title={color.name}
+                          />
+                        ))}
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="w-full mt-1 text-xs py-1 h-auto"
+                        onClick={() => setColorPickerOpen(true)}
+                      >
+                        Personalizar color
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Label className="text-xs">Color personalizado</Label>
+                      <div className="flex flex-col items-center">
+                        <HexColorPicker 
+                          color={customColor}
+                          onChange={setCustomColor}
+                          className="mb-2"
+                        />
+                        <Input
+                          value={customColor}
+                          onChange={(e) => setCustomColor(e.target.value)}
+                          className="mb-2"
+                        />
+                        <div className="flex gap-2 w-full">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => setColorPickerOpen(false)}
+                          >
+                            <X className="h-3.5 w-3.5 mr-1.5" />
+                            Cancelar
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => handleHighlight()}
+                          >
+                            <Check className="h-3.5 w-3.5 mr-1.5" />
+                            Aplicar
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+                
+                {!colorPickerOpen && (
+                  <div className="flex gap-2">
+                    <Button 
+                      className="flex-1" 
+                      variant="outline" 
+                      onClick={handleCopy}
+                    >
+                      Copiar
+                    </Button>
+                    <Button 
+                      className="flex-1" 
+                      onClick={handleHighlight}
+                    >
+                      Resaltar
+                    </Button>
+                  </div>
+                )}
               </div>
             </PopoverContent>
           </Popover>
@@ -357,7 +507,7 @@ export function TranscriptionTab({
         </div>
       )}
       
-      <div className="flex-1 overflow-hidden min-h-0 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800/30">
+      <div className="flex-1 overflow-hidden min-h-0 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800/30 relative">
         <ScrollArea className="h-full w-full">
           <div 
             className="p-4 md:p-5"
@@ -369,6 +519,9 @@ export function TranscriptionTab({
             </div>
           </div>
         </ScrollArea>
+        
+        {/* Floating highlight menu when text is selected */}
+        {isPopoverOpen && highlightMenuPosition && renderHighlightMenu()}
       </div>
     </div>
   );

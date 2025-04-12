@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { extractWebhookOutput } from "@/lib/transcription-service";
 import { useIsMobile } from "@/hooks/use-mobile";
+
 interface LiveTranscriptionSheetProps {
   isTranscribing: boolean;
   output: string | {
@@ -18,6 +20,7 @@ interface LiveTranscriptionSheetProps {
   onOpenChange?: (open: boolean) => void;
   webhookResponse?: any;
 }
+
 export function LiveTranscriptionSheet({
   isTranscribing,
   output,
@@ -34,6 +37,7 @@ export function LiveTranscriptionSheet({
   const isControlled = open !== undefined && onOpenChange !== undefined;
   const isOpen = isControlled ? open : internalOpen;
   const isMobile = useIsMobile();
+  
   const handleOpenChange = (newOpen: boolean) => {
     if (isControlled) {
       onOpenChange(newOpen);
@@ -44,6 +48,7 @@ export function LiveTranscriptionSheet({
       setUserClosed(true);
     }
   };
+  
   useEffect(() => {
     if (isTranscribing && !isOpen && !userClosed) {
       handleOpenChange(true);
@@ -52,12 +57,14 @@ export function LiveTranscriptionSheet({
       setUserClosed(false);
     }
   }, [isTranscribing, isOpen, userClosed]);
+  
   useEffect(() => {
     if (webhookResponse) {
       const extracted = extractWebhookOutput(webhookResponse);
       setProcessedWebhookResponse(extracted);
     }
   }, [webhookResponse]);
+  
   useEffect(() => {
     const handleTranscriptionComplete = (event: CustomEvent) => {
       if (event.detail?.data && !userClosed) {
@@ -69,20 +76,24 @@ export function LiveTranscriptionSheet({
         }
       }
     };
+    
     const handleEvent = (e: Event) => {
       if ((e as CustomEvent).detail?.type === 'transcriptionComplete') {
         handleTranscriptionComplete(e as CustomEvent);
       }
     };
+    
     window.addEventListener('audioRecorderMessage', handleEvent);
     return () => {
       window.removeEventListener('audioRecorderMessage', handleEvent);
     };
   }, [userClosed]);
+  
   const handleClose = () => {
     handleOpenChange(false);
     setUserClosed(true);
   };
+  
   const safeOutput = (() => {
     try {
       if (output === null || output === undefined) {
@@ -103,7 +114,9 @@ export function LiveTranscriptionSheet({
       return "Error: No se pudo procesar el formato de salida";
     }
   })();
+  
   const hasWebhookResponse = processedWebhookResponse || typeof output === 'object' && output && 'webhookResponse' in output;
+  
   const webhookContent = (() => {
     if (processedWebhookResponse) {
       return typeof processedWebhookResponse === 'string' ? processedWebhookResponse : JSON.stringify(processedWebhookResponse, null, 2);
@@ -117,12 +130,18 @@ export function LiveTranscriptionSheet({
 
   // Responsive sheet width based on screen size
   const sheetSizeClass = isMobile ? "w-[95vw] max-w-full" : "sm:max-w-md md:max-w-xl lg:max-w-2xl";
-  return <Sheet open={isOpen} onOpenChange={handleOpenChange}>
-      {children ? <SheetTrigger asChild>
+  
+  return (
+    <Sheet open={isOpen} onOpenChange={handleOpenChange}>
+      {children ? (
+        <SheetTrigger asChild>
           {children}
-        </SheetTrigger> : <SheetTrigger asChild>
+        </SheetTrigger>
+      ) : (
+        <SheetTrigger asChild>
           {/* Empty trigger - triggered programmatically */}
-        </SheetTrigger>}
+        </SheetTrigger>
+      )}
       
       <SheetContent side="right" className={`${sheetSizeClass} p-0 flex flex-col overflow-hidden`}>
         <SheetHeader className="p-3 sm:p-4 border-b flex flex-row justify-between items-center">
@@ -154,7 +173,26 @@ export function LiveTranscriptionSheet({
               </TabsTrigger>
             </TabsList>
             
-            
+            <TabsContent value="transcription" className="flex-1 overflow-hidden mt-0">
+              <div className="p-2 sm:p-4 pb-2">
+                <div className="text-xs sm:text-sm text-muted-foreground mb-2">
+                  {isTranscribing ? "Transcribiendo audio en tiempo real..." : "Transcripción completada"}
+                </div>
+              </div>
+              
+              <div className="px-2 sm:px-4 h-[calc(100vh-220px)] overflow-hidden">
+                <ScrollArea className="h-full overflow-y-auto">
+                  <div className="pr-2 sm:pr-4 max-w-full overflow-x-hidden">
+                    <TranscriptionPanel 
+                      output={safeOutput} 
+                      isLoading={isTranscribing && !safeOutput} 
+                      showProgress={isTranscribing} 
+                      progress={progress} 
+                    />
+                  </div>
+                </ScrollArea>
+              </div>
+            </TabsContent>
             
             <TabsContent value="webhook" className="flex-1 overflow-hidden mt-0">
               <div className="p-2 sm:p-4 pb-2">
@@ -166,7 +204,11 @@ export function LiveTranscriptionSheet({
               <div className="px-2 sm:px-4 h-[calc(100vh-220px)] overflow-hidden">
                 <ScrollArea className="h-full overflow-y-auto">
                   <div className="pr-2 sm:pr-4 max-w-full overflow-x-hidden">
-                    <TranscriptionPanel output={webhookContent} isLoading={isTranscribing && !hasWebhookResponse} showProgress={false} />
+                    <TranscriptionPanel 
+                      output={webhookContent} 
+                      isLoading={isTranscribing && !hasWebhookResponse} 
+                      showProgress={false} 
+                    />
                   </div>
                 </ScrollArea>
               </div>
@@ -174,5 +216,6 @@ export function LiveTranscriptionSheet({
           </Tabs>
         </div>
       </SheetContent>
-    </Sheet>;
+    </Sheet>
+  );
 }
