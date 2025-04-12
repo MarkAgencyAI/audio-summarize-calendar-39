@@ -75,22 +75,22 @@ export function Layout({
       
       {/* Desktop Sidebar */}
       {!isMobile && (
-        <div className={`fixed h-full z-40 dark:bg-[#1a1a1a] light:bg-white border-r dark:border-[#2e2e2e40] light:border-[#e0e0e0] flex flex-col transition-all duration-300 ease-in-out shadow-lg ${sidebarOpen ? 'left-0 w-16 md:w-64' : 'left-[-64px] md:left-[-256px] w-16 md:w-64'}`}>
+        <div className={`fixed h-full z-40 dark:bg-[#1a1a1a] light:bg-white border-r dark:border-[#2e2e2e40] light:border-[#e0e0e0] flex flex-col transition-all duration-300 ease-in-out shadow-lg ${sidebarOpen ? 'left-0 w-16 md:w-64' : 'left-0 w-0 md:w-0 border-r-0'}`}>
           <div className="border-b dark:border-[#2e2e2e40] light:border-[#e0e0e0] flex items-center justify-between p-4 h-16">
             <div className={`${sidebarOpen ? 'flex' : 'hidden'} items-center justify-center flex-1`}>
               <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="h-24 w-auto object-contain" />
             </div>
             
-            {/* Moved the toggle button inside the navbar */}
+            {/* Toggle button inside the sidebar */}
             <button 
               onClick={toggleSidebar} 
-              className="dark:bg-[#2a2a2a] light:bg-white rounded-full h-8 w-8 flex items-center justify-center shadow-md dark:border-[#3a3a3a40] light:border-[#d0d0d0] border transition-all duration-300 text-[#00b8ae]"
+              className={`dark:bg-[#2a2a2a] light:bg-white rounded-full h-8 w-8 flex items-center justify-center shadow-md dark:border-[#3a3a3a40] light:border-[#d0d0d0] border transition-all duration-300 text-[#00b8ae] ${sidebarOpen ? '' : 'absolute -right-4'}`}
             >
               {sidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </button>
           </div>
           
-          <nav className="flex-1 p-2 overflow-y-auto">
+          <nav className={`flex-1 p-2 overflow-y-auto ${sidebarOpen ? '' : 'hidden'}`}>
             <ul className="space-y-1">
               {navItems.map(item => (
                 <li key={item.path}>
@@ -105,7 +105,7 @@ export function Layout({
                     <div className="flex-shrink-0">
                       {item.icon}
                     </div>
-                    <span className={`${sidebarOpen ? 'inline' : 'hidden'} font-medium ml-4 text-center`}>
+                    <span className="font-medium ml-4 text-center">
                       {item.label}
                     </span>
                   </button>
@@ -114,13 +114,13 @@ export function Layout({
             </ul>
           </nav>
           
-          <div className="p-4 border-t dark:border-[#2e2e2e40] light:border-[#e0e0e0] flex items-center justify-between">
+          <div className={`p-4 border-t dark:border-[#2e2e2e40] light:border-[#e0e0e0] flex items-center justify-between ${sidebarOpen ? '' : 'hidden'}`}>
             <button 
               onClick={handleLogout} 
               className="flex items-center space-x-2 dark:text-gray-300 light:text-gray-600 hover:text-[#00b8ae] dark:hover:text-[#00b8aeee] light:hover:text-[#008C85] transition-colors"
             >
               <LogOut className="h-5 w-5" />
-              <span className={`${sidebarOpen ? 'inline' : 'hidden'}`}>
+              <span>
                 Cerrar sesión
               </span>
             </button>
@@ -155,7 +155,7 @@ export function Layout({
       
       {/* Main Content */}
       <div className={`flex-1 flex flex-col transition-all duration-300 ${
-        isMobile ? "pt-14 pb-16" : sidebarOpen ? "pl-16 md:pl-64" : "pl-0"
+        isMobile ? "pt-14 pb-16" : sidebarOpen ? "pl-16 md:pl-64" : "pl-16"
       }`}>
         <main className="flex-1 p-3 md:p-6 animate-fade-in overflow-x-hidden max-w-full">
           {children}

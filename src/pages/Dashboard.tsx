@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -17,7 +16,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { ToolsCarousel } from "@/components/ToolsCarousel";
 import { NotesSection } from "@/components/NotesSection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AudioRecorderV2 } from "@/components/AudioRecorderV2";
 import { LiveTranscriptionSheet } from "@/components/LiveTranscriptionSheet";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -202,7 +200,6 @@ export default function Dashboard() {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("transcriptions");
   
-  // Add these variables for transcription state
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcriptionOutput, setTranscriptionOutput] = useState("");
@@ -255,7 +252,6 @@ export default function Dashboard() {
     };
   }, []);
   
-  // Add this effect to listen for audio recorder events
   useEffect(() => {
     const handleAudioRecorderMessage = (event: Event) => {
       const customEvent = event as CustomEvent;
@@ -303,19 +299,6 @@ export default function Dashboard() {
 
         {isMobile && <div className="grid grid-cols-1 gap-4">
             <UpcomingEvents events={upcomingEvents} />
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center justify-between gap-2">
-                  <div className="flex items-center">
-                    <Mic className="h-5 w-5 text-blue-500 mr-2" />
-                    Nueva Grabación
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <AudioTranscriptionTool />
-              </CardContent>
-            </Card>
             
             <ToolsCarousel 
               showTranscriptionOptions={isTranscribing || !!transcriptionOutput}
@@ -348,19 +331,6 @@ export default function Dashboard() {
 
         {!isMobile && <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
             <div className="md:col-span-4 space-y-6">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center justify-between gap-2">
-                    <div className="flex items-center">
-                      <Mic className="h-5 w-5 text-blue-500 mr-2" />
-                      Nueva Grabación
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <AudioTranscriptionTool />
-                </CardContent>
-              </Card>
               <ToolsCarousel 
                 showTranscriptionOptions={isTranscribing || !!transcriptionOutput}
                 isTranscribing={isTranscribing}
