@@ -27,7 +27,7 @@ export function WebhookTab({ data }: WebhookTabProps) {
 
   return (
     <div className="h-full flex flex-col p-4 overflow-hidden">
-      <div className="mb-3 flex items-center gap-2">
+      <div className="mb-3 flex items-center gap-2 flex-shrink-0">
         <Sparkles className="h-5 w-5 text-amber-500" />
         <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200">Resumen y puntos clave</h3>
         <Badge variant="warning" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800">
@@ -35,9 +35,9 @@ export function WebhookTab({ data }: WebhookTabProps) {
         </Badge>
       </div>
       
-      <div className="flex-1 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30">
-        <ScrollArea className="h-full w-full p-4">
-          <div className="max-w-full">
+      <div className="flex-1 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30 min-h-0">
+        <ScrollArea className="h-full w-full">
+          <div className="p-4 max-w-full">
             <pre className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700 dark:text-slate-300 break-words">
               {formatWebhookResponse()}
             </pre>

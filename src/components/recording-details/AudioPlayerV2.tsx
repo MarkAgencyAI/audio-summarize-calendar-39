@@ -162,9 +162,42 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
     };
 
+    // Generate audio wave bars for visualization
+    const renderAudioWave = () => {
+      const bars = [];
+      const barCount = 20;
+      
+      for (let i = 0; i < barCount; i++) {
+        // Create a dynamic height for each bar based on a sine wave pattern
+        const height = 15 + Math.sin(i / (barCount / 4) * Math.PI) * 10;
+        bars.push(
+          <div 
+            key={i} 
+            className={`audio-wave-bar w-1 mx-0.5 rounded-t-full bg-blue-500 ${isPlaying ? 'animate-pulse' : ''}`}
+            style={{ 
+              height: `${height}px`,
+              opacity: isPlaying ? 0.8 : 0.4,
+              animationDelay: `${i * 0.05}s`
+            }}
+          />
+        );
+      }
+      
+      return (
+        <div className="flex items-end justify-center h-6 bg-slate-50 dark:bg-slate-800/30 rounded p-1">
+          {bars}
+        </div>
+      );
+    };
+
     return (
       <div className="flex flex-col">
         <audio ref={audioRef} preload="metadata" />
+
+        {/* Audio wave visualization */}
+        <div className="mb-2 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
+          {renderAudioWave()}
+        </div>
 
         {/* Controls */}
         <div className="flex items-center gap-2">

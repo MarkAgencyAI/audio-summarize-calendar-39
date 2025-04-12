@@ -18,8 +18,8 @@ export function RecordingTabs({
   const isMobile = useIsMobile();
   
   return (
-    <Tabs value={data.activeTab} onValueChange={onTabChange} className="h-full">
-      <div className="px-4 pt-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+    <Tabs value={data.activeTab} onValueChange={onTabChange} className="h-full flex flex-col">
+      <div className="px-4 pt-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
         <TabsList className="grid grid-cols-3 gap-1 w-full bg-slate-100 dark:bg-slate-800/50 p-1 rounded-lg">
           <TabsTrigger 
             value="webhook" 
@@ -53,7 +53,7 @@ export function RecordingTabs({
         </TabsList>
       </div>
       
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-grow overflow-hidden min-h-0">
         <TabsContent value="webhook" className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
           <WebhookTab data={data} />
         </TabsContent>

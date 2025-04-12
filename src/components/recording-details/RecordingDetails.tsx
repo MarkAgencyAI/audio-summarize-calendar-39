@@ -137,15 +137,15 @@ export function RecordingDetails({
 
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <DialogContent className="p-0 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg w-[95vw] md:w-[90vw] lg:w-[80vw] max-w-6xl max-h-[90vh] overflow-auto flex flex-col">
-        <div className="flex flex-col w-full h-full overflow-hidden">
+      <DialogContent className="p-0 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg w-[95vw] md:w-[90vw] lg:w-[80vw] max-w-6xl h-[90vh] flex flex-col overflow-hidden">
+        <div className="flex flex-col w-full h-full">
           {/* Header Area */}
-          <div className="p-5 pb-3 border-b border-slate-200 dark:border-slate-800">
+          <div className="p-5 pb-3 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
             <RecordingHeader recording={recording} />
           </div>
           
           {/* Audio Player Section */}
-          <div className="p-4 bg-slate-50 dark:bg-slate-800/40">
+          <div className="p-4 bg-slate-50 dark:bg-slate-800/40 flex-shrink-0">
             <AudioPlayerV2 
               audioUrl={recording.audioUrl} 
               audioBlob={audioBlob || undefined}
@@ -169,7 +169,7 @@ export function RecordingDetails({
           </div>
           
           {/* Content Area */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-grow overflow-hidden min-h-0">
             <RecordingTabs 
               data={recordingDetailsData} 
               onTabChange={setActiveTab} 

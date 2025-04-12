@@ -212,8 +212,8 @@ export function TranscriptionTab({
   };
   
   return (
-    <div className="h-full flex flex-col p-4">
-      <div className="mb-3 flex items-center justify-between">
+    <div className="h-full flex flex-col p-4 overflow-hidden">
+      <div className="mb-3 flex items-center justify-between flex-shrink-0">
         <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200">
           Transcripción
         </h3>
@@ -282,9 +282,9 @@ export function TranscriptionTab({
         </div>
       </div>
       
-      <div className="flex flex-col border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-800/30">
+      <div className="flex flex-col border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-800/30 flex-grow min-h-0">
         {isExpanded && (
-          <div className="p-3 border-b border-slate-200 dark:border-slate-700">
+          <div className="p-3 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
             <div className="flex items-center justify-between">
               <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Velocidad de reproducción
@@ -303,9 +303,9 @@ export function TranscriptionTab({
           </div>
         )}
         
-        <ScrollArea className="flex-1 h-full">
+        <ScrollArea className="flex-grow min-h-0 h-full">
           <div 
-            className="p-4 flex-1 overflow-wrap-anywhere transcription-text"
+            className="p-4 overflow-wrap-anywhere transcription-text"
             ref={transcriptionRef}
             onMouseUp={handleTextSelect}
           >

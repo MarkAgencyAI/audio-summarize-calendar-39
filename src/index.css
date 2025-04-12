@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -132,7 +133,8 @@
 }
 
 .audio-wave-bar {
-  animation: wave 1s ease-in-out infinite;
+  animation: wave 1.2s ease-in-out infinite;
+  transform-origin: bottom;
 }
 
 .audio-wave-bar:nth-child(2n) {
@@ -166,6 +168,7 @@
 /* Fix for scrolling in dialog content */
 [data-radix-scroll-area-viewport] {
   height: 100% !important;
+  display: block !important;
 }
 
 /* Make sure pre tags don't overflow */
@@ -180,6 +183,8 @@ pre {
 [role="tabpanel"] {
   height: 100%;
   overflow: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Ensure the dialog scrolls properly on mobile */
@@ -189,3 +194,9 @@ pre {
     overflow: auto;
   }
 }
+
+/* Fix for flex layout issues in scrollable containers */
+.min-h-0 {
+  min-height: 0;
+}
+
