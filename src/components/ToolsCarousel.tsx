@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Folder, Calculator, Upload, Camera } from "lucide-react";
+import { Folder, Mic, Upload } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { AudioRecorderV2 } from "@/components/AudioRecorderV2";
 import { PdfUploader } from "@/components/PdfUploader";
@@ -10,6 +10,7 @@ import { MathScanner } from "@/components/MathScanner";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Button } from "@/components/ui/button";
 import { LiveTranscriptionSheet } from "@/components/LiveTranscriptionSheet";
+import { Input } from "@/components/ui/input";
 
 interface ToolsCarouselProps {
   showTranscriptionOptions: boolean;
@@ -38,7 +39,24 @@ export function ToolsCarousel({
           Herramientas
         </CardTitle>
         <div className="flex items-center space-x-2">
-          <AudioRecorderV2 compact />
+          <Input
+            placeholder="Materia"
+            className="w-32 h-8 text-xs mr-2"
+          />
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="h-8 px-2 mr-1"
+          >
+            <Mic className="h-4 w-4 mr-1" /> Grabar
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="h-8 px-2"
+          >
+            <Upload className="h-4 w-4 mr-1" /> Subir
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
