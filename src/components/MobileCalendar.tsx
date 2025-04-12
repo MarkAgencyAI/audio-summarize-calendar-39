@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO } from 'date-fns';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Filter, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,18 @@ export function MobileCalendar({
   
   const isMobile = useIsMobile();
   
+  // Helper function to safely parse dates
+  const safeParseISO = (dateString: string): Date | null => {
+    try {
+      if (!dateString) return null;
+      const date = parseISO(dateString);
+      return isValid(date) ? date : null;
+    } catch (e) {
+      console.error("Error parsing date:", dateString, e);
+      return null;
+    }
+  };
+  
   // Filter events based on search query
   const filteredEvents = events.filter(event => 
     event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -48,15 +60,20 @@ export function MobileCalendar({
   
   // Events for the current month
   const currentMonthEvents = filteredEvents.filter(event => {
-    const eventDate = parseISO(event.date);
-    return isSameMonth(eventDate, currentDate);
+    const eventDate = safeParseISO(event.date);
+    return eventDate ? isSameMonth(eventDate, currentDate) : false;
   });
   
   // Events for the selected day
   const selectedDayEvents = filteredEvents.filter(event => {
-    const eventDate = parseISO(event.date);
-    return isSameDay(eventDate, selectedDate);
-  }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const eventDate = safeParseISO(event.date);
+    return eventDate ? isSameDay(eventDate, selectedDate) : false;
+  }).sort((a, b) => {
+    const dateA = safeParseISO(a.date);
+    const dateB = safeParseISO(b.date);
+    if (!dateA || !dateB) return 0;
+    return dateA.getTime() - dateB.getTime();
+  });
   
   const filterTypes = [
     { id: 'all', label: 'Todos', color: '#6b7280' },
@@ -94,6 +111,19 @@ export function MobileCalendar({
     return eachDayOfInterval({ start, end });
   };
   
+  // Safely format date with fallback
+  const safeFormat = (date: Date | string | null, formatString: string, options = {}): string => {
+    try {
+      if (!date) return '';
+      const dateObj = typeof date === 'string' ? safeParseISO(date) : date;
+      if (!dateObj || !isValid(dateObj)) return '';
+      return format(dateObj, formatString, options);
+    } catch (e) {
+      console.error("Error formatting date:", date, e);
+      return '';
+    }
+  };
+  
   const renderCalendarGrid = () => {
     const days = getDaysInMonth();
     const dayNames = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
@@ -109,9 +139,10 @@ export function MobileCalendar({
         </div>
         <div className="grid grid-cols-7 gap-1">
           {days.map(day => {
-            const dayEvents = currentMonthEvents.filter(event => 
-              isSameDay(parseISO(event.date), day)
-            );
+            const dayEvents = currentMonthEvents.filter(event => {
+              const eventDate = safeParseISO(event.date);
+              return eventDate ? isSameDay(eventDate, day) : false;
+            });
             
             return (
               <Button
@@ -240,7 +271,12 @@ export function MobileCalendar({
                   if (activeFilter === 'all') return true;
                   return event.type === activeFilter;
                 })
-                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                .sort((a, b) => {
+                  const dateA = safeParseISO(a.date);
+                  const dateB = safeParseISO(b.date);
+                  if (!dateA || !dateB) return 0;
+                  return dateA.getTime() - dateB.getTime();
+                })
                 .slice(0, 30)
                 .map(event => (
                   <div 
@@ -252,7 +288,7 @@ export function MobileCalendar({
                       <div>
                         <p className="text-sm font-medium truncate">{event.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          {format(new Date(event.date), 'PPP • HH:mm', { locale: es })}
+                          {safeFormat(event.date, 'PPP • HH:mm', { locale: es })}
                         </p>
                       </div>
                       <div 
@@ -308,8 +344,8 @@ export function MobileCalendar({
                         <div>
                           <p className="font-medium">{event.title}</p>
                           <p className="text-sm text-muted-foreground">
-                            {format(new Date(event.date), 'HH:mm', { locale: es })}
-                            {event.endDate && ` - ${format(new Date(event.endDate), 'HH:mm')}`}
+                            {safeFormat(event.date, 'HH:mm', { locale: es })}
+                            {event.endDate && safeFormat(event.endDate, ' - HH:mm')}
                           </p>
                           {event.description && (
                             <p className="mt-1 text-sm">{event.description}</p>
