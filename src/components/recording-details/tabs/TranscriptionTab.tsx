@@ -171,9 +171,9 @@ export function TranscriptionTab({
       // Add the text before the highlight
       if (highlight.startPosition > lastIndex) {
         parts.push(
-          <React.Fragment key={`text-${lastIndex}`}>
+          <span key={`text-${lastIndex}`}>
             {transcription.substring(lastIndex, highlight.startPosition)}
-          </React.Fragment>
+          </span>
         );
       }
       
@@ -202,9 +202,9 @@ export function TranscriptionTab({
     // Add the remaining text after the last highlight
     if (lastIndex < transcription.length) {
       parts.push(
-        <React.Fragment key={`text-${lastIndex}`}>
+        <span key={`text-${lastIndex}`}>
           {transcription.substring(lastIndex)}
-        </React.Fragment>
+        </span>
       );
     }
     
@@ -310,7 +310,9 @@ export function TranscriptionTab({
             onMouseUp={handleTextSelect}
           >
             {data.recording.output ? (
-              renderHighlightedText()
+              <div className="leading-relaxed text-sm sm:text-base text-slate-800 dark:text-slate-200">
+                {renderHighlightedText()}
+              </div>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-center p-8">
                 <div className="w-16 h-16 mb-4 rounded-full bg-slate-100 dark:bg-slate-900/30 flex items-center justify-center">

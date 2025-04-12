@@ -163,6 +163,7 @@
 /* Better text wrapping for transcriptions */
 .overflow-wrap-anywhere {
   overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* Fix for scrolling in dialog content */
@@ -200,3 +201,7 @@ pre {
   min-height: 0;
 }
 
+/* Fix for React Fragment key warnings */
+.transcription-text > span {
+  display: inline;
+}
