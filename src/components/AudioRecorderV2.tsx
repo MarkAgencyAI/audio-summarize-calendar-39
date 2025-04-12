@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload, AlertCircle } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -349,7 +350,7 @@ export function AudioRecorderV2({ compact = false }: { compact?: boolean }) {
           <Button 
             size="sm" 
             variant="outline" 
-            onClick={handleStartRecording} 
+            onClick={startRecording} 
             disabled={!subject.trim()}
             className="h-8 px-2"
           >
