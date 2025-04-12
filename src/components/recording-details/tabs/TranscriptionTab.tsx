@@ -1,17 +1,22 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { TranscriptionTabProps, HighlightMenuPosition, SelectionRange } from "../types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
-import { PlayCircle, PauseCircle, Rewind, Forward, Copy, Highlighter, Edit, Trash2, ChevronsUpDown, ChevronDown, ChevronUp, FileText } from "lucide-react";
+import { 
+  PlayCircle, PauseCircle, Copy, Highlighter, FileText, 
+  Info, CheckCircle, Bookmark, Search, Settings, AlignJustify
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
-import { highlightColors } from "../types";
+import { 
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { highlightColors } from "../types";
+import { cn } from "@/lib/utils";
 
 export function TranscriptionTab({
   data,
@@ -23,20 +28,37 @@ export function TranscriptionTab({
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [selectedColor, setSelectedColor] = useState(highlightColors[0].value);
   const [transcriptionSpeed, setTranscriptionSpeed] = useState(1);
-  const [isExpanded, setIsExpanded] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
+  
   const transcriptionRef = useRef<HTMLDivElement>(null);
-  const isMobile = useIsMobile();
+  
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  
+  function useDebounce<T>(value: T, delay: number): T {
+    const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  
+    useEffect(() => {
+      const handler = setTimeout(() => {
+        setDebouncedValue(value);
+      }, delay);
+  
+      return () => {
+        clearTimeout(handler);
+      };
+    }, [value, delay]);
+  
+    return debouncedValue;
+  }
   
   useEffect(() => {
-    // Debuggear el contenido de la transcripción
-    console.log("Transcripción:", data.recording.output);
-    console.log("Highlights:", data.highlights);
+    console.log("Transcription data loaded:", {
+      hasOutput: !!data.recording.output,
+      outputLength: data.recording.output?.length || 0,
+      hasHighlights: data.highlights?.length > 0
+    });
   }, [data.recording.output, data.highlights]);
-  
-  const toggleExpanded = () => {
-    setIsExpanded(!isExpanded);
-  };
   
   const toggleAudioPlayback = () => {
     setIsAudioPlaying(!isAudioPlaying);
@@ -50,68 +72,44 @@ export function TranscriptionTab({
     const selection = window.getSelection();
     if (!selection) return;
     
-    const text = selection.toString();
+    const text = selection.toString().trim();
     if (text && text.length > 0) {
       setSelectedText(text);
       
       const range = selection.getRangeAt(0);
-      const { startOffset, endOffset } = range;
+      const rect = range.getBoundingClientRect();
       
-      // Calculate the start and end indices based on the current transcription content
       if (transcriptionRef.current) {
-        const startContainer = range.startContainer;
-        const endContainer = range.endContainer;
+        const transcriptionRect = transcriptionRef.current.getBoundingClientRect();
+        setHighlightMenuPosition({
+          x: rect.left + rect.width / 2 - transcriptionRect.left,
+          y: rect.top - transcriptionRect.top - 10
+        });
         
-        let startIndex = 0;
-        let endIndex = 0;
-        
-        // Function to traverse nodes and calculate the index
-        const calculateIndex = (node: Node, offset: number): number => {
-          let index = 0;
-          let currentNode: Node | null = transcriptionRef.current;
-          
-          while (currentNode) {
-            if (currentNode === node) {
-              return index + offset;
-            }
-            
-            if (currentNode.textContent) {
-              index += currentNode.textContent.length;
-            }
-            
-            currentNode = currentNode.nextSibling;
-          }
-          
-          return -1; // Should not happen if the node is within the transcriptionRef
-        };
-        
-        startIndex = calculateIndex(startContainer, startOffset);
-        endIndex = calculateIndex(endContainer, endOffset);
-        
-        if (startIndex !== -1 && endIndex !== -1) {
-          setSelectionRange({ start: startIndex, end: endIndex });
-          
-          // Get the coordinates of the selected text
-          const rect = range.getBoundingClientRect();
-          setHighlightMenuPosition({
-            x: rect.left + rect.width / 2,
-            y: rect.top + window.scrollY - 10, // Position above the text
+        const content = data.recording.output || "";
+        const startPos = content.indexOf(text);
+        if (startPos !== -1) {
+          setSelectionRange({
+            start: startPos,
+            end: startPos + text.length
           });
           setIsPopoverOpen(true);
-          onTextSelection();
         }
       }
     } else {
-      // Clear selection
-      setSelectedText("");
-      setHighlightMenuPosition(null);
-      setSelectionRange(null);
-      setIsPopoverOpen(false);
+      clearSelection();
     }
   };
   
+  const clearSelection = () => {
+    setSelectedText("");
+    setHighlightMenuPosition(null);
+    setSelectionRange(null);
+    setIsPopoverOpen(false);
+  };
+  
   const handleHighlight = () => {
-    if (selectionRange) {
+    if (selectionRange && selectedText) {
       data.updateRecording(data.recording.id, {
         highlights: [
           ...(data.highlights || []),
@@ -126,9 +124,8 @@ export function TranscriptionTab({
       });
       
       setIsPopoverOpen(false);
-      setSelectedText("");
-      setSelectionRange(null);
-      toast.success("Texto resaltado");
+      clearSelection();
+      toast.success("Texto resaltado correctamente");
     }
   };
   
@@ -147,104 +144,203 @@ export function TranscriptionTab({
     data.updateRecording(data.recording.id, {
       highlights: data.highlights.filter((h) => h.id !== highlightId),
     });
-  };
-  
-  const getHighlightStyle = (highlight: any) => {
-    return {
-      backgroundColor: highlight.color,
-      borderRadius: "0.25rem",
-      padding: "0.125rem 0.25rem",
-      margin: "0 -0.25rem",
-      display: "inline",
-    };
+    toast.success("Resaltado eliminado");
   };
   
   const renderHighlightedText = () => {
     let transcription = data.recording.output || "";
-    let highlights = data.highlights || [];
+    const highlights = data.highlights || [];
+    
+    if (!transcription || transcription.trim() === "") {
+      return (
+        <div className="h-full flex flex-col items-center justify-center text-center p-8">
+          <div className="w-16 h-16 mb-4 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+            <FileText className="h-8 w-8 text-blue-500 dark:text-blue-400" />
+          </div>
+          <h4 className="text-lg font-medium text-slate-800 dark:text-slate-200 mb-2">No hay transcripción</h4>
+          <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md">
+            La transcripción se generará automáticamente cuando proceses audio.
+          </p>
+        </div>
+      );
+    }
+    
+    if (highlights.length === 0) {
+      if (debouncedSearchTerm) {
+        return highlightSearchMatches(transcription, debouncedSearchTerm);
+      }
+      
+      return <p className="whitespace-pre-wrap">{transcription}</p>;
+    }
+    
+    const sortedHighlights = [...highlights].sort((a, b) => a.startPosition - b.startPosition);
+    
     let parts = [];
     let lastIndex = 0;
     
-    if (!transcription || transcription.trim() === "") {
-      return <p className="text-slate-500 dark:text-slate-400">No hay contenido de transcripción disponible.</p>;
-    }
-    
-    // Sort highlights by start index
-    highlights.sort((a, b) => a.startPosition - b.startPosition);
-    
-    for (const highlight of highlights) {
-      if (highlight.endPosition <= lastIndex) {
-        // Skip overlapping highlights
-        continue;
-      }
-      
-      // Add the text before the highlight
+    for (const highlight of sortedHighlights) {
       if (highlight.startPosition > lastIndex) {
-        parts.push(
-          <span key={`text-${lastIndex}`}>
-            {transcription.substring(lastIndex, highlight.startPosition)}
-          </span>
-        );
+        const textBefore = transcription.substring(lastIndex, highlight.startPosition);
+        
+        if (debouncedSearchTerm) {
+          parts.push(
+            <React.Fragment key={`before-${lastIndex}`}>
+              {highlightSearchMatches(textBefore, debouncedSearchTerm)}
+            </React.Fragment>
+          );
+        } else {
+          parts.push(<span key={`text-${lastIndex}`}>{textBefore}</span>);
+        }
       }
       
-      // Add the highlighted text
       const highlightText = transcription.substring(highlight.startPosition, highlight.endPosition);
       parts.push(
         <mark
           key={highlight.id}
-          style={getHighlightStyle(highlight)}
-          className="highlighted-text relative"
+          style={{ backgroundColor: highlight.color }}
+          className="relative px-1 py-0.5 rounded group"
         >
           {highlightText}
-          <div className="absolute top-0 left-0 w-full h-full opacity-0 hover:opacity-100 transition-opacity">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded shadow-md p-2 flex gap-1 items-center">
-              <button onClick={() => clearHighlight(highlight.id)} className="hover:bg-slate-700 dark:hover:bg-slate-300 p-1 rounded">
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+          <span className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button 
+              size="icon"
+              variant="secondary"
+              className="h-5 w-5 rounded-full border border-white shadow-sm"
+              onClick={() => clearHighlight(highlight.id)}
+            >
+              <span className="sr-only">Eliminar resaltado</span>
+              ×
+            </Button>
+          </span>
         </mark>
       );
       
       lastIndex = highlight.endPosition;
     }
     
-    // Add the remaining text after the last highlight
     if (lastIndex < transcription.length) {
-      parts.push(
-        <span key={`text-${lastIndex}`}>
-          {transcription.substring(lastIndex)}
-        </span>
-      );
+      const remainingText = transcription.substring(lastIndex);
+      
+      if (debouncedSearchTerm) {
+        parts.push(
+          <React.Fragment key={`after-${lastIndex}`}>
+            {highlightSearchMatches(remainingText, debouncedSearchTerm)}
+          </React.Fragment>
+        );
+      } else {
+        parts.push(<span key={`text-${lastIndex}`}>{remainingText}</span>);
+      }
     }
     
-    return parts.length > 0 ? parts : <p>{transcription}</p>;
+    return <div className="whitespace-pre-wrap">{parts}</div>;
   };
   
+  const highlightSearchMatches = (text: string, searchTerm: string) => {
+    if (!searchTerm) return <span>{text}</span>;
+    
+    const parts = text.split(new RegExp(`(${searchTerm})`, 'gi'));
+    
+    return (
+      <>
+        {parts.map((part, index) => {
+          const isMatch = part.toLowerCase() === searchTerm.toLowerCase();
+          return isMatch ? (
+            <mark key={index} className="bg-yellow-200 dark:bg-yellow-700 px-0.5 rounded">
+              {part}
+            </mark>
+          ) : (
+            <span key={index}>{part}</span>
+          );
+        })}
+      </>
+    );
+  };
+
   return (
     <div className="h-full flex flex-col p-4 overflow-hidden">
-      <div className="mb-3 flex items-center justify-between flex-shrink-0">
-        <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200">
-          Transcripción
-        </h3>
-        
+      <div className="flex items-center justify-between mb-4 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className="h-8 w-8 border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/70"
-            onClick={toggleAudioPlayback}
-          >
-            {isAudioPlaying ? <PauseCircle className="h-4 w-4" /> : <PlayCircle className="h-4 w-4" />}
-            <span className="sr-only">{isAudioPlaying ? 'Pause' : 'Play'}</span>
-          </Button>
+          <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-md">
+            <FileText className="h-5 w-5 text-blue-500" />
+          </div>
+          <div>
+            <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200">Transcripción</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {data.recording.output 
+                ? `${data.recording.output.length} caracteres` 
+                : "Sin contenido disponible"}
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-1.5">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-2 flex items-center pointer-events-none">
+              <Search className="h-3.5 w-3.5 text-slate-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Buscar..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="h-8 pl-8 pr-3 py-1 text-sm border border-slate-200 dark:border-slate-700 rounded-md w-32 sm:w-40 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:text-slate-200"
+            />
+            {searchTerm && (
+              <button 
+                className="absolute inset-y-0 right-2 flex items-center"
+                onClick={() => setSearchTerm("")}
+              >
+                <span className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">×</span>
+              </button>
+            )}
+          </div>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-8 w-8 border-slate-200 dark:border-slate-700"
+              >
+                <Settings className="h-4 w-4" />
+                <span className="sr-only">Opciones</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem onClick={() => setShowSettings(!showSettings)}>
+                <AlignJustify className="h-4 w-4 mr-2" />
+                <span>Opciones de vista</span>
+              </DropdownMenuItem>
+              
+              <DropdownMenuItem onClick={toggleAudioPlayback}>
+                {isAudioPlaying ? <PauseCircle className="h-4 w-4 mr-2" /> : <PlayCircle className="h-4 w-4 mr-2" />}
+                <span>{isAudioPlaying ? "Pausar" : "Reproducir"}</span>
+              </DropdownMenuItem>
+              
+              <DropdownMenuItem 
+                onClick={() => {
+                  if (data.recording.output) {
+                    navigator.clipboard.writeText(data.recording.output);
+                    toast.success("Transcripción copiada al portapapeles");
+                  }
+                }}
+                disabled={!data.recording.output}
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                <span>Copiar todo</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           
           <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
             <PopoverTrigger asChild>
               <Button 
                 variant="outline" 
                 size="icon" 
-                className="h-8 w-8 border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/70"
+                className={cn(
+                  "h-8 w-8 border-slate-200 dark:border-slate-700",
+                  selectedText ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400" : ""
+                )}
                 disabled={!selectedText}
               >
                 <Highlighter className="h-4 w-4" />
@@ -252,88 +348,79 @@ export function TranscriptionTab({
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-64">
-              <p className="text-sm font-medium">Selecciona un color</p>
-              <div className="grid grid-cols-6 gap-2 mt-2">
+              <h4 className="text-sm font-medium mb-2">Resaltar texto seleccionado</h4>
+              <div className="grid grid-cols-4 gap-2 mb-3">
                 {highlightColors.map((color) => (
                   <button
                     key={color.value}
-                    className={`h-6 w-6 rounded-full border border-slate-300 dark:border-slate-600 shadow-sm`}
+                    className={cn(
+                      "h-8 w-8 rounded-full border border-slate-200 dark:border-slate-700",
+                      selectedColor === color.value ? "ring-2 ring-offset-2 ring-blue-500" : ""
+                    )}
                     style={{ backgroundColor: color.value }}
                     onClick={() => handleColorSelect(color.value)}
                   />
                 ))}
               </div>
-              <Button className="w-full mt-3" onClick={handleHighlight}>
-                Resaltar
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  className="flex-1" 
+                  variant="outline" 
+                  onClick={handleCopy}
+                >
+                  Copiar
+                </Button>
+                <Button className="flex-1" onClick={handleHighlight}>
+                  Resaltar
+                </Button>
+              </div>
             </PopoverContent>
           </Popover>
-          
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className="h-8 w-8 border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/70"
-            disabled={!selectedText}
-            onClick={handleCopy}
-          >
-            <Copy className="h-4 w-4" />
-            <span className="sr-only">Copiar</span>
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className="h-8 w-8 border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/70"
-            onClick={toggleExpanded}
-          >
-            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            <span className="sr-only">{isExpanded ? 'Contraer' : 'Expandir'}</span>
-          </Button>
         </div>
       </div>
       
-      <div className="flex flex-col border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-800/30 flex-grow min-h-0">
-        {isExpanded && (
-          <div className="p-3 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Velocidad de reproducción
+      {showSettings && (
+        <div className="mb-4 p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/30 flex flex-col gap-2">
+          <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300">Opciones de reproducción</h4>
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <div className="flex justify-between text-xs text-slate-500 mb-1">
+                <span>Velocidad</span>
+                <span>{transcriptionSpeed}x</span>
               </div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">
-                {transcriptionSpeed}x
-              </div>
+              <Slider 
+                value={[transcriptionSpeed]} 
+                min={0.5} 
+                max={2} 
+                step={0.1} 
+                onValueChange={handleSpeedChange} 
+              />
             </div>
-            <Slider 
-              defaultValue={[1]} 
-              max={2} 
-              min={0.5} 
-              step={0.1} 
-              onValueChange={handleSpeedChange} 
-            />
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8 w-8"
+              onClick={toggleAudioPlayback}
+            >
+              {isAudioPlaying ? 
+                <PauseCircle className="h-4 w-4" /> : 
+                <PlayCircle className="h-4 w-4" />
+              }
+            </Button>
           </div>
-        )}
-        
-        <ScrollArea className="flex-grow min-h-0 h-full overflow-y-auto">
+        </div>
+      )}
+      
+      <div className="flex-1 overflow-hidden min-h-0 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800/30">
+        <ScrollArea className="h-full w-full">
           <div 
-            className="p-4 overflow-wrap-anywhere transcription-text"
+            className="p-4 md:p-5"
             ref={transcriptionRef}
             onMouseUp={handleTextSelect}
           >
-            {data.recording.output ? (
-              <div className="leading-relaxed text-sm sm:text-base text-slate-800 dark:text-slate-200">
-                {renderHighlightedText()}
-              </div>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center p-8">
-                <div className="w-16 h-16 mb-4 rounded-full bg-slate-100 dark:bg-slate-900/30 flex items-center justify-center">
-                  <FileText className="h-8 w-8 text-slate-500 dark:text-slate-400" />
-                </div>
-                <h4 className="text-lg font-medium text-slate-800 dark:text-slate-200 mb-2">No hay transcripción</h4>
-                <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md">
-                  La transcripción se generará automáticamente.
-                </p>
-              </div>
-            )}
+            <div className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+              {renderHighlightedText()}
+            </div>
           </div>
         </ScrollArea>
       </div>
