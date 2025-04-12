@@ -1,3 +1,4 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, FileText, Bookmark, Clock } from "lucide-react";
 import { RecordingTabsProps } from "./types";
@@ -6,6 +7,7 @@ import { SummaryTab } from "./tabs/SummaryTab";
 import { ChaptersTab } from "./tabs/ChaptersTab";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
+
 export function RecordingTabs({
   data,
   onTabChange,
@@ -49,15 +51,13 @@ export function RecordingTabs({
       </div>
       
       <div className="flex-grow overflow-hidden min-h-0">
-        
-        
-        <TabsContent value="transcription" className="h-0 m-0 data-[state=active]:h-full data-[state=active]:flex data-[state=active]:flex-col">
+        {data.activeTab === 'transcription' && (
           <TranscriptionTab data={data} onTextSelection={onTextSelection} />
-        </TabsContent>
+        )}
         
-        <TabsContent value="chapters" className="h-0 m-0 data-[state=active]:h-full data-[state=active]:flex data-[state=active]:flex-col">
+        {data.activeTab === 'chapters' && (
           <ChaptersTab data={data} onEditChapter={onEditChapter} onDeleteChapter={onDeleteChapter} />
-        </TabsContent>
+        )}
       </div>
     </Tabs>;
 }
