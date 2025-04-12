@@ -21,7 +21,9 @@ export function RecordingTabs({
 
   // Ensure chapters is initialized
   const chapters = data.chapters || [];
-  return <Tabs value={data.activeTab} onValueChange={onTabChange} className="h-full flex flex-col">
+  
+  return (
+    <Tabs value={data.activeTab} onValueChange={onTabChange} className="h-full flex flex-col">
       <div className="px-4 pt-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
         <TabsList className="grid grid-cols-3 gap-1 w-full bg-slate-100 dark:bg-slate-800/50 p-1 rounded-lg">
           <TabsTrigger value="webhook" className="flex items-center gap-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm rounded-md">
@@ -51,6 +53,10 @@ export function RecordingTabs({
       </div>
       
       <div className="flex-grow overflow-hidden min-h-0">
+        {data.activeTab === 'webhook' && (
+          <SummaryTab data={data} />
+        )}
+        
         {data.activeTab === 'transcription' && (
           <TranscriptionTab data={data} onTextSelection={onTextSelection} />
         )}
@@ -59,5 +65,6 @@ export function RecordingTabs({
           <ChaptersTab data={data} onEditChapter={onEditChapter} onDeleteChapter={onDeleteChapter} />
         )}
       </div>
-    </Tabs>;
+    </Tabs>
+  );
 }
