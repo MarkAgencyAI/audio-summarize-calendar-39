@@ -3,7 +3,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Folder, Calculator, Upload, Camera } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { AudioRecorder } from "@/components/AudioRecorder";
+import { AudioRecorderV2 } from "@/components/AudioRecorderV2";
 import { PdfUploader } from "@/components/PdfUploader";
 import { ImageUploader } from "@/components/ImageUploader";
 import { MathScanner } from "@/components/MathScanner";
@@ -32,11 +32,14 @@ export function ToolsCarousel({
 
   return (
     <Card className="h-auto">
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <CardTitle className="text-lg flex items-center gap-2">
           <Folder className="h-5 w-5 text-blue-500" />
           Herramientas
         </CardTitle>
+        <div className="flex items-center space-x-2">
+          <AudioRecorderV2 compact />
+        </div>
       </CardHeader>
       <CardContent>
         <Carousel
@@ -53,7 +56,7 @@ export function ToolsCarousel({
                 <div className="text-center mb-2">
                   <span className="text-sm font-medium">Grabación</span>
                 </div>
-                <AudioRecorder />
+                <AudioRecorderV2 />
                 
                 {showTranscriptionOptions && (
                   <Button 

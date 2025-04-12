@@ -17,7 +17,7 @@ type SpeakerMode = "single" | "multiple";
 
 const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
-export function AudioRecorderV2() {
+export function AudioRecorderV2({ compact = false }: { compact?: boolean }) {
   const { addRecording, folders } = useRecordings();
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
@@ -335,6 +335,49 @@ export function AudioRecorderV2() {
       }
     }
   };
+
+  if (compact) {
+    return (
+      <div className="flex items-center space-x-2">
+        <Input
+          placeholder="Materia"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          className="w-32 h-8 text-xs"
+        />
+        <div className="flex space-x-1">
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={handleStartRecording} 
+            disabled={!subject.trim()}
+            className="h-8 px-2"
+          >
+            <Mic className="h-4 w-4 mr-1" /> Grabar
+          </Button>
+          
+          <div className="relative">
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="audio/*"
+              onChange={handleFileUpload}
+              className="absolute inset-0 opacity-0 cursor-pointer"
+              disabled={isTranscribing}
+            />
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="h-8 px-2"
+              disabled={isTranscribing}
+            >
+              <Upload className="h-4 w-4 mr-1" /> Subir
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
