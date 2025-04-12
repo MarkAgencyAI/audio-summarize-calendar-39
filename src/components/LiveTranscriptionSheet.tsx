@@ -154,27 +154,7 @@ export function LiveTranscriptionSheet({
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="transcription" className="flex-1 overflow-hidden mt-0 hidden">
-              <div className="px-2 sm:px-4 pb-2">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs text-muted-foreground">Progreso de transcripción</span>
-                  <span className="text-xs font-medium">{progress}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                  <div className="bg-blue-600 h-2.5 rounded-full" style={{
-                  width: `${progress}%`
-                }}></div>
-                </div>
-              </div>
-              
-              <div className="px-2 sm:px-4 h-[calc(100vh-220px)] overflow-hidden">
-                <ScrollArea className="h-full overflow-y-auto">
-                  <div className="pr-2 sm:pr-4 max-w-full overflow-x-hidden">
-                    <TranscriptionPanel output={safeOutput} isLoading={isTranscribing && !output} progress={progress} showProgress={false} />
-                  </div>
-                </ScrollArea>
-              </div>
-            </TabsContent>
+            
             
             <TabsContent value="webhook" className="flex-1 overflow-hidden mt-0">
               <div className="p-2 sm:p-4 pb-2">
