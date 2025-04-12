@@ -15,7 +15,8 @@ import { AudioChaptersTimeline } from "@/components/AudioChapter";
 import { AudioPlayerHandle } from "./types";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Headphones, FileText } from "lucide-react";
+import { Headphones, FileText, PenLine } from "lucide-react";
+import { NotesSection } from "../NotesSection";
 
 interface RecordingDetailsProps {
   recording: Recording;
@@ -34,7 +35,7 @@ export function RecordingDetails({
   const [activeTab, setActiveTab] = useState("transcription");
   const [currentAudioTime, setCurrentAudioTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(recording.duration || 0);
-  const [mainView, setMainView] = useState<"player" | "content">("content");
+  const [mainView, setMainView] = useState<"player" | "content" | "notes">("content");
   const audioPlayerRef = useRef<AudioPlayerHandle>(null);
   const isMobile = useIsMobile();
 
@@ -194,18 +195,22 @@ export function RecordingDetails({
           {/* Main View Tabs */}
           <Tabs 
             value={mainView} 
-            onValueChange={(value) => setMainView(value as "player" | "content")} 
+            onValueChange={(value) => setMainView(value as "player" | "content" | "notes")} 
             className="flex-grow overflow-hidden flex flex-col"
           >
             <div className="px-4 pt-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
-              <TabsList className="grid grid-cols-2 w-full bg-slate-100 dark:bg-slate-800/50 p-1 rounded-lg">
+              <TabsList className="grid grid-cols-3 w-full bg-slate-100 dark:bg-slate-800/50 p-1 rounded-lg">
                 <TabsTrigger value="player" className="flex items-center gap-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm">
                   <Headphones className="h-4 w-4" />
                   <span>Reproductor</span>
                 </TabsTrigger>
                 <TabsTrigger value="content" className="flex items-center gap-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm">
                   <FileText className="h-4 w-4" />
-                  <span>Transcripción y Resumen</span>
+                  <span>Contenido</span>
+                </TabsTrigger>
+                <TabsTrigger value="notes" className="flex items-center gap-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm">
+                  <PenLine className="h-4 w-4" />
+                  <span>Apuntes</span>
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -225,6 +230,15 @@ export function RecordingDetails({
                   onEditChapter={handleEditChapter} 
                   onDeleteChapter={handleDeleteChapter} 
                 />
+              </TabsContent>
+
+              <TabsContent value="notes" className="h-full m-0 flex flex-col">
+                <div className="p-4 overflow-y-auto bg-slate-50 dark:bg-slate-800/40 h-full">
+                  <NotesSection 
+                    folderId={recording.folderId} 
+                    sectionTitle="Apuntes de esta grabación" 
+                  />
+                </div>
               </TabsContent>
             </div>
           </Tabs>

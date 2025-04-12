@@ -15,14 +15,6 @@ import { HexColorPicker } from "react-colorful";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-interface TextHighlight {
-  id: string;
-  text: string;
-  color: string;
-  startPosition: number;
-  endPosition: number;
-}
-
 export function TranscriptionTab({
   data,
   onTextSelection
@@ -108,7 +100,7 @@ export function TranscriptionTab({
     if (!selectionRange || !selectedText) return;
     
     // Create a new highlight
-    const newHighlight: TextHighlight = {
+    const newHighlight = {
       id: crypto.randomUUID(),
       text: selectedText,
       color: highlightColor,
