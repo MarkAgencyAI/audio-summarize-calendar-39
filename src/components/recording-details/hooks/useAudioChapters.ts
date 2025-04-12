@@ -1,16 +1,17 @@
 
-import { useState, RefObject } from "react";
+import { useState, useEffect, RefObject } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
 import { AudioChapter, Recording } from "@/context/RecordingsContext";
 import { chapterColors } from "../types";
-import { AudioPlayerHandle } from "@/components/AudioPlayer";
+import { AudioPlayerHandle } from "../types";
 
 export function useAudioChapters(
   recording: Recording,
   updateRecording: (id: string, data: Partial<Recording>) => void,
   audioPlayerRef: RefObject<AudioPlayerHandle>
 ) {
+  // Initialize with chapters from recording if available
   const [chapters, setChapters] = useState<AudioChapter[]>(recording.chapters || []);
   const [showChapterDialog, setShowChapterDialog] = useState(false);
   const [currentChapter, setCurrentChapter] = useState<AudioChapter | null>(null);
@@ -18,7 +19,15 @@ export function useAudioChapters(
   const [newChapterColor, setNewChapterColor] = useState(chapterColors[0]);
   const [activeChapterId, setActiveChapterId] = useState<string | undefined>(undefined);
   
-  const handleAddChapter = (startTime: number, endTime: number) => {
+  // Effect to sync chapters from recording to local state
+  useEffect(() => {
+    if (recording.chapters && recording.chapters.length > 0) {
+      setChapters(recording.chapters);
+      console.log("Loaded chapters from recording:", recording.chapters);
+    }
+  }, [recording.id, recording.chapters]);
+  
+  const handleAddChapter = (startTime: number, endTime?: number) => {
     setNewChapterTitle(`Capítulo ${chapters.length + 1}`);
     setNewChapterColor(chapterColors[chapters.length % chapterColors.length]);
     setCurrentChapter({
@@ -84,7 +93,7 @@ export function useAudioChapters(
       const newChapter: AudioChapter = {
         id: uuidv4(),
         title: newChapterTitle,
-        startTime: currentAudioTime,
+        startTime: 0, // This will be updated by the component that calls handleSaveChapter
         color: newChapterColor
       };
       
@@ -93,7 +102,7 @@ export function useAudioChapters(
         const lastChapterIndex = chapters.length - 1;
         updatedChapters[lastChapterIndex] = {
           ...updatedChapters[lastChapterIndex],
-          endTime: currentAudioTime
+          endTime: 0 // This will be updated by the component that calls handleSaveChapter
         };
         updatedChapters.push(newChapter);
       } else {
@@ -101,6 +110,7 @@ export function useAudioChapters(
       }
     }
     
+    // Sort chapters by start time
     updatedChapters.sort((a, b) => a.startTime - b.startTime);
     
     setChapters(updatedChapters);
@@ -121,9 +131,6 @@ export function useAudioChapters(
       setActiveChapterId(chapter.id);
     }
   };
-  
-  // This needs to be declared in the parent component due to closure over currentAudioTime
-  const currentAudioTime = 0; // Placeholder, will be provided by parent
 
   return {
     chapters,

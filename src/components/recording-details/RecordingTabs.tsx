@@ -17,6 +17,9 @@ export function RecordingTabs({
   const hasWebhookData = !!data.recording.webhookData;
   const isMobile = useIsMobile();
   
+  // Ensure chapters is initialized
+  const chapters = data.chapters || [];
+  
   return (
     <Tabs value={data.activeTab} onValueChange={onTabChange} className="h-full flex flex-col">
       <div className="px-4 pt-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
@@ -47,7 +50,7 @@ export function RecordingTabs({
             <Bookmark className="h-4 w-4" />
             <span className="truncate text-sm">Capítulos</span>
             <span className="text-xs text-white rounded-full h-5 w-5 flex items-center justify-center bg-blue-500">
-              {data.chapters.length}
+              {chapters.length}
             </span>
           </TabsTrigger>
         </TabsList>

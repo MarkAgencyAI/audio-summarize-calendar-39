@@ -22,6 +22,9 @@ export function ChaptersTab({
       : `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  // Ensure chapters are available even if they're not yet initialized in state
+  const chaptersToDisplay = data.chapters || [];
+
   return (
     <div className="h-full flex flex-col p-4">
       <div className="mb-3 flex items-center justify-between">
@@ -31,7 +34,7 @@ export function ChaptersTab({
             Capítulos de audio
           </h3>
           <span className="text-xs text-slate-500 dark:text-slate-400">
-            ({data.chapters.length})
+            ({chaptersToDisplay.length})
           </span>
         </div>
         
@@ -44,7 +47,7 @@ export function ChaptersTab({
       </div>
       
       <div className="flex-1 overflow-hidden">
-        {data.chapters.length === 0 ? (
+        {chaptersToDisplay.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-8 border border-dashed border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/30">
             <div className="w-16 h-16 mb-4 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
               <Bookmark className="h-8 w-8 text-blue-500 dark:text-blue-400" />
@@ -59,7 +62,7 @@ export function ChaptersTab({
           <ScrollArea className="h-full border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800/30">
             <div className="p-2">
               <AudioChaptersList 
-                chapters={data.chapters}
+                chapters={chaptersToDisplay}
                 currentTime={data.currentAudioTime}
                 duration={data.audioDuration}
                 onChapterClick={() => {}}

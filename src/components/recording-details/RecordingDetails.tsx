@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { loadAudioFromStorage, saveAudioToStorage } from "@/lib/storage";
 import { RecordingHeader } from "./RecordingHeader";
@@ -14,6 +14,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { AudioPlayerV2 } from "./AudioPlayerV2";
 import { AudioChaptersTimeline } from "@/components/AudioChapter";
 import { AudioPlayerHandle } from "./types";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface RecordingDetailsProps {
   recording: Recording;
@@ -115,18 +116,24 @@ export function RecordingDetails({
   };
 
   // Create a wrapper function for adding chapters
-  // This fixes the type mismatch by correctly passing the startTime parameter
   const handleAddChapterFromPlayer = () => {
     // When called from the player, we use the current time as startTime
     // and pass undefined as endTime to indicate an ongoing chapter
     handleAddChapter(currentAudioTime, undefined);
   };
 
+  // Make sure we have the chapters from the recording if they exist
+  useEffect(() => {
+    if (recording.chapters && recording.chapters.length > 0) {
+      console.log("Loading saved chapters:", recording.chapters);
+    }
+  }, [recording.chapters]);
+
   // Prepare data for child components
   const recordingDetailsData: RecordingDetailsType = {
     recording,
-    highlights,
-    chapters,
+    highlights: highlights || [],
+    chapters: chapters || [],
     activeChapterId,
     currentAudioTime,
     audioDuration,
@@ -138,6 +145,11 @@ export function RecordingDetails({
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogContent className="p-0 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg w-[95vw] md:w-[90vw] lg:w-[80vw] max-w-6xl h-[90vh] flex flex-col overflow-hidden">
+        {/* Adding DialogTitle for accessibility but visually hidden */}
+        <VisuallyHidden>
+          <DialogTitle>Detalles de grabación</DialogTitle>
+        </VisuallyHidden>
+        
         <div className="flex flex-col w-full h-full">
           {/* Header Area */}
           <div className="p-5 pb-3 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
@@ -156,7 +168,7 @@ export function RecordingDetails({
               onAddChapter={handleAddChapterFromPlayer}
             />
             
-            {chapters.length > 0 && (
+            {chapters && chapters.length > 0 && (
               <div className="mt-3 max-w-full overflow-hidden">
                 <AudioChaptersTimeline 
                   chapters={chapters} 
