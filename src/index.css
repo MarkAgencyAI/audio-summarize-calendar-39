@@ -67,6 +67,17 @@
       transform: scaleY(0.85);
     }
   }
+  
+  /* Text highlight styles */
+  mark {
+    padding: 0 2px;
+    border-radius: 2px;
+    transition: background-color 0.2s ease;
+  }
+  
+  .text-highlight-container mark:hover {
+    opacity: 0.8;
+  }
 }
  
 @layer base {

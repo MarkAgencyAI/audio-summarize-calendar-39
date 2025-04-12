@@ -1,10 +1,9 @@
 
 import React, { useState, useRef, useEffect } from "react";
-import { TranscriptionTabProps, HighlightMenuPosition, SelectionRange } from "../types";
+import { TranscriptionTabProps } from "../types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
-  FileText, Search, Copy, Highlighter, Info, 
-  Settings, Play, Pause, Settings2, Check, X 
+  FileText, Search, Copy, Highlighter, Settings2, X 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -16,160 +15,140 @@ import { HexColorPicker } from "react-colorful";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-// Define available highlight colors
-const DEFAULT_HIGHLIGHT_COLORS = [
-  { name: "Amarillo", value: "#FEF7CD" },
-  { name: "Verde", value: "#F2FCE2" },
-  { name: "Azul", value: "#D3E4FD" },
-  { name: "Naranja", value: "#FEC6A1" },
-  { name: "Rosa", value: "#FFDEE2" },
-  { name: "Lila", value: "#E5DEFF" },
-  { name: "Durazno", value: "#FDE1D3" },
-  { name: "Gris", value: "#F1F0FB" },
-];
+interface TextHighlight {
+  id: string;
+  text: string;
+  color: string;
+  startPosition: number;
+  endPosition: number;
+}
 
 export function TranscriptionTab({
   data,
   onTextSelection
 }: TranscriptionTabProps) {
+  // State for text selection and highlighting
   const [selectedText, setSelectedText] = useState("");
-  const [highlightMenuPosition, setHighlightMenuPosition] = useState<HighlightMenuPosition | null>(null);
-  const [selectionRange, setSelectionRange] = useState<SelectionRange | null>(null);
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [selectedColor, setSelectedColor] = useState(DEFAULT_HIGHLIGHT_COLORS[0].value);
+  const [selectionRange, setSelectionRange] = useState<{start: number, end: number} | null>(null);
+  const [highlightColor, setHighlightColor] = useState("#FFEB3B");
+  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+  const [isHighlightMenuOpen, setIsHighlightMenuOpen] = useState(false);
+  
+  // State for UI controls
   const [searchTerm, setSearchTerm] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [fontSize, setFontSize] = useState(16);
-  const [colorPickerOpen, setColorPickerOpen] = useState(false);
-  const [customColor, setCustomColor] = useState("#FEF7CD");
   
+  // References
   const transcriptionRef = useRef<HTMLDivElement>(null);
-  const selectionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Setup highlights from recording data
+  const highlights = data.highlights || [];
   
   // Log transcription data for debugging
   useEffect(() => {
-    console.log("Transcription data:", {
+    console.log("Transcription component rendered:", {
       hasOutput: !!data.recording.output,
       outputLength: data.recording.output?.length || 0,
-      firstChars: data.recording.output?.substring(0, 50),
-      highlights: data.highlights?.length || 0
+      highlights: highlights.length
     });
-  }, [data]);
+  }, [data.recording.output, highlights.length]);
 
-  useEffect(() => {
-    // Clean up timeout on unmount
-    return () => {
-      if (selectionTimeout.current) {
-        clearTimeout(selectionTimeout.current);
-      }
-    };
-  }, []);
-
-  const handleTextSelect = () => {
-    // Clear any existing timeout
-    if (selectionTimeout.current) {
-      clearTimeout(selectionTimeout.current);
+  // Handle text selection
+  const handleTextSelection = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.toString().trim() === "") {
+      clearSelection();
+      return;
     }
     
-    // Set a small delay to handle selection properly
-    selectionTimeout.current = setTimeout(() => {
-      const selection = window.getSelection();
-      if (!selection) return;
-      
-      const text = selection.toString().trim();
-      
-      if (text && text.length > 0) {
-        setSelectedText(text);
-        
-        if (selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          
-          // Check if selection is within our transcription element
-          if (transcriptionRef.current && transcriptionRef.current.contains(range.commonAncestorContainer)) {
-            const rect = range.getBoundingClientRect();
-            const transcriptionRect = transcriptionRef.current.getBoundingClientRect();
-            
-            // Calculate position for the highlight menu
-            setHighlightMenuPosition({
-              x: rect.left + rect.width / 2 - transcriptionRect.left,
-              y: rect.top - transcriptionRect.top - 10
-            });
-            
-            // Calculate selection range within text
-            const content = data.recording.output || "";
-            const preSelectionRange = range.cloneRange();
-            preSelectionRange.selectNodeContents(transcriptionRef.current);
-            preSelectionRange.setEnd(range.startContainer, range.startOffset);
-            const startPos = preSelectionRange.toString().length;
-            
-            setSelectionRange({
-              start: startPos,
-              end: startPos + text.length
-            });
-            
-            setIsPopoverOpen(true);
-          }
-        }
-      } else {
+    // Get the selected text
+    const text = selection.toString().trim();
+    if (text.length === 0) {
+      clearSelection();
+      return;
+    }
+    
+    // Make sure selection is within our component
+    if (selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      if (!transcriptionRef.current?.contains(range.commonAncestorContainer)) {
         clearSelection();
+        return;
       }
-    }, 100);
-  };
-  
-  const clearSelection = () => {
-    setSelectedText("");
-    setHighlightMenuPosition(null);
-    setSelectionRange(null);
-    setIsPopoverOpen(false);
-  };
-  
-  const handleHighlight = () => {
-    if (selectionRange && selectedText) {
-      const color = colorPickerOpen ? customColor : selectedColor;
       
-      data.updateRecording(data.recording.id, {
-        highlights: [
-          ...(data.highlights || []),
-          {
-            id: crypto.randomUUID(),
-            text: selectedText,
-            color: color,
-            startPosition: selectionRange.start,
-            endPosition: selectionRange.end,
-          },
-        ],
+      // Get the selection range in the text
+      const fullText = data.recording.output || "";
+      const preSelectionRange = range.cloneRange();
+      preSelectionRange.selectNodeContents(transcriptionRef.current);
+      preSelectionRange.setEnd(range.startContainer, range.startOffset);
+      const startPos = preSelectionRange.toString().length;
+      
+      // Set the selected text and range
+      setSelectedText(text);
+      setSelectionRange({
+        start: startPos,
+        end: startPos + text.length
       });
       
-      setIsPopoverOpen(false);
-      clearSelection();
-      window.getSelection()?.removeAllRanges();
-      toast.success("Texto resaltado correctamente");
+      // Open the highlight popup
+      setIsHighlightMenuOpen(true);
     }
   };
   
-  const handleColorSelect = (color: string) => {
-    setSelectedColor(color);
-    setColorPickerOpen(false);
+  // Clear the current selection
+  const clearSelection = () => {
+    setSelectedText("");
+    setSelectionRange(null);
+    setIsHighlightMenuOpen(false);
   };
   
+  // Apply highlight to selected text
+  const applyHighlight = () => {
+    if (!selectionRange || !selectedText) return;
+    
+    // Create a new highlight
+    const newHighlight: TextHighlight = {
+      id: crypto.randomUUID(),
+      text: selectedText,
+      color: highlightColor,
+      startPosition: selectionRange.start,
+      endPosition: selectionRange.end
+    };
+    
+    // Update recording with new highlight
+    data.updateRecording(data.recording.id, {
+      highlights: [...highlights, newHighlight]
+    });
+    
+    // Clean up selection
+    clearSelection();
+    window.getSelection()?.removeAllRanges();
+    toast.success("Texto resaltado correctamente");
+  };
+  
+  // Handle copying text to clipboard
   const handleCopy = () => {
     if (selectedText) {
       navigator.clipboard.writeText(selectedText);
       toast.success("Texto copiado al portapapeles");
-      setIsPopoverOpen(false);
+      clearSelection();
     }
   };
   
-  const clearHighlight = (highlightId: string) => {
+  // Remove a highlight
+  const removeHighlight = (highlightId: string) => {
     data.updateRecording(data.recording.id, {
-      highlights: data.highlights.filter((h) => h.id !== highlightId),
+      highlights: highlights.filter(h => h.id !== highlightId)
     });
     toast.success("Resaltado eliminado");
   };
 
+  // Render the transcription content with highlights
   const renderTranscriptionContent = () => {
     const transcription = data.recording.output || "";
     
+    // If no transcription is available
     if (!transcription || transcription.trim() === "") {
       return (
         <div className="h-full flex flex-col items-center justify-center text-center p-8">
@@ -184,21 +163,23 @@ export function TranscriptionTab({
       );
     }
     
-    // If we have transcription content but no highlights
-    if (!data.highlights || data.highlights.length === 0) {
-      // Search functionality
-      if (searchTerm.trim()) {
-        return highlightSearchMatches(transcription, searchTerm);
-      }
+    // If searching, just highlight search results
+    if (searchTerm.trim() && (!highlights || highlights.length === 0)) {
+      return highlightSearchMatches(transcription, searchTerm);
+    }
+    
+    // If no highlights, just show the text
+    if (!highlights || highlights.length === 0) {
       return <p className="whitespace-pre-wrap" style={{ fontSize: `${fontSize}px` }}>{transcription}</p>;
     }
     
-    // With highlights
-    const sortedHighlights = [...data.highlights].sort((a, b) => a.startPosition - b.startPosition);
-    let parts = [];
+    // Render text with highlights
+    const sortedHighlights = [...highlights].sort((a, b) => a.startPosition - b.startPosition);
+    let parts: React.ReactNode[] = [];
     let lastIndex = 0;
     
     for (const highlight of sortedHighlights) {
+      // Add text before the highlight
       if (highlight.startPosition > lastIndex) {
         const textBefore = transcription.substring(lastIndex, highlight.startPosition);
         if (searchTerm.trim()) {
@@ -212,6 +193,7 @@ export function TranscriptionTab({
         }
       }
       
+      // Add the highlighted text
       const highlightText = transcription.substring(highlight.startPosition, highlight.endPosition);
       parts.push(
         <mark
@@ -225,7 +207,7 @@ export function TranscriptionTab({
               size="icon"
               variant="secondary"
               className="h-5 w-5 rounded-full border border-white shadow-sm"
-              onClick={() => clearHighlight(highlight.id)}
+              onClick={() => removeHighlight(highlight.id)}
             >
               <span className="sr-only">Eliminar resaltado</span>
               <X className="h-3 w-3" />
@@ -237,6 +219,7 @@ export function TranscriptionTab({
       lastIndex = highlight.endPosition;
     }
     
+    // Add text after the last highlight
     if (lastIndex < transcription.length) {
       const remainingText = transcription.substring(lastIndex);
       if (searchTerm.trim()) {
@@ -253,15 +236,16 @@ export function TranscriptionTab({
     return <div className="whitespace-pre-wrap" style={{ fontSize: `${fontSize}px` }}>{parts}</div>;
   };
   
-  const highlightSearchMatches = (text: string, searchTerm: string) => {
-    if (!searchTerm) return <span>{text}</span>;
+  // Highlight search matches in text
+  const highlightSearchMatches = (text: string, term: string) => {
+    if (!term.trim()) return <span>{text}</span>;
     
-    const parts = text.split(new RegExp(`(${searchTerm})`, 'gi'));
+    const parts = text.split(new RegExp(`(${term})`, 'gi'));
     
     return (
       <>
         {parts.map((part, index) => {
-          const isMatch = part.toLowerCase() === searchTerm.toLowerCase();
+          const isMatch = part.toLowerCase() === term.toLowerCase();
           return isMatch ? (
             <mark key={index} className="bg-yellow-200 dark:bg-yellow-700 px-0.5 rounded">
               {part}
@@ -271,48 +255,6 @@ export function TranscriptionTab({
           );
         })}
       </>
-    );
-  };
-
-  // Create the highlight menu popup
-  const renderHighlightMenu = () => {
-    if (!highlightMenuPosition) return null;
-    
-    return (
-      <div
-        className="absolute bg-white dark:bg-slate-800 rounded-lg shadow-lg p-3 border border-slate-200 dark:border-slate-700 transform -translate-x-1/2 -translate-y-full z-50 min-w-[160px]"
-        style={{
-          left: `${highlightMenuPosition.x}px`,
-          top: `${highlightMenuPosition.y}px`,
-        }}
-      >
-        <div className="flex gap-2 mb-2">
-          <Button size="sm" variant="outline" onClick={handleCopy} className="flex-1">
-            <Copy className="h-3.5 w-3.5 mr-1.5" />
-            Copiar
-          </Button>
-          <Button size="sm" onClick={handleHighlight} className="flex-1">
-            <Highlighter className="h-3.5 w-3.5 mr-1.5" />
-            Resaltar
-          </Button>
-        </div>
-        <div className="grid grid-cols-4 gap-1">
-          {DEFAULT_HIGHLIGHT_COLORS.map((color) => (
-            <button
-              key={color.value}
-              className={cn(
-                "h-6 w-6 rounded-full border",
-                selectedColor === color.value
-                  ? "ring-2 ring-blue-500 ring-offset-1"
-                  : "border-slate-200 dark:border-slate-700"
-              )}
-              style={{ backgroundColor: color.value }}
-              onClick={() => handleColorSelect(color.value)}
-              title={color.name}
-            />
-          ))}
-        </div>
-      </div>
     );
   };
 
@@ -334,6 +276,7 @@ export function TranscriptionTab({
         </div>
         
         <div className="flex items-center gap-1.5">
+          {/* Search Input */}
           <div className="relative">
             <div className="absolute inset-y-0 left-2 flex items-center pointer-events-none">
               <Search className="h-3.5 w-3.5 text-slate-400" />
@@ -355,6 +298,7 @@ export function TranscriptionTab({
             )}
           </div>
           
+          {/* Settings Button */}
           <Button
             variant="outline"
             size="sm"
@@ -365,6 +309,7 @@ export function TranscriptionTab({
             <span className="sr-only sm:not-sr-only sm:inline-block">Opciones</span>
           </Button>
           
+          {/* Copy Button */}
           {data.recording.output && (
             <Button
               variant="outline"
@@ -380,7 +325,11 @@ export function TranscriptionTab({
             </Button>
           )}
           
-          <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+          {/* Highlight Button */}
+          <Popover 
+            open={isHighlightMenuOpen} 
+            onOpenChange={setIsHighlightMenuOpen}
+          >
             <PopoverTrigger asChild>
               <Button 
                 variant="outline" 
@@ -399,86 +348,93 @@ export function TranscriptionTab({
               <h4 className="text-sm font-medium mb-3">Resaltar texto seleccionado</h4>
               
               <div className="space-y-4">
-                <div className="space-y-2">
-                  {!colorPickerOpen ? (
-                    <>
-                      <Label className="text-xs">Colores predefinidos</Label>
-                      <div className="grid grid-cols-4 gap-2">
-                        {DEFAULT_HIGHLIGHT_COLORS.map((color) => (
+                {!isColorPickerOpen ? (
+                  <div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                      Selecciona un color para el resaltado:
+                    </p>
+                    
+                    <div className="mb-3">
+                      <div 
+                        className="w-full h-10 rounded-md border border-slate-200 dark:border-slate-700 mb-2"
+                        style={{ backgroundColor: highlightColor }}
+                      />
+                      
+                      <div className="grid grid-cols-6 gap-2">
+                        {["#FFEB3B", "#FFC107", "#FF9800", "#4CAF50", "#2196F3", "#9C27B0", 
+                          "#F44336", "#E91E63", "#CDDC39", "#009688", "#673AB7", "#3F51B5"
+                        ].map(color => (
                           <button
-                            key={color.value}
+                            key={color}
                             className={cn(
-                              "h-8 w-8 rounded-full border border-slate-200 dark:border-slate-700",
-                              selectedColor === color.value ? "ring-2 ring-offset-2 ring-blue-500" : ""
+                              "w-8 h-8 rounded-full border",
+                              highlightColor === color ? "ring-2 ring-blue-500 ring-offset-2" : "border-slate-200 dark:border-slate-700"
                             )}
-                            style={{ backgroundColor: color.value }}
-                            onClick={() => handleColorSelect(color.value)}
-                            title={color.name}
+                            style={{ backgroundColor: color }}
+                            onClick={() => setHighlightColor(color)}
                           />
                         ))}
                       </div>
+                      
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="w-full mt-1 text-xs py-1 h-auto"
-                        onClick={() => setColorPickerOpen(true)}
+                        className="w-full mt-2 text-xs py-1 h-auto"
+                        onClick={() => setIsColorPickerOpen(true)}
                       >
                         Personalizar color
                       </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Label className="text-xs">Color personalizado</Label>
-                      <div className="flex flex-col items-center">
-                        <HexColorPicker 
-                          color={customColor}
-                          onChange={setCustomColor}
-                          className="mb-2"
-                        />
-                        <Input
-                          value={customColor}
-                          onChange={(e) => setCustomColor(e.target.value)}
-                          className="mb-2"
-                        />
-                        <div className="flex gap-2 w-full">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => setColorPickerOpen(false)}
-                          >
-                            <X className="h-3.5 w-3.5 mr-1.5" />
-                            Cancelar
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => handleHighlight()}
-                          >
-                            <Check className="h-3.5 w-3.5 mr-1.5" />
-                            Aplicar
-                          </Button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-                
-                {!colorPickerOpen && (
-                  <div className="flex gap-2">
-                    <Button 
-                      className="flex-1" 
-                      variant="outline" 
-                      onClick={handleCopy}
-                    >
-                      Copiar
-                    </Button>
-                    <Button 
-                      className="flex-1" 
-                      onClick={handleHighlight}
-                    >
-                      Resaltar
-                    </Button>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button 
+                        className="flex-1" 
+                        variant="outline" 
+                        onClick={handleCopy}
+                      >
+                        Copiar
+                      </Button>
+                      <Button 
+                        className="flex-1" 
+                        onClick={applyHighlight}
+                      >
+                        Resaltar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <Label className="text-xs mb-2 block">Color personalizado</Label>
+                    <HexColorPicker 
+                      color={highlightColor}
+                      onChange={setHighlightColor}
+                      className="mb-2 w-full"
+                    />
+                    
+                    <div className="mb-2">
+                      <Input
+                        value={highlightColor}
+                        onChange={(e) => setHighlightColor(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setIsColorPickerOpen(false)}
+                      >
+                        Volver
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        onClick={applyHighlight}
+                      >
+                        Aplicar
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -487,6 +443,7 @@ export function TranscriptionTab({
         </div>
       </div>
       
+      {/* Settings Panel */}
       {showSettings && (
         <div className="mb-4 p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/30">
           <div className="flex items-center gap-4">
@@ -507,21 +464,19 @@ export function TranscriptionTab({
         </div>
       )}
       
+      {/* Main Content */}
       <div className="flex-1 overflow-hidden min-h-0 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800/30 relative">
         <ScrollArea className="h-full w-full">
           <div 
             className="p-4 md:p-5"
             ref={transcriptionRef}
-            onMouseUp={handleTextSelect}
+            onMouseUp={handleTextSelection}
           >
             <div className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
               {renderTranscriptionContent()}
             </div>
           </div>
         </ScrollArea>
-        
-        {/* Floating highlight menu when text is selected */}
-        {isPopoverOpen && highlightMenuPosition && renderHighlightMenu()}
       </div>
     </div>
   );
