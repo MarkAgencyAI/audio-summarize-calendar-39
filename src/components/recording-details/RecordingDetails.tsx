@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -39,7 +38,6 @@ export function RecordingDetails({
   const audioPlayerRef = useRef<AudioPlayerHandle>(null);
   const isMobile = useIsMobile();
 
-  // Debugging logs
   useEffect(() => {
     console.log("Recording details mounted:", {
       id: recording.id,
@@ -50,7 +48,6 @@ export function RecordingDetails({
     });
   }, [recording]);
 
-  // Custom hooks for chapters and highlights
   const {
     chapters,
     activeChapterId,
@@ -75,11 +72,9 @@ export function RecordingDetails({
     renderHighlightedText
   } = useHighlights(recording, updateRecording);
 
-  // Dialog control
   const dialogOpen = propIsOpen !== undefined ? propIsOpen : isOpen;
   const setDialogOpen = onOpenChange || setIsOpenState;
 
-  // Load audio from storage
   useEffect(() => {
     const loadAudio = async () => {
       try {
@@ -97,7 +92,6 @@ export function RecordingDetails({
     loadAudio();
   }, [recording.id]);
 
-  // Save audio to storage if not already there
   useEffect(() => {
     const saveAudio = async () => {
       if (recording.audioUrl && !audioBlob) {
@@ -120,11 +114,9 @@ export function RecordingDetails({
     saveAudio();
   }, [recording.audioUrl, recording.id, audioBlob]);
 
-  // Handle audio time updates
   const handleTimeUpdate = (time: number) => {
     setCurrentAudioTime(time);
 
-    // Update active chapter based on current time
     const activeChapter = chapters.find(chapter => 
       time >= chapter.startTime && (!chapter.endTime || time <= chapter.endTime)
     );
@@ -136,13 +128,11 @@ export function RecordingDetails({
     }
   };
 
-  // Create a wrapper function for adding chapters
   const handleAddChapterFromPlayer = (startTime: number, endTime?: number) => {
     handleAddChapter(startTime, endTime);
     toast.success("Fragmento seleccionado para crear capítulo");
   };
 
-  // Prepare data for child components
   const recordingDetailsData: RecordingDetailsType = {
     recording,
     highlights: highlights || [],
@@ -155,7 +145,6 @@ export function RecordingDetails({
     updateRecording
   };
 
-  // Render the Audio Player tab content
   const renderPlayerContent = () => (
     <div className="p-4 flex flex-col h-full">
       <h3 className="text-lg font-semibold mb-4">Reproductor de Audio</h3>
@@ -187,12 +176,10 @@ export function RecordingDetails({
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogContent className="p-0 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg w-[95vw] md:w-[90vw] lg:w-[80vw] max-w-6xl h-[90vh] flex flex-col overflow-hidden">
         <div className="flex flex-col w-full h-full">
-          {/* Header Area */}
           <div className="p-5 pb-3 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
             <RecordingHeader recording={recording} />
           </div>
           
-          {/* Main View Tabs */}
           <Tabs 
             value={mainView} 
             onValueChange={(value) => setMainView(value as "player" | "content" | "notes")} 
@@ -232,13 +219,11 @@ export function RecordingDetails({
                 />
               </TabsContent>
 
-              <TabsContent value="notes" className="h-full m-0 flex flex-col">
-                <div className="p-4 overflow-y-auto bg-slate-50 dark:bg-slate-800/40 h-full">
-                  <NotesSection 
-                    folderId={recording.folderId} 
-                    sectionTitle="Apuntes de esta grabación" 
-                  />
-                </div>
+              <TabsContent value="notes">
+                <NotesSection 
+                  folderId={recording.folderId} 
+                  sectionTitle="Apuntes de esta grabación" 
+                />
               </TabsContent>
             </div>
           </Tabs>
