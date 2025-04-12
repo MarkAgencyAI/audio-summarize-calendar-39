@@ -329,7 +329,8 @@ export function AudioRecorderV2({
                     <Label htmlFor="single-speaker" className="flex items-center cursor-pointer">
                       <User className="h-4 w-4 mr-2" />
                       <div>
-                        <span className="font-medium">Un solo orador (Modo Clase)</span>
+                        <span className="font-medium">Un solo orador
+                    </span>
                         <p className="text-xs text-muted-foreground">Para captar principalmente la voz del profesor</p>
                       </div>
                     </Label>
@@ -339,7 +340,7 @@ export function AudioRecorderV2({
                     <Label htmlFor="multiple-speaker" className="flex items-center cursor-pointer">
                       <Users className="h-4 w-4 mr-2" />
                       <div>
-                        <span className="font-medium">Múltiples oradores (Debates)</span>
+                        <span className="font-medium">Múltiples oradores</span>
                         <p className="text-xs text-muted-foreground">Para captar la información de varias personas</p>
                       </div>
                     </Label>
