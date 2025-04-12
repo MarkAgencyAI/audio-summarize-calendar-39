@@ -114,7 +114,7 @@ export function SummaryTab({ data }: WebhookTabProps) {
   };
 
   return (
-    <div className="flex-grow flex flex-col p-4 overflow-hidden">
+    <div className="flex-grow flex flex-col p-4 overflow-hidden h-full">
       <div className="mb-4 flex flex-col gap-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-md">
@@ -133,8 +133,8 @@ export function SummaryTab({ data }: WebhookTabProps) {
       </div>
       
       <div className="flex-1 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/30">
-        <ScrollArea className="h-full w-full">
-          <div className="p-5 max-w-full">
+        <ScrollArea className="h-full">
+          <div className="p-5">
             {renderSummaryContent()}
           </div>
         </ScrollArea>
