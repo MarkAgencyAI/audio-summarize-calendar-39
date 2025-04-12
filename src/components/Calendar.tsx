@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Search, List, LayoutGrid } from 'lucide-react';
+import { ChevronLeft, ChevronRight, List, LayoutGrid } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +24,7 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface CalendarEvent {
   id: string;
@@ -80,7 +82,7 @@ export function Calendar({
   const [newEvent, setNewEvent] = useState<Omit<CalendarEvent, 'id'>>({
     title: '',
     description: '',
-    date: format(selectedDate, 'yyyy-MM-dd'),
+    date: format(selectedDate, 'yyyy-MM-dd\'T\'HH:mm'),
     endDate: format(addHours(selectedDate, 1), 'yyyy-MM-dd\'T\'HH:mm'),
     type: 'other',
     folderId: ''
@@ -169,7 +171,7 @@ export function Calendar({
     setNewEvent({
       title: '',
       description: '',
-      date: format(selectedDate, 'yyyy-MM-dd'),
+      date: format(selectedDate, 'yyyy-MM-dd\'T\'HH:mm'),
       endDate: format(addHours(selectedDate, 1), 'yyyy-MM-dd\'T\'HH:mm'),
       type: 'other',
       folderId: ''
@@ -303,35 +305,93 @@ export function Calendar({
     setRepeatOption('none');
   };
 
+  // Get the folder name for an event
+  const getFolderName = (folderId: string | undefined) => {
+    if (!folderId) return "";
+    const folder = folders.find(f => f.id === folderId);
+    return folder ? folder.name : "";
+  };
+
   const renderMonthView = () => {
     const days = getDaysInMonth();
     const dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-    return <div className="space-y-4">
+    return (
+      <div className="space-y-4">
         <div className="grid grid-cols-7 gap-1 text-center">
-          {dayNames.map(day => <div key={day} className="p-2 text-sm font-medium">
+          {dayNames.map(day => (
+            <div key={day} className="p-2 text-sm font-medium">
               {day}
-            </div>)}
+            </div>
+          ))}
         </div>
         <div className="grid grid-cols-7 gap-1">
           {days.map(day => {
-          const dayEvents = currentMonthEvents.filter(event => isSameDay(parseISO(event.date), day));
-          return <Button key={day.toString()} variant="ghost" className={`h-16 flex flex-col items-center justify-start p-1 hover:bg-accent relative ${isSameDay(day, new Date()) ? 'bg-secondary' : ''} ${isSameDay(day, selectedDate) ? 'border-2 border-primary' : ''}`} onClick={() => handleDateClick(day)}>
-                <span className="text-sm font-medium">
+            const dayEvents = currentMonthEvents.filter(event => 
+              isSameDay(parseISO(event.date), day)
+            );
+            
+            return (
+              <Button
+                key={day.toString()}
+                variant="ghost"
+                className={`h-24 flex flex-col items-start justify-start p-1 hover:bg-accent relative ${
+                  isSameDay(day, new Date()) ? 'bg-secondary/50' : ''
+                } ${
+                  isSameDay(day, selectedDate) ? 'border-2 border-primary' : ''
+                }`}
+                onClick={() => handleDateClick(day)}
+              >
+                <span className="text-sm font-medium self-center mb-1">
                   {format(day, 'd')}
                 </span>
-                <div className="mt-1 flex flex-wrap justify-center gap-1">
-                  {dayEvents.slice(0, 3).map((event, index) => <div key={event.id} className={`w-2 h-2 rounded-full bg-${event.type}`} style={{
-                backgroundColor: eventTypeColors[event.type]
-              }} title={event.title} />)}
-                  {dayEvents.length > 3 && <span className="text-xs">+{dayEvents.length - 3}</span>}
+                
+                <div className="w-full flex flex-col gap-0.5 overflow-y-auto max-h-16 px-0.5">
+                  {dayEvents.slice(0, 3).map((event) => (
+                    <TooltipProvider key={event.id}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div 
+                            className="text-xs truncate px-1 rounded"
+                            style={{ 
+                              backgroundColor: `${eventTypeColors[event.type]}20`,
+                              borderLeft: `2px solid ${eventTypeColors[event.type]}`,
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditEventDialog(event);
+                            }}
+                          >
+                            <span className="truncate block">{event.title}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="text-xs max-w-52">
+                            <p className="font-medium">{event.title}</p>
+                            <p>{format(parseISO(event.date), 'HH:mm')}</p>
+                            {event.description && <p className="text-muted-foreground">{event.description}</p>}
+                            {event.folderId && <p className="text-muted-foreground">Materia: {getFolderName(event.folderId)}</p>}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ))}
+                  
+                  {dayEvents.length > 3 && (
+                    <div className="text-xs text-center text-muted-foreground">
+                      +{dayEvents.length - 3} más
+                    </div>
+                  )}
                 </div>
-              </Button>;
-        })}
+              </Button>
+            );
+          })}
         </div>
-      </div>;
+      </div>
+    );
   };
 
-  return <div className="space-y-4">
+  return (
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="sm" onClick={() => setView('month')}>
@@ -342,17 +402,9 @@ export function Calendar({
             <List className="h-4 w-4 mr-1" />
             Semana
           </Button>
-          <Button variant="outline" size="sm" onClick={() => openNewEventDialog()}>
-            <Plus className="h-4 w-4 mr-1" />
-            Nuevo Evento
-          </Button>
         </div>
         
         <div className="flex items-center space-x-2">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input type="search" placeholder="Buscar eventos..." className="w-full rounded-md pl-8" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
@@ -401,7 +453,8 @@ export function Calendar({
         </div>
       </div>
       
-      {view === 'month' && <Card>
+      {view === 'month' && (
+        <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-4">
               <Button variant="outline" size="sm" onClick={handlePrevMonth}>
@@ -409,8 +462,8 @@ export function Calendar({
               </Button>
               <h2 className="text-xl font-bold capitalize">
                 {format(currentDate, 'MMMM yyyy', {
-              locale: es
-            })}
+                  locale: es
+                })}
               </h2>
               <Button variant="outline" size="sm" onClick={handleNextMonth}>
                 <ChevronRight className="h-4 w-4" />
@@ -418,24 +471,48 @@ export function Calendar({
             </div>
             {renderMonthView()}
           </CardContent>
-        </Card>}
+        </Card>
+      )}
       
-      {view === 'week' && <WeeklySchedule date={selectedDate} events={filteredEvents} onEdit={handleEditEvent} onDelete={handleDeleteEvent} onCancel={() => setView('month')} hasExistingSchedule={true} existingEvents={filteredEvents} onSave={newEvents => {
-      newEvents.forEach(event => {
-        addEvent({
-          ...event,
-          repeat: {
-            frequency: 'weekly',
-            interval: 1
-          }
-        });
-      });
-      setView('month');
-    }} />}
+      {view === 'week' && (
+        <WeeklySchedule 
+          date={selectedDate} 
+          events={filteredEvents} 
+          onEdit={handleEditEvent} 
+          onDelete={handleDeleteEvent} 
+          onCancel={() => setView('month')} 
+          hasExistingSchedule={true} 
+          existingEvents={filteredEvents} 
+          onAddEvent={openNewEventDialog}
+          onSave={newEvents => {
+            newEvents.forEach(event => {
+              addEvent({
+                ...event,
+                repeat: {
+                  frequency: 'weekly',
+                  interval: 1
+                }
+              });
+            });
+            setView('month');
+          }} 
+        />
+      )}
       
-      {view === 'day' && <DailyView date={selectedDate} events={selectedDayEvents} onBack={() => setView('month')} onTimeSelect={time => {
-      openNewEventDialog(time);
-    }} onEventClick={openEditEventDialog} onEditEvent={handleEditEvent} onDeleteEvent={handleDeleteEvent} activeFilter={activeFilter} />}
+      {view === 'day' && (
+        <DailyView 
+          date={selectedDate} 
+          events={selectedDayEvents} 
+          onBack={() => setView('month')} 
+          onTimeSelect={time => {
+            openNewEventDialog(time);
+          }} 
+          onEventClick={openEditEventDialog} 
+          onEditEvent={handleEditEvent} 
+          onDeleteEvent={handleDeleteEvent} 
+          activeFilter={activeFilter} 
+        />
+      )}
       
       <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
         <DialogContent className="sm:max-w-[425px]">
@@ -448,40 +525,63 @@ export function Calendar({
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="title">Título</Label>
-              <Input id="title" value={newEvent.title} onChange={e => setNewEvent({
-              ...newEvent,
-              title: e.target.value
-            })} placeholder="Título del evento" />
+              <Input 
+                id="title" 
+                value={newEvent.title} 
+                onChange={e => setNewEvent({
+                  ...newEvent,
+                  title: e.target.value
+                })} 
+                placeholder="Título del evento" 
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="description">Descripción</Label>
-              <Textarea id="description" value={newEvent.description || ''} onChange={e => setNewEvent({
-              ...newEvent,
-              description: e.target.value
-            })} placeholder="Descripción (opcional)" />
+              <Textarea 
+                id="description" 
+                value={newEvent.description || ''} 
+                onChange={e => setNewEvent({
+                  ...newEvent,
+                  description: e.target.value
+                })} 
+                placeholder="Descripción (opcional)" 
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="date">Fecha y hora de inicio</Label>
-                <Input id="date" type="datetime-local" value={newEvent.date} onChange={e => setNewEvent({
-                ...newEvent,
-                date: e.target.value
-              })} />
+                <Input 
+                  id="date" 
+                  type="datetime-local" 
+                  value={newEvent.date} 
+                  onChange={e => setNewEvent({
+                    ...newEvent,
+                    date: e.target.value
+                  })} 
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="endDate">Fecha y hora de fin</Label>
-                <Input id="endDate" type="datetime-local" value={newEvent.endDate || ''} onChange={e => setNewEvent({
-                ...newEvent,
-                endDate: e.target.value
-              })} />
+                <Input 
+                  id="endDate" 
+                  type="datetime-local" 
+                  value={newEvent.endDate || ''} 
+                  onChange={e => setNewEvent({
+                    ...newEvent,
+                    endDate: e.target.value
+                  })} 
+                />
               </div>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="type">Tipo</Label>
-              <Select value={newEvent.type} onValueChange={(value: 'exam' | 'assignment' | 'study' | 'class' | 'meeting' | 'other') => setNewEvent({
-              ...newEvent,
-              type: value
-            })}>
+              <Select 
+                value={newEvent.type} 
+                onValueChange={(value: 'exam' | 'assignment' | 'study' | 'class' | 'meeting' | 'other') => setNewEvent({
+                  ...newEvent,
+                  type: value
+                })}
+              >
                 <SelectTrigger id="type">
                   <SelectValue placeholder="Selecciona un tipo de evento" />
                 </SelectTrigger>
@@ -497,22 +597,32 @@ export function Calendar({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="folder">Materia</Label>
-              <Select value={newEvent.folderId || ''} onValueChange={(value) => setNewEvent({
-              ...newEvent,
-              folderId: value || undefined
-            })}>
+              <Select 
+                value={newEvent.folderId || "_empty"}
+                onValueChange={(value) => setNewEvent({
+                  ...newEvent,
+                  folderId: value === "_empty" ? undefined : value
+                })}
+              >
                 <SelectTrigger id="folder">
                   <SelectValue placeholder="Selecciona una materia" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_empty">Sin materia</SelectItem>
-                  {folders.map(folder => <SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>)}
+                  {folders.map(folder => (
+                    <SelectItem key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="grid gap-2">
               <Label>Repetición</Label>
-              <RadioGroup value={repeatOption} onValueChange={(value: 'none' | 'daily' | 'weekly' | 'monthly') => setRepeatOption(value)}>
+              <RadioGroup 
+                value={repeatOption} 
+                onValueChange={(value: 'none' | 'daily' | 'weekly' | 'monthly') => setRepeatOption(value)}
+              >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="none" id="r-none" />
                   <Label htmlFor="r-none">Sin repetición</Label>
@@ -547,21 +657,32 @@ export function Calendar({
           </DialogHeader>
           <div className="py-4">
             <p>¿Estás seguro de que deseas eliminar este evento?</p>
-            {eventToDelete?.repeat && eventToDelete.repeat.frequency && <div className="mt-4">
+            {eventToDelete?.repeat && eventToDelete.repeat.frequency && (
+              <div className="mt-4">
                 <div className="flex items-center space-x-2">
-                  <input type="checkbox" id="delete-all" checked={deleteAllRecurring} onChange={e => setDeleteAllRecurring(e.target.checked)} className="rounded border-gray-300" />
+                  <input 
+                    type="checkbox" 
+                    id="delete-all" 
+                    checked={deleteAllRecurring} 
+                    onChange={e => setDeleteAllRecurring(e.target.checked)} 
+                    className="rounded border-gray-300" 
+                  />
                   <Label htmlFor="delete-all">
                     Eliminar todos los eventos recurrentes de esta serie
                   </Label>
                 </div>
-              </div>}
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-            setShowDeleteConfirmDialog(false);
-            setEventToDelete(null);
-            setDeleteAllRecurring(false);
-          }}>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteConfirmDialog(false);
+                setEventToDelete(null);
+                setDeleteAllRecurring(false);
+              }}
+            >
               Cancelar
             </Button>
             <Button variant="destructive" onClick={confirmDelete}>
@@ -570,5 +691,6 @@ export function Calendar({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>;
+    </div>
+  );
 }

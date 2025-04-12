@@ -22,6 +22,7 @@ interface WeeklyScheduleProps {
   hasExistingSchedule: boolean;
   existingEvents: CalendarEvent[];
   onSave: (events: Omit<CalendarEvent, "id">[]) => void;
+  onAddEvent?: () => void;
 }
 
 type WeeklyEventWithTemp = Omit<CalendarEvent, "id"> & { tempId: string };
@@ -34,7 +35,8 @@ export function WeeklySchedule({
   existingEvents,
   onEdit,
   onDelete,
-  events
+  events,
+  onAddEvent
 }: WeeklyScheduleProps) {
   const { folders } = useRecordings();
   const [scheduleEvents, setScheduleEvents] = useState<WeeklyEventWithTemp[]>([]);
@@ -51,8 +53,8 @@ export function WeeklySchedule({
     folderId: ""
   });
   
-  // Days of the week
-  const weekStart = startOfWeek(date, { weekStartsOn: 0 });
+  // Days of the week - start from Monday (1) instead of Sunday (0)
+  const weekStart = startOfWeek(date, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   
   // Time slots from 7:00 AM to 9:00 PM
@@ -132,6 +134,12 @@ export function WeeklySchedule({
   }, [hasExistingSchedule, existingEvents]);
   
   const handleAddTimeSlot = (dayIndex: number, time: string) => {
+    if (onAddEvent) {
+      // If we have an external event handler, use it instead
+      onAddEvent();
+      return;
+    }
+    
     const selectedDate = weekDays[dayIndex];
     const [hours, minutes] = time.split(":").map(Number);
     
@@ -341,10 +349,10 @@ export function WeeklySchedule({
             <div className="space-y-2">
               <Label htmlFor="folder">Materia</Label>
               <Select
-                value={newEvent.folderId}
+                value={newEvent.folderId || "_empty"}
                 onValueChange={(value) => setNewEvent({
                   ...newEvent,
-                  folderId: value
+                  folderId: value === "_empty" ? "" : value
                 })}
               >
                 <SelectTrigger id="folder">

@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -15,11 +16,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { loadFromStorage, saveToStorage } from "@/lib/storage";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useRecordings } from "@/context/RecordingsContext";
 
 export default function CalendarPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { folders } = useRecordings();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [showAddEventDialog, setShowAddEventDialog] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
@@ -297,6 +301,19 @@ export default function CalendarPage() {
     }
   };
 
+  const openAddEventDialog = () => {
+    setShowAddEventDialog(true);
+    setNewEvent({
+      title: "",
+      description: "",
+      date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+      endDate: format(addHours(new Date(), 1), "yyyy-MM-dd'T'HH:mm"),
+      folderId: "",
+      type: "other",
+      repeat: "none"
+    });
+  };
+
   return (
     <Layout>
       <div className="space-y-4 sm:space-y-6 w-full">
@@ -309,7 +326,7 @@ export default function CalendarPage() {
             {isMobile ? (
               <MobileCalendar 
                 events={events}
-                onAddEvent={() => setShowAddEventDialog(true)}
+                onAddEvent={openAddEventDialog}
                 onEventClick={(event) => {
                   setNewEvent({
                     title: event.title,
@@ -330,7 +347,7 @@ export default function CalendarPage() {
             ) : (
               <Calendar 
                 events={events} 
-                onAddEvent={() => setShowAddEventDialog(true)}
+                onAddEvent={openAddEventDialog}
                 onEditEvent={(event) => handleAddEvent(event)}
                 onDeleteEvent={handleDeleteEvent}
                 activeFilter={activeFilter}
@@ -341,16 +358,14 @@ export default function CalendarPage() {
         </div>
       </div>
       
-      {!isMobile && (
-        <div className="fixed bottom-6 right-6">
-          <Button 
-            onClick={() => setShowAddEventDialog(true)}
-            className="rounded-full shadow-lg w-14 h-14 p-4"
-          >
-            <Plus className="h-6 w-6" />
-          </Button>
-        </div>
-      )}
+      <div className="fixed bottom-6 right-6">
+        <Button 
+          onClick={openAddEventDialog}
+          className="rounded-full shadow-lg w-14 h-14 p-4"
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+      </div>
       
       <Dialog open={showAddEventDialog} onOpenChange={setShowAddEventDialog}>
         <DialogContent className="max-w-[95vw] sm:max-w-[450px]">
@@ -409,6 +424,54 @@ export default function CalendarPage() {
                   })} 
                 />
               </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="type">Tipo</Label>
+              <Select 
+                value={newEvent.type} 
+                onValueChange={(value: "exam" | "assignment" | "study" | "class" | "meeting" | "other") => 
+                  setNewEvent({
+                    ...newEvent,
+                    type: value
+                  })
+                }
+              >
+                <SelectTrigger id="type">
+                  <SelectValue placeholder="Selecciona un tipo de evento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="exam">Examen</SelectItem>
+                  <SelectItem value="assignment">Tarea</SelectItem>
+                  <SelectItem value="study">Estudio</SelectItem>
+                  <SelectItem value="class">Clase</SelectItem>
+                  <SelectItem value="meeting">Reunión</SelectItem>
+                  <SelectItem value="other">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="folder">Materia</Label>
+              <Select
+                value={newEvent.folderId || "_empty"}
+                onValueChange={(value) => setNewEvent({
+                  ...newEvent,
+                  folderId: value === "_empty" ? "" : value
+                })}
+              >
+                <SelectTrigger id="folder">
+                  <SelectValue placeholder="Selecciona una materia" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_empty">Sin materia</SelectItem>
+                  {folders.map(folder => (
+                    <SelectItem key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             
             <div className="space-y-2">
