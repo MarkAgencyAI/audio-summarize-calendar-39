@@ -7,7 +7,7 @@ import { RecordingItem } from "@/components/RecordingItem";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Folder, Mic, FileText, Search, Calendar, Bell, BookOpen } from "lucide-react";
+import { Folder, Mic, FileText, Search, Calendar, Bell, BookOpen, Filter, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { parseISO, format, isWithinInterval, addDays } from "date-fns";
 import { es } from "date-fns/locale";
@@ -17,11 +17,16 @@ import { ToolsCarousel } from "@/components/ToolsCarousel";
 import { NotesSection } from "@/components/NotesSection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LiveTranscriptionSheet } from "@/components/LiveTranscriptionSheet";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Check, X, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AudioRecorderV2 } from "@/components/AudioRecorderV2";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 
 interface CalendarEvent {
   id: string;
@@ -99,32 +104,55 @@ function Transcriptions() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex flex-col sm:flex-col items-start sm:items-center gap-3 mb-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-3">
           <div className="flex items-center flex-1 w-full">
             <Search className="h-4 w-4 text-muted-foreground mr-2" />
             <Input type="search" placeholder="Buscar transcripciones..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
           </div>
           
-          <div className="flex items-center flex-wrap gap-2">
-            <span className="text-sm font-medium mr-1 whitespace-nowrap">Filtrar por:</span>
-            <RadioGroup value={understandingFilter} onValueChange={value => setUnderstandingFilter(value as "all" | "understood" | "not-understood")} className="flex space-x-2">
-              <div className="flex items-center space-x-1">
-                <RadioGroupItem value="all" id="filter-all" className="h-4 w-4" />
-                <Label htmlFor="filter-all" className="text-xs cursor-pointer">Todas</Label>
-              </div>
-              <div className="flex items-center space-x-1">
-                <RadioGroupItem value="understood" id="filter-understood" className="h-4 w-4" />
-                <Label htmlFor="filter-understood" className="text-xs cursor-pointer flex items-center gap-1">
-                  Entendidas <Check className="h-3 w-3 text-green-600" />
-                </Label>
-              </div>
-              <div className="flex items-center space-x-1">
-                <RadioGroupItem value="not-understood" id="filter-not-understood" className="h-4 w-4" />
-                <Label htmlFor="filter-not-understood" className="text-xs cursor-pointer flex items-center gap-1">
-                  No entendidas <X className="h-3 w-3 text-amber-600" />
-                </Label>
-              </div>
-            </RadioGroup>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 gap-1 px-3">
+                  <Filter className="h-4 w-4" />
+                  <span className="hidden sm:inline">Filtrar</span>
+                  {understandingFilter !== "all" && (
+                    <Badge className="ml-1 h-5 px-1 bg-primary/20 text-primary" variant="outline">
+                      {understandingFilter === "understood" ? "Entendidas" : "No entendidas"}
+                    </Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem 
+                  className="flex items-center gap-2 cursor-pointer" 
+                  onClick={() => setUnderstandingFilter("all")}>
+                  <div className="w-4 h-4 flex items-center justify-center">
+                    {understandingFilter === "all" && <Check className="h-4 w-4" />}
+                  </div>
+                  <span>Todas</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="flex items-center gap-2 cursor-pointer" 
+                  onClick={() => setUnderstandingFilter("understood")}>
+                  <div className="w-4 h-4 flex items-center justify-center text-green-600">
+                    {understandingFilter === "understood" ? <Check className="h-4 w-4" /> : <Check className="h-4 w-4 opacity-0" />}
+                  </div>
+                  <span>Entendidas</span>
+                  <Check className="h-3 w-3 ml-auto text-green-600" />
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="flex items-center gap-2 cursor-pointer" 
+                  onClick={() => setUnderstandingFilter("not-understood")}>
+                  <div className="w-4 h-4 flex items-center justify-center text-amber-600">
+                    {understandingFilter === "not-understood" ? <Check className="h-4 w-4" /> : <Check className="h-4 w-4 opacity-0" />}
+                  </div>
+                  <span>No entendidas</span>
+                  <X className="h-3 w-3 ml-auto text-amber-600" />
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         
