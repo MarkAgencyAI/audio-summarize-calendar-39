@@ -139,7 +139,17 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           .order('created_at', { ascending: true });
 
         if (foldersError) throw foldersError;
-        setFolders(foldersData || []);
+        
+        // Convertir el formato de Supabase al formato de la aplicación
+        const formattedFolders: Folder[] = (foldersData || []).map(folder => ({
+          id: folder.id,
+          name: folder.name,
+          color: folder.color,
+          icon: folder.icon,
+          createdAt: folder.created_at
+        }));
+        
+        setFolders(formattedFolders);
 
         // Cargar grabaciones
         const { data: recordingsData, error: recordingsError } = await supabase
@@ -148,7 +158,26 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           .order('created_at', { ascending: false });
 
         if (recordingsError) throw recordingsError;
-        setRecordings(recordingsData || []);
+        
+        // Convertir el formato de Supabase al formato de la aplicación
+        const formattedRecordings: Recording[] = (recordingsData || []).map(recording => ({
+          id: recording.id,
+          name: recording.name,
+          date: recording.date,
+          duration: recording.duration,
+          audioData: "", // Necesario porque no se almacena en Supabase
+          folderId: recording.folder_id,
+          output: recording.output,
+          language: recording.language,
+          subject: recording.subject,
+          webhookData: recording.webhook_data,
+          speakerMode: recording.speaker_mode as 'single' | 'multiple',
+          understood: recording.understood || false,
+          createdAt: recording.created_at,
+          updatedAt: recording.updated_at
+        }));
+        
+        setRecordings(formattedRecordings);
 
         // Cargar notas
         const { data: notesData, error: notesError } = await supabase
@@ -157,7 +186,19 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           .order('created_at', { ascending: false });
 
         if (notesError) throw notesError;
-        setNotes(notesData || []);
+        
+        // Convertir el formato de Supabase al formato de la aplicación
+        const formattedNotes: Note[] = (notesData || []).map(note => ({
+          id: note.id,
+          title: note.title,
+          content: note.content,
+          folderId: note.folder_id,
+          imageUrl: note.image_url,
+          createdAt: note.created_at,
+          updatedAt: note.updated_at
+        }));
+        
+        setNotes(formattedNotes);
 
         // Cargar calificaciones
         const { data: gradesData, error: gradesError } = await supabase
@@ -166,7 +207,17 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           .order('created_at', { ascending: false });
 
         if (gradesError) throw gradesError;
-        setGrades(gradesData || []);
+        
+        // Convertir el formato de Supabase al formato de la aplicación
+        const formattedGrades: Grade[] = (gradesData || []).map(grade => ({
+          id: grade.id,
+          name: grade.name,
+          score: grade.score,
+          folderId: grade.folder_id,
+          createdAt: grade.created_at
+        }));
+        
+        setGrades(formattedGrades);
 
       } catch (error) {
         console.error('Error cargando datos:', error);
@@ -319,12 +370,4 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       {children}
     </RecordingsContext.Provider>
   );
-};
-
-export function useRecordings() {
-  const context = useContext(RecordingsContext);
-  if (!context) {
-    throw new Error("useRecordings must be used within a RecordingsProvider");
-  }
-  return context;
 };
