@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { AudioPlayerHandle } from "./types";
 import { toast } from "sonner";
 import { AudioChapter } from "@/context/RecordingsContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AudioPlayerProps {
   audioUrl?: string;
@@ -60,13 +61,13 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
     const audioRef = useRef<HTMLAudioElement>(null);
     const timelineRef = useRef<HTMLDivElement>(null);
     
-    // Wave selection state
     const [selectionStart, setSelectionStart] = useState<number | null>(null);
     const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
     const [isSelecting, setIsSelecting] = useState(false);
     const waveformRef = useRef<HTMLDivElement>(null);
 
-    // Imperative handle to control the audio player from parent components
+    const isMobile = useIsMobile();
+
     useImperativeHandle(ref, () => ({
       play: () => {
         if (audioRef.current) {
@@ -94,14 +95,12 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       }
     }));
 
-    // Reset selection state when selection mode is toggled off
     useEffect(() => {
       if (!isSelectionMode) {
         clearSelection();
       }
     }, [isSelectionMode]);
 
-    // Load audio source
     useEffect(() => {
       if (!audioRef.current) return;
 
@@ -147,7 +146,6 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       };
     }, [audioUrl, audioBlob]);
 
-    // Play/Pause
     const togglePlay = () => {
       if (audioRef.current) {
         if (isPlaying) {
@@ -159,7 +157,6 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       }
     };
 
-    // Volume control
     const handleVolumeChange = (value: number[]) => {
       const newVolume = value[0] / 100;
       setVolume(newVolume);
@@ -168,7 +165,6 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       }
     };
 
-    // Mute control
     const toggleMute = () => {
       setIsMuted(!isMuted);
       if (audioRef.current) {
@@ -176,7 +172,6 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       }
     };
 
-    // Seek control
     const handleSeek = (value: number[]) => {
       if (audioRef.current) {
         const newTime = (value[0] / 100) * duration;
@@ -185,7 +180,6 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       }
     };
 
-    // Skip back/forward
     const skip = (seconds: number) => {
       if (audioRef.current) {
         const newTime = audioRef.current.currentTime + seconds;
@@ -195,8 +189,7 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
         }
       }
     };
-    
-    // Wave selection handlers
+
     const handleWaveMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
       if (!waveformRef.current || !isSelectionMode) return;
       
@@ -209,7 +202,7 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       setSelectionStart(newTime);
       setSelectionEnd(null);
     };
-    
+
     const handleWaveMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
       if (!isSelecting || !waveformRef.current) return;
       
@@ -220,11 +213,11 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       
       setSelectionEnd(newTime);
     };
-    
+
     const handleWaveMouseUp = () => {
       setIsSelecting(false);
     };
-    
+
     const handleTimelineHover = (e: React.MouseEvent<HTMLDivElement>) => {
       if (!timelineRef.current || duration <= 0) return;
       
@@ -235,7 +228,6 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       
       setHoverTime(hoverTimeValue);
       
-      // Find chapter at hover position
       const chapter = sortedChapters.find(
         chapter => hoverTimeValue >= chapter.startTime && 
         (!chapter.endTime || hoverTimeValue <= chapter.endTime)
@@ -243,12 +235,12 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       
       setHoverChapter(chapter || null);
     };
-    
+
     const handleTimelineLeave = () => {
       setHoverTime(null);
       setHoverChapter(null);
     };
-    
+
     const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
       if (!timelineRef.current) return;
       
@@ -257,24 +249,21 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       const percentage = offsetX / rect.width;
       const newTime = percentage * duration;
       
-      // Check if clicking on a chapter
       const clickedChapter = sortedChapters.find(
         chapter => newTime >= chapter.startTime && 
         (!chapter.endTime || newTime <= chapter.endTime)
       );
       
       if (clickedChapter && onChapterClick) {
-        // If clicking on a chapter, start playing from chapter start
         onChapterClick(clickedChapter);
       } else {
-        // Otherwise just seek to the clicked position
         if (audioRef.current) {
           audioRef.current.currentTime = newTime;
           setCurrentTime(newTime);
         }
       }
     };
-    
+
     const handleWaveClick = (e: React.MouseEvent<HTMLDivElement>) => {
       if (!waveformRef.current || isSelecting || isSelectionMode) return;
       
@@ -283,32 +272,28 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       const percentage = offsetX / rect.width;
       const newTime = percentage * duration;
       
-      // Check if clicking on a chapter
       const clickedChapter = sortedChapters.find(
         chapter => newTime >= chapter.startTime && 
         (!chapter.endTime || newTime <= chapter.endTime)
       );
       
       if (clickedChapter && onChapterClick) {
-        // If clicking on a chapter, start playing from chapter start
         onChapterClick(clickedChapter);
       } else {
-        // Otherwise just seek to the clicked position
         if (audioRef.current) {
           audioRef.current.currentTime = newTime;
           setCurrentTime(newTime);
         }
       }
     };
-    
+
     const clearSelection = () => {
       setSelectionStart(null);
       setSelectionEnd(null);
     };
-    
+
     const handleAddChapter = () => {
       if (onAddChapter && selectionStart !== null && selectionEnd !== null) {
-        // Ensure start time is always less than end time
         const startTime = Math.min(selectionStart, selectionEnd);
         const endTime = Math.max(selectionStart, selectionEnd);
         
@@ -320,14 +305,12 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       }
     };
 
-    // Format time
     const formatTime = (time: number): string => {
       const minutes = Math.floor(time / 60);
       const seconds = Math.floor(time % 60);
       return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
     };
-    
-    // Calculate position and width for selection visual
+
     const selectionStartPercent = selectionStart !== null ? (selectionStart / duration) * 100 : null;
     const selectionEndPercent = selectionEnd !== null ? (selectionEnd / duration) * 100 : null;
     const selectionLeftPercent = selectionStartPercent !== null && selectionEndPercent !== null 
@@ -337,16 +320,13 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       ? Math.abs(selectionEndPercent - selectionStartPercent) 
       : null;
 
-    // Sort chapters by start time to ensure they render in correct order
     const sortedChapters = [...chapters].sort((a, b) => a.startTime - b.startTime);
 
-    // Find the active chapter based on current time
     const activeChapter = sortedChapters.find(
       chapter => currentTime >= chapter.startTime && 
       (!chapter.endTime || currentTime <= chapter.endTime)
     );
 
-    // Generate chapters for visualization in YouTube-style timeline
     const renderChaptersTimeline = () => {
       if (sortedChapters.length === 0) return null;
       
@@ -382,19 +362,16 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
             );
           })}
           
-          {/* Current position indicator */}
           <div 
             className="absolute top-0 h-full w-1 bg-white shadow-md z-10 pointer-events-none" 
             style={{ left: `${(currentTime / duration) * 100}%` }}
           />
           
-          {/* Played portion overlay */}
           <div 
             className="absolute top-0 left-0 h-full bg-white/20 pointer-events-none" 
             style={{ width: `${(currentTime / duration) * 100}%` }}
           />
           
-          {/* Hover chapter tooltip */}
           {hoverTime !== null && hoverChapter && (
             <div 
               className="absolute top-0 transform -translate-y-full -translate-x-1/2 bg-black text-white px-2 py-1 rounded text-xs whitespace-nowrap z-20 shadow-lg"
@@ -410,9 +387,7 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       );
     };
 
-    // Generate audio wave bars for visualization
     const renderAudioWave = () => {
-      // Create a dynamic height for each bar based on a sine wave pattern
       return (
         <div className={`relative h-16 bg-slate-50 dark:bg-slate-800/30 rounded-lg p-1 overflow-hidden border border-slate-200 dark:border-slate-700 ${isSelectionMode ? 'cursor-crosshair' : 'cursor-pointer'}`}
              ref={waveformRef}
@@ -422,7 +397,6 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
              onMouseLeave={handleWaveMouseUp}
              onClick={handleWaveClick}
         >
-          {/* Chapter visualization - render colored sections for each chapter */}
           {sortedChapters.length > 0 && (
             <div className="absolute bottom-0 left-0 right-0 h-12 flex">
               {sortedChapters.map((chapter, index) => {
@@ -441,12 +415,11 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
                     style={{ 
                       width: `${width}%`, 
                       marginLeft: index === 0 ? `${startPercent}%` : 0,
-                      background: `${chapter.color}40`, // Add transparency
+                      background: `${chapter.color}40`,
                       borderLeft: index > 0 ? `1px solid ${chapter.color}` : '',
                     }}
                     title={chapter.title}
                   >
-                    {/* Chapter title indicator on top */}
                     {width > 10 && (
                       <div 
                         className="absolute -top-1 left-2 text-xs truncate max-w-[90%] px-1 rounded"
@@ -456,10 +429,8 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
                       </div>
                     )}
                     
-                    {/* Audio wave visualization */}
                     <div className="flex items-end justify-center h-10 w-full">
                       {Array.from({ length: Math.max(3, Math.floor(width / 3)) }).map((_, i) => {
-                        // Bar height based on position within chapter
                         const barHeight = 8 + Math.sin(i / (width / 10) * Math.PI) * 5;
                         return (
                           <div
@@ -480,11 +451,9 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
             </div>
           )}
           
-          {/* Base audio wave when no chapters */}
           {sortedChapters.length === 0 && (
             <div className="absolute bottom-0 left-0 right-0 flex items-end justify-center h-12 px-2">
               {Array.from({ length: 40 }).map((_, i) => {
-                // Bar height based on sine wave pattern for base visualization
                 const height = 12 + Math.sin(i / (40 / 6) * Math.PI) * 10;
                 return (
                   <div 
@@ -501,13 +470,11 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
             </div>
           )}
           
-          {/* Played portion overlay */}
           <div 
             className="absolute bottom-0 left-0 h-12 bg-blue-500/10 pointer-events-none" 
             style={{ width: `${(currentTime / duration) * 100}%` }}
           />
           
-          {/* Selected region - only shown in selection mode */}
           {isSelectionMode && selectionLeftPercent !== null && selectionWidthPercent !== null && (
             <div 
               className="absolute bottom-0 h-12 bg-blue-500/30 border-l border-r border-blue-500 pointer-events-none" 
@@ -519,7 +486,6 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
             />
           )}
           
-          {/* Current position indicator */}
           <div 
             className="absolute bottom-0 h-12 w-0.5 bg-red-500 pointer-events-none z-10" 
             style={{ left: `${(currentTime / duration) * 100}%` }}
@@ -527,7 +493,6 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
             <div className="w-2 h-2 rounded-full bg-red-500 absolute -top-1 left-1/2 transform -translate-x-1/2"></div>
           </div>
           
-          {/* Time markers */}
           <div className="absolute top-0 left-0 right-0 flex justify-between px-2 text-[10px] text-gray-500">
             <span>{formatTime(0)}</span>
             <span>{formatTime(Math.floor(duration / 2))}</span>
@@ -537,7 +502,6 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       );
     };
 
-    // Render chapter badge/indicator for active chapter
     const renderActiveChapter = () => {
       if (!activeChapter) return null;
 
@@ -552,63 +516,61 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
     };
 
     return (
-      <div className="flex flex-col">
+      <div className="flex flex-col space-y-3">
         <audio ref={audioRef} preload="metadata" />
 
-        {/* Current chapter indicator */}
         {activeChapter && (
           <div className="mb-3 flex items-center justify-center">
             {renderActiveChapter()}
           </div>
         )}
 
-        {/* Audio wave visualization */}
         <div className="mb-2">
           {renderAudioWave()}
         </div>
         
-        {/* YouTube-style chapters timeline */}
         {renderChaptersTimeline()}
 
-        {/* Time display */}
         <div className="flex justify-between text-xs text-muted-foreground mt-1 mb-2">
           <span>{formatTime(currentTime)}</span>
           <span>{formatTime(duration)}</span>
         </div>
 
-        {/* Controls */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={togglePlay}
-            aria-label={isPlaying ? "Pause" : "Play"}
-            className="h-9 w-9"
-          >
-            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-          </Button>
+        <div className={`flex flex-col space-y-3 ${isMobile ? 'items-stretch' : 'items-center'}`}>
+          <div className="flex items-center justify-center space-x-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={togglePlay}
+              aria-label={isPlaying ? "Pause" : "Play"}
+              className="h-12 w-12"
+            >
+              {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
+            </Button>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => skip(-10)}
-            aria-label="Skip Back 10 seconds"
-            className="h-9 w-9"
-          >
-            <SkipBack className="h-4 w-4" />
-          </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => skip(-10)}
+              aria-label="Skip Back 10 seconds"
+              className="h-12 w-12"
+            >
+              <SkipBack className="h-6 w-6" />
+            </Button>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => skip(10)}
-            aria-label="Skip Forward 10 seconds"
-            className="h-9 w-9"
-          >
-            <SkipForward className="h-4 w-4" />
-          </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => skip(10)}
+              aria-label="Skip Forward 10 seconds"
+              className="h-12 w-12"
+            >
+              <SkipForward className="h-6 w-6" />
+            </Button>
+          </div>
 
-          <div className="flex-1 flex items-center gap-2">
+          <div className="flex items-center space-x-2 w-full">
+            <span className="text-xs text-muted-foreground">{formatTime(currentTime)}</span>
             <Slider
               defaultValue={[0]}
               max={100}
@@ -618,51 +580,55 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
               value={[(currentTime / duration) * 100 || 0]}
               className="flex-1"
             />
+            <span className="text-xs text-muted-foreground">{formatTime(duration)}</span>
           </div>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleMute}
-            aria-label={isMuted ? "Unmute" : "Mute"}
-            className="h-9 w-9"
-          >
-            {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-          </Button>
+          <div className="flex items-center justify-center space-x-2 w-full">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleMute}
+              aria-label={isMuted ? "Unmute" : "Mute"}
+              className="h-10 w-10"
+            >
+              {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+            </Button>
+            <Slider
+              defaultValue={[100]}
+              max={100}
+              step={1}
+              aria-label="Volume"
+              onValueChange={handleVolumeChange}
+              value={[volume * 100]}
+              className="w-full max-w-xs"
+            />
+          </div>
 
-          <Slider
-            defaultValue={[100]}
-            max={100}
-            step={1}
-            aria-label="Volume"
-            onValueChange={handleVolumeChange}
-            value={[volume * 100]}
-            className="w-24"
-          />
-          
-          {isSelectionMode && selectionStart !== null && selectionEnd !== null && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handleAddChapter}
-              className="flex items-center gap-2 border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/70"
-            >
-              <Scissors className="h-4 w-4" />
-              <span>Crear capítulo</span>
-            </Button>
-          )}
-          
-          {onAddChapter && (
-            <Button 
-              variant={isSelectionMode ? "default" : "outline"}
-              size="sm"
-              onClick={onToggleSelectionMode}
-              className={`flex items-center gap-2 ${isSelectionMode ? 'bg-blue-500 text-white hover:bg-blue-600' : 'border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/70'}`}
-            >
-              <Bookmark className="h-4 w-4" />
-              <span>{isSelectionMode ? "Cancelar selección" : "Crear capítulo"}</span>
-            </Button>
-          )}
+          <div className="flex items-center justify-center space-x-2 w-full">
+            {isSelectionMode && selectionStart !== null && selectionEnd !== null && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleAddChapter}
+                className="flex items-center gap-2 border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/70"
+              >
+                <Scissors className="h-4 w-4" />
+                <span>Crear capítulo</span>
+              </Button>
+            )}
+            
+            {onAddChapter && (
+              <Button 
+                variant={isSelectionMode ? "default" : "outline"}
+                size="sm"
+                onClick={onToggleSelectionMode}
+                className={`flex items-center gap-2 ${isSelectionMode ? 'bg-blue-500 text-white hover:bg-blue-600' : 'border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/70'}`}
+              >
+                <Bookmark className="h-4 w-4" />
+                <span>{isSelectionMode ? "Cancelar selección" : "Crear capítulo"}</span>
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     );
