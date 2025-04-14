@@ -36,7 +36,7 @@ export function RecordingDetails({
   const [activeTab, setActiveTab] = useState("transcription");
   const [currentAudioTime, setCurrentAudioTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(recording.duration || 0);
-  const [mainView, setMainView] = useState<"player" | "content" | "notes">("content");
+  const [mainView, setMainView] = useState<"content" | "notes">("content");
   const audioPlayerRef = useRef<AudioPlayerHandle>(null);
   const isMobile = useIsMobile();
 
@@ -131,22 +131,6 @@ export function RecordingDetails({
     onDeleteEvent
   };
 
-  const renderPlayerContent = () => (
-    <div className="p-4 flex flex-col">
-      <h3 className="text-lg font-semibold mb-4">Reproductor de Audio</h3>
-      <AudioPlayerV2 
-        audioUrl={recording.audioUrl} 
-        audioBlob={audioBlob || undefined}
-        initialDuration={recording.duration} 
-        onTimeUpdate={handleTimeUpdate} 
-        ref={audioPlayerRef}
-        onDurationChange={setAudioDuration}
-        onAddChapter={handleAddChapterFromPlayer}
-        chapters={chapters}
-      />
-    </div>
-  );
-
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogContent className="p-0 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg w-[95vw] md:w-[90vw] lg:w-[80vw] max-w-6xl h-[90vh] flex flex-col overflow-hidden">
@@ -155,17 +139,28 @@ export function RecordingDetails({
             <RecordingHeader recording={recording} onDeleteEvent={onDeleteEvent} />
           </div>
           
+          {/* Audio player section - Always visible */}
+          <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+            <AudioPlayerV2 
+              audioUrl={recording.audioUrl} 
+              audioBlob={audioBlob || undefined}
+              initialDuration={recording.duration} 
+              onTimeUpdate={handleTimeUpdate} 
+              ref={audioPlayerRef}
+              onDurationChange={setAudioDuration}
+              onAddChapter={handleAddChapterFromPlayer}
+              chapters={chapters}
+            />
+          </div>
+          
+          {/* Content tabs - Transcription, Summary, Notes */}
           <Tabs 
             value={mainView} 
-            onValueChange={(value) => setMainView(value as "player" | "content" | "notes")} 
+            onValueChange={(value) => setMainView(value as "content" | "notes")} 
             className="flex-grow overflow-hidden flex flex-col"
           >
             <div className="px-4 pt-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
-              <TabsList className="grid grid-cols-3 w-full bg-slate-100 dark:bg-slate-800/50 p-1 rounded-lg">
-                <TabsTrigger value="player" className="flex items-center gap-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm">
-                  <Headphones className="h-4 w-4" />
-                  <span>Reproductor</span>
-                </TabsTrigger>
+              <TabsList className="grid grid-cols-2 w-full bg-slate-100 dark:bg-slate-800/50 p-1 rounded-lg">
                 <TabsTrigger value="content" className="flex items-center gap-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm">
                   <FileText className="h-4 w-4" />
                   <span>Contenido</span>
@@ -178,11 +173,7 @@ export function RecordingDetails({
             </div>
             
             <div className="flex-grow overflow-auto">
-              <TabsContent value="player" className="m-0 p-0">
-                {renderPlayerContent()}
-              </TabsContent>
-              
-              <TabsContent value="content" className="m-0 p-0">
+              <TabsContent value="content" className="m-0 p-0 h-full">
                 <RecordingTabs 
                   data={recordingDetailsData} 
                   onTabChange={setActiveTab} 
@@ -192,7 +183,7 @@ export function RecordingDetails({
                 />
               </TabsContent>
 
-              <TabsContent value="notes" className="m-0 p-0">
+              <TabsContent value="notes" className="m-0 p-0 h-full">
                 <NotesSection 
                   folderId={recording.folderId} 
                   sectionTitle="Apuntes de esta grabación" 
