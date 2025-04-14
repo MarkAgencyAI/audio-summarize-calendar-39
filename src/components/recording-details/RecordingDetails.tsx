@@ -37,6 +37,7 @@ export function RecordingDetails({
   const [currentAudioTime, setCurrentAudioTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(recording.duration || 0);
   const [mainView, setMainView] = useState<"content" | "notes">("content");
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
   const audioPlayerRef = useRef<AudioPlayerHandle>(null);
   const isMobile = useIsMobile();
 
@@ -116,6 +117,14 @@ export function RecordingDetails({
   const handleAddChapterFromPlayer = (startTime: number, endTime?: number) => {
     handleAddChapter(startTime, endTime);
     toast.success("Fragmento seleccionado para crear capítulo");
+    setIsSelectionMode(false);
+  };
+
+  const toggleSelectionMode = () => {
+    setIsSelectionMode(!isSelectionMode);
+    if (!isSelectionMode) {
+      toast.info("Selecciona una sección de audio para crear un capítulo");
+    }
   };
 
   const recordingDetailsData: RecordingDetailsType = {
@@ -150,6 +159,9 @@ export function RecordingDetails({
               onDurationChange={setAudioDuration}
               onAddChapter={handleAddChapterFromPlayer}
               chapters={chapters}
+              isSelectionMode={isSelectionMode}
+              onChapterClick={handleChapterClick}
+              onToggleSelectionMode={toggleSelectionMode}
             />
           </div>
           

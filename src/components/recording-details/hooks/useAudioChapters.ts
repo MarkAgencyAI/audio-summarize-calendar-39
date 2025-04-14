@@ -126,8 +126,12 @@ export function useAudioChapters(
 
   const handleChapterClick = (chapter: AudioChapter) => {
     if (audioPlayerRef.current) {
+      // Seek to the start of the chapter
       audioPlayerRef.current.seek(chapter.startTime);
       setActiveChapterId(chapter.id);
+      
+      // Start playback
+      audioPlayerRef.current.play();
     }
   };
 

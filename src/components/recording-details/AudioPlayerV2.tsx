@@ -1,4 +1,3 @@
-
 import React, {
   useState,
   useRef,
@@ -13,7 +12,6 @@ import {
   SkipForward,
   Volume2,
   VolumeX,
-  Clock,
   Bookmark,
   Scissors,
 } from "lucide-react";
@@ -31,6 +29,9 @@ interface AudioPlayerProps {
   onDurationChange?: (duration: number) => void;
   onAddChapter?: (startTime: number, endTime: number) => void;
   chapters?: AudioChapter[];
+  isSelectionMode?: boolean;
+  onToggleSelectionMode?: () => void;
+  onChapterClick?: (chapter: AudioChapter) => void;
 }
 
 export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
@@ -43,6 +44,9 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       onDurationChange,
       onAddChapter,
       chapters = [],
+      isSelectionMode = false,
+      onToggleSelectionMode,
+      onChapterClick
     },
     ref
   ) => {
@@ -89,6 +93,13 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
         return currentTime;
       }
     }));
+
+    // Reset selection state when selection mode is toggled off
+    useEffect(() => {
+      if (!isSelectionMode) {
+        clearSelection();
+      }
+    }, [isSelectionMode]);
 
     // Load audio source
     useEffect(() => {
@@ -187,7 +198,7 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
     
     // Wave selection handlers
     const handleWaveMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!waveformRef.current) return;
+      if (!waveformRef.current || !isSelectionMode) return;
       
       const rect = waveformRef.current.getBoundingClientRect();
       const offsetX = e.clientX - rect.left;
@@ -238,17 +249,55 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       setHoverChapter(null);
     };
     
+    const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!timelineRef.current) return;
+      
+      const rect = timelineRef.current.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left;
+      const percentage = offsetX / rect.width;
+      const newTime = percentage * duration;
+      
+      // Check if clicking on a chapter
+      const clickedChapter = sortedChapters.find(
+        chapter => newTime >= chapter.startTime && 
+        (!chapter.endTime || newTime <= chapter.endTime)
+      );
+      
+      if (clickedChapter && onChapterClick) {
+        // If clicking on a chapter, start playing from chapter start
+        onChapterClick(clickedChapter);
+      } else {
+        // Otherwise just seek to the clicked position
+        if (audioRef.current) {
+          audioRef.current.currentTime = newTime;
+          setCurrentTime(newTime);
+        }
+      }
+    };
+    
     const handleWaveClick = (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!waveformRef.current || isSelecting) return;
+      if (!waveformRef.current || isSelecting || isSelectionMode) return;
       
       const rect = waveformRef.current.getBoundingClientRect();
       const offsetX = e.clientX - rect.left;
       const percentage = offsetX / rect.width;
       const newTime = percentage * duration;
       
-      if (audioRef.current) {
-        audioRef.current.currentTime = newTime;
-        setCurrentTime(newTime);
+      // Check if clicking on a chapter
+      const clickedChapter = sortedChapters.find(
+        chapter => newTime >= chapter.startTime && 
+        (!chapter.endTime || newTime <= chapter.endTime)
+      );
+      
+      if (clickedChapter && onChapterClick) {
+        // If clicking on a chapter, start playing from chapter start
+        onChapterClick(clickedChapter);
+      } else {
+        // Otherwise just seek to the clicked position
+        if (audioRef.current) {
+          audioRef.current.currentTime = newTime;
+          setCurrentTime(newTime);
+        }
       }
     };
     
@@ -307,6 +356,7 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
           ref={timelineRef}
           onMouseMove={handleTimelineHover}
           onMouseLeave={handleTimelineLeave}
+          onClick={handleTimelineClick}
         >
           {sortedChapters.map((chapter, index) => {
             const startPercent = (chapter.startTime / duration) * 100;
@@ -364,7 +414,7 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
     const renderAudioWave = () => {
       // Create a dynamic height for each bar based on a sine wave pattern
       return (
-        <div className="relative h-16 bg-slate-50 dark:bg-slate-800/30 rounded-lg p-1 cursor-pointer overflow-hidden border border-slate-200 dark:border-slate-700"
+        <div className={`relative h-16 bg-slate-50 dark:bg-slate-800/30 rounded-lg p-1 overflow-hidden border border-slate-200 dark:border-slate-700 ${isSelectionMode ? 'cursor-crosshair' : 'cursor-pointer'}`}
              ref={waveformRef}
              onMouseDown={handleWaveMouseDown}
              onMouseMove={handleWaveMouseMove}
@@ -457,8 +507,8 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
             style={{ width: `${(currentTime / duration) * 100}%` }}
           />
           
-          {/* Selected region */}
-          {selectionLeftPercent !== null && selectionWidthPercent !== null && (
+          {/* Selected region - only shown in selection mode */}
+          {isSelectionMode && selectionLeftPercent !== null && selectionWidthPercent !== null && (
             <div 
               className="absolute bottom-0 h-12 bg-blue-500/30 border-l border-r border-blue-500 pointer-events-none" 
               style={{
@@ -590,7 +640,7 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
             className="w-24"
           />
           
-          {selectionStart !== null && selectionEnd !== null && (
+          {isSelectionMode && selectionStart !== null && selectionEnd !== null && (
             <Button 
               variant="outline" 
               size="sm"
@@ -602,15 +652,15 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
             </Button>
           )}
           
-          {!(selectionStart !== null && selectionEnd !== null) && onAddChapter && (
+          {onAddChapter && (
             <Button 
-              variant="outline" 
+              variant={isSelectionMode ? "default" : "outline"}
               size="sm"
-              onClick={() => toast.info("Selecciona una sección de audio para crear un capítulo")}
-              className="flex items-center gap-2 border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/70"
+              onClick={onToggleSelectionMode}
+              className={`flex items-center gap-2 ${isSelectionMode ? 'bg-blue-500 text-white hover:bg-blue-600' : 'border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/70'}`}
             >
               <Bookmark className="h-4 w-4" />
-              <span>Crear capítulo</span>
+              <span>{isSelectionMode ? "Cancelar selección" : "Crear capítulo"}</span>
             </Button>
           )}
         </div>
