@@ -29,31 +29,31 @@ export function TimeSlot({ event, onClick, onDelete, getFolderName, rowHeight = 
 
   return (
     <div 
-      className="border-l border-r border-border p-0.5 sm:p-1 cursor-pointer min-h-[80px] transition-colors hover:bg-accent/20 weekly-time-slot relative"
+      className="border-r border-border p-0.5 cursor-pointer min-h-[80px] transition-colors hover:bg-accent/20 weekly-time-slot relative"
       onClick={() => !event && onClick()}
     >
       {event ? (
         <div 
-          className="absolute left-0 right-0 mx-0.5 sm:mx-1 rounded-md overflow-hidden weekly-event z-10"
+          className="absolute left-0 right-0 mx-0.5 rounded-sm overflow-hidden weekly-event z-10"
           style={{ 
             backgroundColor: `${eventTypeColors[event.type]}20`,
-            borderLeft: `3px solid ${eventTypeColors[event.type]}`,
+            borderLeft: `2px solid ${eventTypeColors[event.type]}`,
             color: eventTypeColors[event.type],
             height: `${getEventHeight()}px`,
-            top: '4px'
+            top: '2px'
           }}
         >
           <div className="flex justify-between items-start p-1">
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-[10px] sm:text-sm truncate">{event.title}</p>
+              <p className="font-medium text-[10px] truncate">{event.title}</p>
               {event.folderId && (
-                <p className="text-[8px] sm:text-xs opacity-80 truncate">{getFolderName(event.folderId)}</p>
+                <p className="text-[8px] opacity-80 truncate">{getFolderName(event.folderId)}</p>
               )}
             </div>
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-4 w-4 opacity-50 hover:opacity-100 ml-1"
+              className="h-4 w-4 opacity-50 hover:opacity-100"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(event.tempId);
@@ -63,11 +63,7 @@ export function TimeSlot({ event, onClick, onDelete, getFolderName, rowHeight = 
             </Button>
           </div>
         </div>
-      ) : (
-        <div className="h-full weekly-add-slot">
-          {/* Empty slot */}
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }

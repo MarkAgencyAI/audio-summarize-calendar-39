@@ -197,65 +197,69 @@ export function WeeklyScheduleGrid({
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader className="p-4">
           <div className="flex items-center justify-between">
-            <Button variant="outline" size="icon" onClick={handlePrevWeek}>
+            <Button variant="outline" size="icon" onClick={handlePrevWeek} className="h-8 w-8">
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <CardTitle className="text-base md:text-lg font-medium">
+            <CardTitle className="text-sm md:text-base font-medium">
               Cronograma semanal
             </CardTitle>
-            <Button variant="outline" size="icon" onClick={handleNextWeek}>
+            <Button variant="outline" size="icon" onClick={handleNextWeek} className="h-8 w-8">
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </CardHeader>
         
-        <CardContent className="p-4 pt-0">
-          <div className="overflow-x-auto">
-            <div className="grid grid-cols-8 min-w-[700px]">
-              <div className="col-span-1">
-                <div className="h-10 flex items-center justify-center font-medium text-xs sm:text-sm">
-                  Hora
+        <CardContent className="p-0">
+          <ScrollArea className="h-[calc(100vh-220px)]">
+            <div className="min-w-[700px]">
+              <div className="grid grid-cols-[60px_repeat(7,1fr)]">
+                <div className="sticky top-0 z-10 bg-background border-b">
+                  <div className="h-12" />
                 </div>
-                {hours.map(hour => (
-                  <div key={hour} className="h-20 flex items-center justify-center border-t border-border text-xs sm:text-sm">
-                    {hour}:00
+                {weekDays.map(day => (
+                  <div key={day.toString()} className="sticky top-0 z-10 bg-background border-b px-1">
+                    <div className="h-12 flex flex-col items-center justify-center">
+                      <span className="text-xs font-medium capitalize">
+                        {format(day, "EEE", { locale: es })}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {format(day, "d")}
+                      </span>
+                    </div>
                   </div>
                 ))}
+
+                {hours.map(hour => (
+                  <React.Fragment key={hour}>
+                    <div className="sticky left-0 bg-background border-r h-20 flex items-center justify-center text-xs text-muted-foreground">
+                      {hour}:00
+                    </div>
+                    {weekDays.map(day => (
+                      <TimeSlot
+                        key={generateTimeSlotKey(day, hour)}
+                        event={getEventForTimeSlot(day, hour)}
+                        onClick={() => handleAddEvent(day, hour)}
+                        onDelete={handleDeleteEvent}
+                        getFolderName={getFolderName}
+                        rowHeight={80}
+                      />
+                    ))}
+                  </React.Fragment>
+                ))}
               </div>
-              
-              {weekDays.map(day => (
-                <div key={day.toString()} className="col-span-1">
-                  <div className="h-10 flex items-center justify-center font-medium text-xs sm:text-sm capitalize">
-                    {format(day, "EEE", { locale: es })}
-                    <span className="ml-1 text-[10px] sm:text-xs font-normal text-muted-foreground">
-                      {format(day, "d")}
-                    </span>
-                  </div>
-                  {hours.map(hour => (
-                    <TimeSlot 
-                      key={generateTimeSlotKey(day, hour)}
-                      event={getEventForTimeSlot(day, hour)}
-                      onClick={() => handleAddEvent(day, hour)}
-                      onDelete={handleDeleteEvent}
-                      getFolderName={getFolderName}
-                      rowHeight={80}
-                    />
-                  ))}
-                </div>
-              ))}
             </div>
-          </div>
+          </ScrollArea>
         </CardContent>
         
-        <CardFooter className="flex justify-between p-4 pt-0">
-          <Button variant="outline" onClick={onCancel}>
+        <CardFooter className="flex justify-between p-4 border-t">
+          <Button variant="outline" onClick={onCancel} size="sm">
             <X className="h-4 w-4 mr-2" />
             Cancelar
           </Button>
-          <Button onClick={handleSaveSchedule}>
+          <Button onClick={handleSaveSchedule} size="sm">
             <Save className="h-4 w-4 mr-2" />
             Guardar
           </Button>
