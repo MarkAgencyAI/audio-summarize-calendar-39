@@ -1,18 +1,20 @@
+
 import React, { useState, useEffect } from "react";
-import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, parseISO, addHours } from "date-fns";
+import { format, addDays, startOfWeek, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { v4 as uuidv4 } from "uuid";
-import { TimeSlot } from "./TimeSlot";
 import { Button } from "@/components/ui/button";
 import { WeeklyEventDialog } from "./WeeklyEventDialog";
 import { CalendarEvent } from "@/components/Calendar";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, Save, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, X, PlusCircle } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
 import { toast } from "sonner";
 import { loadFromStorage, saveToStorage } from "@/lib/storage";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { MobileTimeSlot } from "./MobileTimeSlot";
+import { DesktopTimeSlot } from "./DesktopTimeSlot";
 
 export interface WeeklyEventWithTemp extends Omit<CalendarEvent, "id"> {
   tempId: string;
@@ -35,19 +37,16 @@ export function WeeklyScheduleGrid({
 }: WeeklyScheduleGridProps) {
   const { folders } = useRecordings();
   const isMobile = useIsMobile();
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<{
-    day: Date;
-    hour: number;
-  } | null>(null);
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [selectedHour, setSelectedHour] = useState<number | null>(null);
   const [events, setEvents] = useState<WeeklyEventWithTemp[]>([]);
   const [weekStart, setWeekStart] = useState<Date>(startOfWeek(date, { weekStartsOn: 1 }));
   const [showDialog, setShowDialog] = useState(false);
 
-  const weekDays = eachDayOfInterval({
-    start: weekStart,
-    end: endOfWeek(weekStart, { weekStartsOn: 1 })
-  });
-
+  // Generate week days from weekStart (Monday to Sunday)
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  
+  // Generate hours from 7am to 8pm
   const hours = Array.from({ length: 14 }, (_, i) => i + 7);
 
   useEffect(() => {
@@ -58,10 +57,17 @@ export function WeeklyScheduleGrid({
     } else {
       const existingWeeklyEvents: WeeklyEventWithTemp[] = existingEvents
         .filter(event => {
-          const eventDate = parseISO(event.date);
-          const eventHour = eventDate.getHours();
-          
-          return eventHour >= 7 && eventHour <= 20 && event.repeat?.frequency === "weekly";
+          try {
+            const eventDate = parseISO(event.date);
+            const eventHour = eventDate.getHours();
+            
+            return isValid(eventDate) && 
+                   eventHour >= 7 && 
+                   eventHour <= 20 && 
+                   event.repeat?.frequency === "weekly";
+          } catch (e) {
+            return false;
+          }
         })
         .map(event => ({
           ...event,
@@ -78,10 +84,6 @@ export function WeeklyScheduleGrid({
     }
   }, [events]);
 
-  const generateTimeSlotKey = (day: Date, hour: number) => {
-    return `${format(day, 'EEEE', { locale: es })}-${hour}`;
-  };
-
   const handlePrevWeek = () => {
     setWeekStart(prev => addDays(prev, -7));
   };
@@ -91,7 +93,8 @@ export function WeeklyScheduleGrid({
   };
 
   const handleAddEvent = (day: Date, hour: number) => {
-    setSelectedTimeSlot({ day, hour });
+    setSelectedDay(day);
+    setSelectedHour(hour);
     
     const eventDate = new Date(day);
     eventDate.setHours(hour, 0, 0, 0);
@@ -187,84 +190,148 @@ export function WeeklyScheduleGrid({
     const dayName = format(day, "EEEE", { locale: es }).toLowerCase();
     
     return events.find(event => {
-      const eventDate = parseISO(event.date);
-      const eventHour = eventDate.getHours();
-      const eventDay = format(eventDate, "EEEE", { locale: es }).toLowerCase();
-      
-      return eventDay === dayName && eventHour === hour;
+      try {
+        const eventDate = parseISO(event.date);
+        if (!isValid(eventDate)) return false;
+        
+        const eventHour = eventDate.getHours();
+        const eventDay = format(eventDate, "EEEE", { locale: es }).toLowerCase();
+        
+        return eventDay === dayName && eventHour === hour;
+      } catch (e) {
+        return false;
+      }
     });
   };
 
   return (
     <div className="space-y-4">
-      <Card className="overflow-hidden">
-        <CardHeader className="p-4">
+      <Card className="overflow-hidden border border-border">
+        <CardHeader className="p-3 md:p-4">
           <div className="flex items-center justify-between">
-            <Button variant="outline" size="icon" onClick={handlePrevWeek} className="h-8 w-8">
+            <Button variant="outline" size="sm" onClick={handlePrevWeek} className="h-7 w-7 md:h-8 md:w-8 p-0">
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <CardTitle className="text-sm md:text-base font-medium">
               Cronograma semanal
             </CardTitle>
-            <Button variant="outline" size="icon" onClick={handleNextWeek} className="h-8 w-8">
+            <Button variant="outline" size="sm" onClick={handleNextWeek} className="h-7 w-7 md:h-8 md:w-8 p-0">
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </CardHeader>
         
         <CardContent className="p-0">
-          <ScrollArea className="h-[calc(100vh-220px)]">
-            <div className="min-w-[700px]">
-              <div className="grid grid-cols-[60px_repeat(7,1fr)]">
-                <div className="sticky top-0 z-10 bg-background border-b">
-                  <div className="h-12" />
+          {isMobile ? (
+            <div className="flex flex-col">
+              <div className="grid grid-cols-[60px_repeat(7,minmax(60px,1fr))] sticky top-0 z-10 bg-background border-b text-xs">
+                <div className="h-10 flex items-center justify-center text-center font-medium text-muted-foreground">
+                  Hora
                 </div>
-                {weekDays.map(day => (
-                  <div key={day.toString()} className="sticky top-0 z-10 bg-background border-b px-1">
-                    <div className="h-12 flex flex-col items-center justify-center">
-                      <span className="text-xs font-medium capitalize">
-                        {format(day, "EEE", { locale: es })}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">
-                        {format(day, "d")}
-                      </span>
-                    </div>
+                {weekDays.map((day) => (
+                  <div 
+                    key={day.toString()} 
+                    className="h-10 flex flex-col items-center justify-center text-xs border-l border-border"
+                  >
+                    <span className="font-medium capitalize">
+                      {format(day, "E", { locale: es })}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {format(day, "d")}
+                    </span>
                   </div>
                 ))}
-
-                {hours.map(hour => (
-                  <React.Fragment key={hour}>
-                    <div className="sticky left-0 bg-background border-r h-20 flex items-center justify-center text-xs text-muted-foreground">
-                      {hour}:00
-                    </div>
-                    {weekDays.map(day => (
-                      <TimeSlot
-                        key={generateTimeSlotKey(day, hour)}
-                        event={getEventForTimeSlot(day, hour)}
-                        onClick={() => handleAddEvent(day, hour)}
-                        onDelete={handleDeleteEvent}
-                        getFolderName={getFolderName}
-                        rowHeight={80}
-                      />
-                    ))}
-                  </React.Fragment>
-                ))}
               </div>
+              
+              <ScrollArea className="h-[calc(100vh-250px)]">
+                <div className="min-w-[500px]">
+                  {hours.map(hour => (
+                    <div key={hour} className="grid grid-cols-[60px_repeat(7,minmax(60px,1fr))]">
+                      <div className="h-14 flex items-center justify-center text-xs text-muted-foreground border-b border-border">
+                        {hour}:00
+                      </div>
+                      {weekDays.map(day => (
+                        <MobileTimeSlot
+                          key={`${day.toString()}-${hour}`}
+                          event={getEventForTimeSlot(day, hour)}
+                          onClick={() => handleAddEvent(day, hour)}
+                          onDelete={handleDeleteEvent}
+                          getFolderName={getFolderName}
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
             </div>
-          </ScrollArea>
+          ) : (
+            <ScrollArea className="h-[calc(100vh-220px)]">
+              <div className="min-w-[700px]">
+                <div className="grid grid-cols-[80px_repeat(7,1fr)]">
+                  <div className="sticky top-0 z-10 bg-background border-b">
+                    <div className="h-12" />
+                  </div>
+                  {weekDays.map(day => (
+                    <div key={day.toString()} className="sticky top-0 z-10 bg-background border-b px-1">
+                      <div className="h-12 flex flex-col items-center justify-center">
+                        <span className="text-sm font-medium capitalize">
+                          {format(day, "EEE", { locale: es })}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {format(day, "d")}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+
+                  {hours.map(hour => (
+                    <React.Fragment key={hour}>
+                      <div className="sticky left-0 bg-background border-r h-20 flex items-center justify-center text-sm text-muted-foreground">
+                        {hour}:00
+                      </div>
+                      {weekDays.map(day => (
+                        <DesktopTimeSlot
+                          key={`${day.toString()}-${hour}`}
+                          event={getEventForTimeSlot(day, hour)}
+                          onClick={() => handleAddEvent(day, hour)}
+                          onDelete={handleDeleteEvent}
+                          getFolderName={getFolderName}
+                        />
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            </ScrollArea>
+          )}
         </CardContent>
         
-        <CardFooter className="flex justify-between p-4 border-t">
-          <Button variant="outline" onClick={onCancel} size="sm">
+        <CardFooter className="flex justify-between p-3 md:p-4 border-t">
+          <Button variant="outline" onClick={onCancel} size="sm" className="h-8">
             <X className="h-4 w-4 mr-2" />
             Cancelar
           </Button>
-          <Button onClick={handleSaveSchedule} size="sm">
+          <Button onClick={handleSaveSchedule} size="sm" className="h-8">
             <Save className="h-4 w-4 mr-2" />
             Guardar
           </Button>
         </CardFooter>
       </Card>
+      
+      <div className="fixed bottom-6 right-6 md:hidden">
+        <Button 
+          onClick={() => {
+            const now = new Date();
+            const currentHour = now.getHours();
+            const currentDay = weekDays.find(d => format(d, "EEEE", { locale: es }) === format(now, "EEEE", { locale: es })) || weekDays[0];
+            handleAddEvent(currentDay, currentHour >= 7 && currentHour <= 20 ? currentHour : 8);
+          }} 
+          size="icon" 
+          className="rounded-full h-12 w-12 shadow-lg"
+        >
+          <PlusCircle className="h-6 w-6" />
+        </Button>
+      </div>
       
       <WeeklyEventDialog
         open={showDialog}
