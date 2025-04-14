@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useRecordings } from "@/context/RecordingsContext";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -77,9 +76,16 @@ export function NoteItem({
     toast.success("Apunte eliminado");
   };
   
+  const handleCardClick = () => {
+    setShowDetails(true);
+  };
+
   return (
     <>
-      <Card className="border-custom-primary/10 overflow-hidden hover:shadow-md transition-shadow bg-card">
+      <Card 
+        className="border-custom-primary/10 overflow-hidden hover:shadow-md transition-shadow bg-card cursor-pointer" 
+        onClick={handleCardClick}
+      >
         <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between gap-2">
           <div className="flex-1 overflow-hidden">
             <CardTitle className="text-base truncate">{title}</CardTitle>
@@ -88,14 +94,9 @@ export function NoteItem({
             </CardDescription>
           </div>
           
-          <Button 
-            size="icon" 
-            variant="ghost" 
-            className="h-8 w-8" 
-            onClick={() => setShowDetails(true)}
-          >
+          <div className="h-8 w-8 flex items-center justify-center">
             <FileText className="h-4 w-4" />
-          </Button>
+          </div>
         </CardHeader>
         
         <CardContent className="p-4 pt-2">
