@@ -1,5 +1,5 @@
-
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
+import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, List, LayoutGrid } from 'lucide-react';
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from '@/lib/utils';
 
 export interface CalendarEvent {
   id: string;
@@ -319,7 +320,7 @@ export function Calendar({
       <div className="space-y-4">
         <div className="grid grid-cols-7 gap-1 text-center">
           {dayNames.map(day => (
-            <div key={day} className="p-2 text-sm font-medium">
+            <div key={day} className="p-2 text-sm font-medium border-b border-border">
               {day}
             </div>
           ))}
@@ -334,11 +335,11 @@ export function Calendar({
               <Button
                 key={day.toString()}
                 variant="ghost"
-                className={`h-24 flex flex-col items-start justify-start p-1 hover:bg-accent relative ${
-                  isSameDay(day, new Date()) ? 'bg-secondary/50' : ''
-                } ${
+                className={cn(
+                  "h-24 flex flex-col items-start justify-start p-1 hover:bg-accent relative border border-border rounded-none", 
+                  isSameDay(day, new Date()) ? 'bg-secondary/50' : '',
                   isSameDay(day, selectedDate) ? 'border-2 border-primary' : ''
-                }`}
+                )}
                 onClick={() => handleDateClick(day)}
               >
                 <span className="text-sm font-medium self-center mb-1">
@@ -347,33 +348,27 @@ export function Calendar({
                 
                 <div className="w-full flex flex-col gap-0.5 overflow-y-auto max-h-16 px-0.5">
                   {dayEvents.slice(0, 3).map((event) => (
-                    <TooltipProvider key={event.id}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div 
-                            className="text-xs truncate px-1 rounded"
-                            style={{ 
-                              backgroundColor: `${eventTypeColors[event.type]}20`,
-                              borderLeft: `2px solid ${eventTypeColors[event.type]}`,
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEditEventDialog(event);
-                            }}
-                          >
-                            <span className="truncate block">{event.title}</span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <div className="text-xs max-w-52">
-                            <p className="font-medium">{event.title}</p>
-                            <p>{format(parseISO(event.date), 'HH:mm')}</p>
-                            {event.description && <p className="text-muted-foreground">{event.description}</p>}
-                            {event.folderId && <p className="text-muted-foreground">Materia: {getFolderName(event.folderId)}</p>}
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    <div 
+                      key={event.id} 
+                      className="text-xs truncate px-1 rounded flex justify-between items-center"
+                      style={{ 
+                        backgroundColor: `${eventTypeColors[event.type]}20`,
+                        borderLeft: `2px solid ${eventTypeColors[event.type]}`,
+                      }}
+                    >
+                      <span className="truncate block">{event.title}</span>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 w-6 p-0 hover:bg-destructive/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteEvent(event.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   ))}
                   
                   {dayEvents.length > 3 && (
