@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { extractWebhookOutput } from "@/lib/transcription-service";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useRecordings } from "@/context/RecordingsContext";
+import { useAuth } from "@/context/AuthContext";
 
 interface LiveTranscriptionSheetProps {
   isTranscribing: boolean;
@@ -37,6 +38,8 @@ export function LiveTranscriptionSheet({
   const isControlled = open !== undefined && onOpenChange !== undefined;
   const isOpen = isControlled ? open : internalOpen;
   const isMobile = useIsMobile();
+  const { addRecording } = useRecordings();
+  const { user } = useAuth();
   
   const handleOpenChange = (newOpen: boolean) => {
     if (isControlled) {
@@ -69,6 +72,26 @@ export function LiveTranscriptionSheet({
     const handleTranscriptionComplete = (event: CustomEvent) => {
       if (event.detail?.data && !userClosed) {
         handleOpenChange(true);
+        
+        if (event.detail.data.output && user) {
+          console.log("Guardando transcripción completada en la base de datos");
+          const transcriptionData = {
+            name: `Transcripción ${new Date().toLocaleString()}`,
+            date: new Date().toISOString(),
+            duration: event.detail.data.duration || 0,
+            audioData: "",
+            folderId: "default",
+            output: event.detail.data.output,
+            language: "es",
+            subject: "",
+            webhookData: event.detail.data.webhookResponse || null,
+            speakerMode: "single" as "single" | "multiple",
+            understood: false
+          };
+          
+          addRecording(transcriptionData);
+        }
+        
         if (event.detail.data.webhookResponse) {
           setActiveTab("webhook");
           const extracted = extractWebhookOutput(event.detail.data.webhookResponse);
@@ -87,7 +110,7 @@ export function LiveTranscriptionSheet({
     return () => {
       window.removeEventListener('audioRecorderMessage', handleEvent);
     };
-  }, [userClosed]);
+  }, [userClosed, addRecording, user]);
   
   const handleClose = () => {
     handleOpenChange(false);
@@ -127,8 +150,7 @@ export function LiveTranscriptionSheet({
     }
     return "Esperando resumen y puntos fuertes...";
   })();
-
-  // Responsive sheet width based on screen size
+  
   const sheetSizeClass = isMobile ? "w-[95vw] max-w-full" : "sm:max-w-md md:max-w-xl lg:max-w-2xl";
   
   return (
@@ -152,7 +174,7 @@ export function LiveTranscriptionSheet({
             </SheetDescription>
           </div>
           <SheetClose asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={handleClose}>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleOpenChange(false)}>
               <X className="h-4 w-4" />
               <span className="sr-only">Cerrar</span>
             </Button>

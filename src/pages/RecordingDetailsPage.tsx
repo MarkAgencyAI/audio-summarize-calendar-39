@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -23,21 +24,21 @@ export default function RecordingDetailsPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const isMobile = useIsMobile();
   
-  // Cargar datos frescos cuando se monta el componente
+  // Cargar datos frescos cuando se monta el componente o el recordingId cambia
   useEffect(() => {
-    console.log("RecordingDetailsPage montado - actualizando datos");
+    console.log("RecordingDetailsPage - actualizando datos para ID:", recordingId);
     const loadData = async () => {
       try {
         await refreshData();
+        console.log("Datos actualizados para página de detalles de grabación");
       } catch (error) {
         console.error("Error al actualizar datos:", error);
+        toast.error("Error al cargar los datos más recientes");
       }
     };
     
     loadData();
-    // No incluimos refreshData en las dependencias para que no se ejecute en loop
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [recordingId]); // Refrescar cuando cambia el ID del recording
   
   // Find the recording
   const recording = recordings.find(r => r.id === recordingId);
