@@ -1,3 +1,4 @@
+
 import React, {
   useState,
   useRef,
@@ -547,13 +548,14 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
         
         {renderChaptersTimeline()}
 
-        <div className="flex justify-between text-xs text-muted-foreground mt-1 mb-2">
+        <div className="flex justify-between text-xs text-muted-foreground mt-1 mb-3">
           <span>{formatTime(currentTime)}</span>
           <span>{formatTime(duration)}</span>
         </div>
 
-        <div className="flex flex-col space-y-5">
-          <div className="flex justify-center items-center space-x-3">
+        <div className="flex flex-col space-y-6">
+          {/* Play controls */}
+          <div className="flex justify-center items-center space-x-5">
             <Button
               variant="ghost"
               size="icon"
@@ -585,8 +587,9 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
             </Button>
           </div>
 
-          <div className="flex items-center space-x-2 w-full">
-            <span className="text-xs text-muted-foreground w-8 text-right">{formatTime(currentTime)}</span>
+          {/* Seek slider */}
+          <div className="flex items-center space-x-3 w-full">
+            <span className="text-xs text-muted-foreground min-w-[35px] text-right">{formatTime(currentTime)}</span>
             <Slider
               defaultValue={[0]}
               max={100}
@@ -596,18 +599,19 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
               value={[(currentTime / duration) * 100 || 0]}
               className="flex-1"
             />
-            <span className="text-xs text-muted-foreground w-8">{formatTime(duration)}</span>
+            <span className="text-xs text-muted-foreground min-w-[35px]">{formatTime(duration)}</span>
           </div>
 
-          <div className="flex items-center justify-center space-x-2 w-full">
+          {/* Volume controls */}
+          <div className="flex items-center space-x-3 w-full mt-2">
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleMute}
               aria-label={isMuted ? "Unmute" : "Mute"}
-              className="h-10 w-10"
+              className="h-9 w-9 flex-shrink-0"
             >
-              {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+              {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
             </Button>
             <Slider
               defaultValue={[100]}
@@ -616,11 +620,12 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
               aria-label="Volume"
               onValueChange={handleVolumeChange}
               value={[volume * 100]}
-              className="w-full max-w-xs"
+              className="flex-1"
             />
           </div>
 
-          <div className="flex items-center justify-center space-x-2 w-full mt-2">
+          {/* Chapter creation buttons */}
+          <div className="flex items-center justify-center space-x-3 w-full mt-3">
             {isSelectionMode && selectionStart !== null && selectionEnd !== null && (
               <Button 
                 variant="outline" 

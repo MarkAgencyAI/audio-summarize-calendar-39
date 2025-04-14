@@ -148,7 +148,7 @@ export function RecordingDetails({
             <RecordingHeader recording={recording} onDeleteEvent={onDeleteEvent} />
           </div>
           
-          {/* Content tabs - Transcription, Summary, Notes, Player */}
+          {/* Main tabs - Content, Notes, Player */}
           <Tabs 
             value={mainView} 
             onValueChange={(value) => setMainView(value as "content" | "notes" | "player")} 
