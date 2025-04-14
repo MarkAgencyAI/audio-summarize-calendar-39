@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -8,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
   Folder, Plus, MoreHorizontal, Edit, Trash2,
-  Book, Calculator, FileText, Flask, Microscope,
+  Book, Calculator, FileText, FlaskConical, Microscope,
   Languages, ArrowUp, Music, Palette, Code,
   GraduationCap, Globe, Dumbbell, Building
 } from "lucide-react";
@@ -24,7 +23,7 @@ const subjectIcons = [
   { name: "Book", icon: Book, label: "Literatura" },
   { name: "Calculator", icon: Calculator, label: "Matemáticas" },
   { name: "FileText", icon: FileText, label: "Historia" },
-  { name: "Flask", icon: Flask, label: "Química" },
+  { name: "FlaskConical", icon: FlaskConical, label: "Química" },
   { name: "Microscope", icon: Microscope, label: "Biología" },
   { name: "Languages", icon: Languages, label: "Idiomas" },
   { name: "ArrowUp", icon: ArrowUp, label: "Física" },
