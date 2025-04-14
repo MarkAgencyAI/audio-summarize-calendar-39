@@ -43,7 +43,7 @@ export function useTranscription(options?: Partial<TranscriptionOptions>) {
   /**
    * Transcribe un archivo de audio
    */
-  const transcribeAudio = React.useCallback(async (audioBlob: Blob) => {
+  const transcribeAudio = React.useCallback(async (audioBlob: Blob): Promise<TranscriptionResult> => {
     if (!audioBlob) {
       toast.error("No se proporcionó un archivo de audio válido");
       return { transcript: "", errors: ["No se proporcionó un archivo de audio válido"] };
