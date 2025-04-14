@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, parseISO, addHours } from "date-fns";
 import { es } from "date-fns/locale";
@@ -213,7 +214,7 @@ export function WeeklyScheduleGrid({
         
         <CardContent className="p-4 pt-0">
           <div className="overflow-x-auto">
-            <div className={`grid grid-cols-${isMobile ? '3' : '8'} min-w-[280px] sm:min-w-[700px] max-w-full`}>
+            <div className="grid grid-cols-8 min-w-[700px]">
               <div className="col-span-1">
                 <div className="h-10 flex items-center justify-center font-medium text-xs sm:text-sm">
                   Hora
@@ -225,7 +226,7 @@ export function WeeklyScheduleGrid({
                 ))}
               </div>
               
-              {weekDays.slice(0, isMobile ? 2 : 7).map(day => (
+              {weekDays.map(day => (
                 <div key={day.toString()} className="col-span-1">
                   <div className="h-10 flex items-center justify-center font-medium text-xs sm:text-sm capitalize">
                     {format(day, "EEE", { locale: es })}

@@ -43,23 +43,23 @@ export function TimeSlot({ event, onClick, onDelete, getFolderName, rowHeight = 
             top: '4px'
           }}
         >
-          <div className="flex justify-between items-start p-1 sm:p-2">
+          <div className="flex justify-between items-start p-1">
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-xs sm:text-sm truncate">{event.title}</p>
-              {event.folderId && !isMobile && (
-                <p className="text-[10px] sm:text-xs opacity-80 truncate">{getFolderName(event.folderId)}</p>
+              <p className="font-medium text-[10px] sm:text-sm truncate">{event.title}</p>
+              {event.folderId && (
+                <p className="text-[8px] sm:text-xs opacity-80 truncate">{getFolderName(event.folderId)}</p>
               )}
             </div>
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-4 w-4 sm:h-6 sm:w-6 opacity-50 hover:opacity-100 ml-1"
+              className="h-4 w-4 opacity-50 hover:opacity-100 ml-1"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(event.tempId);
               }}
             >
-              <Trash2 className="h-2 w-2 sm:h-3 sm:w-3" />
+              <Trash2 className="h-2 w-2" />
             </Button>
           </div>
         </div>
