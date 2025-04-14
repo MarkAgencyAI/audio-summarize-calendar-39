@@ -213,25 +213,20 @@ export function AudioRecorderV2({
     try {
       toast.info("Procesando grabación...");
       setShowTranscriptionSheet(true);
-      if (audioUrlRef.current) {
-        URL.revokeObjectURL(audioUrlRef.current);
-      }
-      audioUrlRef.current = URL.createObjectURL(audioBlob);
-      const fileSizeMB = (audioBlob.size / (1024 * 1024)).toFixed(2);
-      console.log(`Procesando archivo de audio: ${fileSizeMB}MB, tipo: ${audioBlob.type}, duración: ${recordingDuration}s`);
-      if (audioBlob.size > 20 * 1024 * 1024) {
-        toast.warning("El archivo de audio es muy grande, la transcripción puede tardar más tiempo");
-      }
-      if (recordingDuration > 600) {
-        toast.info(`El audio dura más de 10 minutos (${Math.floor(recordingDuration / 60)} minutos). Se dividirá en segmentos de 7 minutos para procesarlo.`);
+      
+      const recordingId = crypto.randomUUID();
+      const finalName = recordingName || `Grabación ${formatDate(new Date())}`;
+      
+      try {
+        await saveAudioToStorage(recordingId, audioBlob);
+        console.log("Audio guardado en IndexedDB correctamente");
+      } catch (error) {
+        console.error("Error guardando audio en IndexedDB:", error);
+        toast.warning("No se pudo guardar el audio localmente. La reproducción podría no estar disponible sin conexión.");
       }
       
       const result = await transcribeAudio(audioBlob);
-      
-      const {
-        extractWebhookOutput
-      } = await import('@/lib/transcription-service');
-      
+      const { extractWebhookOutput } = await import('@/lib/transcription-service');
       const webhookOutput = extractWebhookOutput(result.webhookResponse);
       
       if (!result.transcript) {
@@ -241,16 +236,6 @@ export function AudioRecorderV2({
       if (result.errors && result.errors.length > 0) {
         toast.warning(`Se completó con ${result.errors.length} errores en algunas partes`);
         console.error("Errores durante la transcripción:", result.errors);
-      }
-      
-      const recordingId = crypto.randomUUID();
-      
-      try {
-        await saveAudioToStorage(recordingId, audioBlob);
-        console.log("Audio guardado en IndexedDB correctamente");
-      } catch (error) {
-        console.error("Error guardando audio en IndexedDB:", error);
-        toast.warning("No se pudo guardar el audio localmente. La reproducción podría no estar disponible sin conexión.");
       }
       
       let suggestedEvents: Array<{ title: string; description: string; date?: string }> = [];
@@ -270,12 +255,10 @@ export function AudioRecorderV2({
       
       const recordingData = {
         id: recordingId,
-        name: recordingName || `Grabación ${formatDate(new Date())}`,
-        audioUrl: audioUrlRef.current,
-        audioData: audioUrlRef.current,
-        output: result.transcript || "",
-        folderId: selectedFolder || folders[0]?.id || null,
+        name: finalName,
         duration: recordingDuration,
+        folderId: selectedFolder || folders[0]?.id || null,
+        output: result.transcript || "",
         subject: subject,
         speakerMode: speakerMode,
         suggestedEvents: suggestedEvents,
@@ -291,7 +274,7 @@ export function AudioRecorderV2({
       
       const savedRecordingId = await addRecording(finalRecordingData);
       
-      if (savedRecordingId && typeof savedRecordingId === 'string') {
+      if (savedRecordingId) {
         setAudioBlob(null);
         setRecordingName('');
         setSubject('');
