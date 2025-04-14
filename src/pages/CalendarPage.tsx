@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -18,12 +17,15 @@ import { loadFromStorage, saveToStorage } from "@/lib/storage";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRecordings } from "@/context/RecordingsContext";
-
 export default function CalendarPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
-  const { folders } = useRecordings();
+  const {
+    user
+  } = useAuth();
+  const {
+    folders
+  } = useRecordings();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [showAddEventDialog, setShowAddEventDialog] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
@@ -40,22 +42,18 @@ export default function CalendarPage() {
     repeat: "none" as "none" | "daily" | "weekly" | "monthly"
   });
   const isMobile = useIsMobile();
-
   useEffect(() => {
     if (!user) {
       navigate("/login");
     }
   }, [user, navigate]);
-
   useEffect(() => {
     const loadedEvents = loadFromStorage<CalendarEvent[]>("calendarEvents") || [];
     setEvents(loadedEvents);
   }, []);
-
   useEffect(() => {
     saveToStorage("calendarEvents", events);
   }, [events]);
-
   useEffect(() => {
     if (location.state?.recording) {
       const recording = location.state.recording;
@@ -83,7 +81,6 @@ export default function CalendarPage() {
         document.body.appendChild(dialog);
         dialog.showModal();
         const suggestedEventsContainer = dialog.querySelector("#suggested-events");
-
         recording.keyPoints.forEach((point, index) => {
           const now = new Date();
           const eventDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (index + 1));
@@ -100,7 +97,6 @@ export default function CalendarPage() {
           `;
           suggestedEventsContainer?.appendChild(eventEl);
         });
-
         const cancelButton = dialog.querySelector("#cancel-button");
         const addButton = dialog.querySelector("#add-button");
         if (cancelButton) {
@@ -113,7 +109,6 @@ export default function CalendarPage() {
           addButton.addEventListener("click", () => {
             const checkboxes = dialog.querySelectorAll("input[type=checkbox]:checked");
             const newEvents: CalendarEvent[] = [];
-            
             checkboxes.forEach((checkbox, index) => {
               const now = new Date();
               const eventDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (index + 1));
@@ -127,26 +122,22 @@ export default function CalendarPage() {
               };
               newEvents.push(newEvent);
             });
-            
             setEvents(prev => {
               const updatedEvents = [...prev, ...newEvents];
               saveToStorage("calendarEvents", updatedEvents);
               return updatedEvents;
             });
-            
             toast.success("Eventos agregados al calendario");
             dialog.close();
             dialog.remove();
           });
         }
       }
-
       navigate("/calendar", {
         replace: true
       });
     }
   }, [location.state, navigate]);
-
   const handleAddEvent = (event: Omit<CalendarEvent, "id">) => {
     const newEvent: CalendarEvent = {
       ...event,
@@ -158,10 +149,8 @@ export default function CalendarPage() {
       return updatedEvents;
     });
   };
-
   const handleDeleteEvent = (id: string) => {
     const eventToDelete = events.find(event => event.id === id);
-    
     if (eventToDelete && eventToDelete.repeat && typeof eventToDelete.repeat === 'object' && eventToDelete.repeat.frequency) {
       setEventToDelete(eventToDelete);
       setShowDeleteConfirmDialog(true);
@@ -174,18 +163,11 @@ export default function CalendarPage() {
       toast.success("Evento eliminado");
     }
   };
-
   const confirmDeleteEvent = () => {
     if (!eventToDelete) return;
-    
     if (deleteAllRecurring) {
       setEvents(prev => {
-        const updatedEvents = prev.filter(event => 
-          !(event.title === eventToDelete.title && 
-            event.type === eventToDelete.type && 
-            event.repeat && typeof event.repeat === 'object' && 
-            event.repeat.frequency === eventToDelete.repeat?.frequency)
-        );
+        const updatedEvents = prev.filter(event => !(event.title === eventToDelete.title && event.type === eventToDelete.type && event.repeat && typeof event.repeat === 'object' && event.repeat.frequency === eventToDelete.repeat?.frequency));
         saveToStorage("calendarEvents", updatedEvents);
         return updatedEvents;
       });
@@ -198,23 +180,19 @@ export default function CalendarPage() {
       });
       toast.success("Evento eliminado");
     }
-    
     setShowDeleteConfirmDialog(false);
     setEventToDelete(null);
     setDeleteAllRecurring(false);
   };
-
   const handleQuickAddEvent = () => {
     if (!newEvent.title.trim()) {
       toast.error("El título es obligatorio");
       return;
     }
-    
     if (newEvent.endDate && new Date(newEvent.endDate) <= new Date(newEvent.date)) {
       toast.error("La hora de finalización debe ser posterior a la hora de inicio");
       return;
     }
-    
     if (newEvent.repeat === "none") {
       handleAddEvent({
         title: newEvent.title,
@@ -229,7 +207,6 @@ export default function CalendarPage() {
     } else {
       createRepeatingEvents();
     }
-    
     setNewEvent({
       title: "",
       description: "",
@@ -239,16 +216,13 @@ export default function CalendarPage() {
       type: "other",
       repeat: "none"
     });
-    
     setShowAddEventDialog(false);
   };
-
   const createRepeatingEvents = () => {
     const repeat = newEvent.repeat !== "none" ? {
       frequency: newEvent.repeat as "daily" | "weekly" | "monthly",
       interval: 1
     } : undefined;
-    
     const baseEvent = {
       title: newEvent.title,
       description: newEvent.description,
@@ -256,40 +230,32 @@ export default function CalendarPage() {
       type: newEvent.type,
       repeat
     };
-    
     handleAddEvent({
       ...baseEvent,
       date: newEvent.date,
       endDate: newEvent.endDate || undefined
     });
-    
     const startDate = new Date(newEvent.date);
     const endDate = newEvent.endDate ? new Date(newEvent.endDate) : undefined;
     const duration = endDate ? endDate.getTime() - startDate.getTime() : 3600000;
-    
     for (let i = 1; i <= 10; i++) {
       let nextDate = new Date(startDate);
-      
       if (newEvent.repeat === "daily") {
         nextDate.setDate(nextDate.getDate() + i);
       } else if (newEvent.repeat === "weekly") {
-        nextDate.setDate(nextDate.getDate() + (i * 7));
+        nextDate.setDate(nextDate.getDate() + i * 7);
       } else if (newEvent.repeat === "monthly") {
         nextDate.setMonth(nextDate.getMonth() + i);
       }
-      
       const nextEndDate = endDate ? new Date(nextDate.getTime() + duration) : undefined;
-      
       handleAddEvent({
         ...baseEvent,
         date: nextDate.toISOString(),
         endDate: nextEndDate?.toISOString()
       });
     }
-    
     toast.success(`Se han creado eventos repetitivos (${newEvent.repeat})`);
   };
-
   const handleFilterChange = (filter: string) => {
     setActiveFilter(filter);
     if (filter === "all") {
@@ -300,7 +266,6 @@ export default function CalendarPage() {
       toast.info(`Mostrando eventos de tipo: ${filter}`);
     }
   };
-
   const openAddEventDialog = () => {
     setShowAddEventDialog(true);
     setNewEvent({
@@ -313,9 +278,7 @@ export default function CalendarPage() {
       repeat: "none"
     });
   };
-
-  return (
-    <Layout>
+  return <Layout>
       <div className="space-y-4 sm:space-y-6 w-full">
         <h1 className="text-2xl md:text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">
           Calendario
@@ -323,46 +286,24 @@ export default function CalendarPage() {
         
         <div className="glassmorphism rounded-xl p-3 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40 w-full overflow-hidden">
           <div className="w-full overflow-x-auto">
-            {isMobile ? (
-              <MobileCalendar 
-                events={events}
-                onAddEvent={openAddEventDialog}
-                onEventClick={(event) => {
-                  setNewEvent({
-                    title: event.title,
-                    description: event.description || "",
-                    date: event.date,
-                    endDate: event.endDate || format(addHours(new Date(event.date), 1), "yyyy-MM-dd'T'HH:mm"),
-                    folderId: event.folderId || "",
-                    type: event.type,
-                    repeat: "none"
-                  });
-                  setShowAddEventDialog(true);
-                }}
-                onEditEvent={(event) => handleAddEvent(event)}
-                onDeleteEvent={handleDeleteEvent}
-                activeFilter={activeFilter}
-                onFilterChange={handleFilterChange}
-              />
-            ) : (
-              <Calendar 
-                events={events} 
-                onAddEvent={openAddEventDialog}
-                onEditEvent={(event) => handleAddEvent(event)}
-                onDeleteEvent={handleDeleteEvent}
-                activeFilter={activeFilter}
-                onFilterChange={handleFilterChange}
-              />
-            )}
+            {isMobile ? <MobileCalendar events={events} onAddEvent={openAddEventDialog} onEventClick={event => {
+            setNewEvent({
+              title: event.title,
+              description: event.description || "",
+              date: event.date,
+              endDate: event.endDate || format(addHours(new Date(event.date), 1), "yyyy-MM-dd'T'HH:mm"),
+              folderId: event.folderId || "",
+              type: event.type,
+              repeat: "none"
+            });
+            setShowAddEventDialog(true);
+          }} onEditEvent={event => handleAddEvent(event)} onDeleteEvent={handleDeleteEvent} activeFilter={activeFilter} onFilterChange={handleFilterChange} /> : <Calendar events={events} onAddEvent={openAddEventDialog} onEditEvent={event => handleAddEvent(event)} onDeleteEvent={handleDeleteEvent} activeFilter={activeFilter} onFilterChange={handleFilterChange} />}
           </div>
         </div>
       </div>
       
       <div className="fixed bottom-6 right-6">
-        <Button 
-          onClick={openAddEventDialog}
-          className="rounded-full shadow-lg w-14 h-14 p-4"
-        >
+        <Button onClick={openAddEventDialog} className="rounded-full shadow-lg w-14 h-14 p-4 mb-20">
           <Plus className="h-6 w-6" />
         </Button>
       </div>
@@ -376,67 +317,44 @@ export default function CalendarPage() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="title">Título</Label>
-              <Input 
-                id="title" 
-                value={newEvent.title} 
-                onChange={e => setNewEvent({
-                  ...newEvent,
-                  title: e.target.value
-                })} 
-              />
+              <Input id="title" value={newEvent.title} onChange={e => setNewEvent({
+              ...newEvent,
+              title: e.target.value
+            })} />
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="description">Descripción</Label>
-              <Textarea 
-                id="description" 
-                value={newEvent.description} 
-                onChange={e => setNewEvent({
-                  ...newEvent,
-                  description: e.target.value
-                })} 
-              />
+              <Textarea id="description" value={newEvent.description} onChange={e => setNewEvent({
+              ...newEvent,
+              description: e.target.value
+            })} />
             </div>
             
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="startDate">Hora de inicio</Label>
-                <Input 
-                  id="startDate" 
-                  type="datetime-local" 
-                  value={newEvent.date} 
-                  onChange={e => setNewEvent({
-                    ...newEvent,
-                    date: e.target.value
-                  })} 
-                />
+                <Input id="startDate" type="datetime-local" value={newEvent.date} onChange={e => setNewEvent({
+                ...newEvent,
+                date: e.target.value
+              })} />
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="endDate">Hora de finalización</Label>
-                <Input 
-                  id="endDate" 
-                  type="datetime-local" 
-                  value={newEvent.endDate} 
-                  onChange={e => setNewEvent({
-                    ...newEvent,
-                    endDate: e.target.value
-                  })} 
-                />
+                <Input id="endDate" type="datetime-local" value={newEvent.endDate} onChange={e => setNewEvent({
+                ...newEvent,
+                endDate: e.target.value
+              })} />
               </div>
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="type">Tipo</Label>
-              <Select 
-                value={newEvent.type} 
-                onValueChange={(value: "exam" | "assignment" | "study" | "class" | "meeting" | "other") => 
-                  setNewEvent({
-                    ...newEvent,
-                    type: value
-                  })
-                }
-              >
+              <Select value={newEvent.type} onValueChange={(value: "exam" | "assignment" | "study" | "class" | "meeting" | "other") => setNewEvent({
+              ...newEvent,
+              type: value
+            })}>
                 <SelectTrigger id="type">
                   <SelectValue placeholder="Selecciona un tipo de evento" />
                 </SelectTrigger>
@@ -453,39 +371,28 @@ export default function CalendarPage() {
             
             <div className="space-y-2">
               <Label htmlFor="folder">Materia</Label>
-              <Select
-                value={newEvent.folderId || "_empty"}
-                onValueChange={(value) => setNewEvent({
-                  ...newEvent,
-                  folderId: value === "_empty" ? "" : value
-                })}
-              >
+              <Select value={newEvent.folderId || "_empty"} onValueChange={value => setNewEvent({
+              ...newEvent,
+              folderId: value === "_empty" ? "" : value
+            })}>
                 <SelectTrigger id="folder">
                   <SelectValue placeholder="Selecciona una materia" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_empty">Sin materia</SelectItem>
-                  {folders.map(folder => (
-                    <SelectItem key={folder.id} value={folder.id}>
+                  {folders.map(folder => <SelectItem key={folder.id} value={folder.id}>
                       {folder.name}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             
             <div className="space-y-2">
               <Label>Repetición</Label>
-              <RadioGroup 
-                value={newEvent.repeat} 
-                onValueChange={(value: "none" | "daily" | "weekly" | "monthly") => 
-                  setNewEvent({
-                    ...newEvent,
-                    repeat: value
-                  })
-                }
-                className="flex flex-col space-y-1"
-              >
+              <RadioGroup value={newEvent.repeat} onValueChange={(value: "none" | "daily" | "weekly" | "monthly") => setNewEvent({
+              ...newEvent,
+              repeat: value
+            })} className="flex flex-col space-y-1">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="none" id="r-none" />
                   <Label htmlFor="r-none">Sin repetición</Label>
@@ -520,11 +427,7 @@ export default function CalendarPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <RadioGroup 
-              value={deleteAllRecurring ? "all" : "single"} 
-              onValueChange={(value) => setDeleteAllRecurring(value === "all")}
-              className="flex flex-col space-y-3"
-            >
+            <RadioGroup value={deleteAllRecurring ? "all" : "single"} onValueChange={value => setDeleteAllRecurring(value === "all")} className="flex flex-col space-y-3">
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="single" id="delete-single" />
                 <Label htmlFor="delete-single">Solo esta instancia</Label>
@@ -536,25 +439,18 @@ export default function CalendarPage() {
             </RadioGroup>
           </div>
           <DialogFooter className="flex justify-between">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setShowDeleteConfirmDialog(false);
-                setEventToDelete(null);
-                setDeleteAllRecurring(false);
-              }}
-            >
+            <Button variant="outline" onClick={() => {
+            setShowDeleteConfirmDialog(false);
+            setEventToDelete(null);
+            setDeleteAllRecurring(false);
+          }}>
               Cancelar
             </Button>
-            <Button 
-              variant="destructive" 
-              onClick={confirmDeleteEvent}
-            >
+            <Button variant="destructive" onClick={confirmDeleteEvent}>
               Eliminar
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Layout>
-  );
+    </Layout>;
 }
