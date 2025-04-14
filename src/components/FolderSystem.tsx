@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
   Folder, Plus, MoreHorizontal, Edit, Trash2,
-  Book, Calculator, FileText, Chemistry, Microscope,
-  Language, AArrowUp, Music, Palette, Code,
+  Book, Calculator, FileText, Flask, Microscope,
+  Languages, ArrowUp, Music, Palette, Code,
   GraduationCap, Globe, Dumbbell, Building
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -19,15 +19,15 @@ import { HexColorPicker } from "react-colorful";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Subject icons mapping
+// Subject icons mapping - updated with correct lucide-react icons
 const subjectIcons = [
   { name: "Book", icon: Book, label: "Literatura" },
   { name: "Calculator", icon: Calculator, label: "Matemáticas" },
   { name: "FileText", icon: FileText, label: "Historia" },
-  { name: "Chemistry", icon: Chemistry, label: "Química" },
+  { name: "Flask", icon: Flask, label: "Química" },
   { name: "Microscope", icon: Microscope, label: "Biología" },
-  { name: "Language", icon: Language, label: "Idiomas" },
-  { name: "AArrowUp", icon: AArrowUp, label: "Física" },
+  { name: "Languages", icon: Languages, label: "Idiomas" },
+  { name: "ArrowUp", icon: ArrowUp, label: "Física" },
   { name: "Music", icon: Music, label: "Música" },
   { name: "Palette", icon: Palette, label: "Arte" },
   { name: "Code", icon: Code, label: "Informática" },
