@@ -2,6 +2,8 @@
 import { useState, useRef, useCallback } from "react";
 import { TextHighlight } from "@/context/RecordingsContext";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 
 interface UseHighlightingProps {
   highlights: TextHighlight[];

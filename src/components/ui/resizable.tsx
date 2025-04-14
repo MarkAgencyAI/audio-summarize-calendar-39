@@ -1,8 +1,4 @@
 
-// Your component has been fixed to include proper ref forwarding.
-// The error was related to the "ref" property missing on the ResizableHandle component.
-// This is a replacement component with the necessary ref support.
-
 "use client"
 
 import { GripVertical } from "lucide-react"

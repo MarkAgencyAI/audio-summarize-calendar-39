@@ -88,5 +88,4 @@ export const chapterColors = [
   "#84cc16", // lime-500
 ];
 
-// Explicitly export the chapterColors array
-export { chapterColors };
+// Remove the duplicate export that was causing the error
