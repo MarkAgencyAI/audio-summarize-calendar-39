@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, startOfWeek, setHours, setMinutes, addMinutes, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
@@ -57,14 +56,12 @@ export function WeeklySchedule({
   const weekStart = startOfWeek(date, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   
-  // Ajustamos las horas a un formato más normal (de 8:00 a 22:00)
   const timeSlots = Array.from({ length: 15 }, (_, i) => {
     const hour = i + 8;
     return `${hour}:00`;
   });
   
   useEffect(() => {
-    // Cargamos eventos del almacenamiento local si existen
     const storedSchedule = localStorage.getItem('weeklySchedule');
     if (storedSchedule) {
       try {
@@ -137,7 +134,6 @@ export function WeeklySchedule({
     }
   }, [hasExistingSchedule, existingEvents]);
   
-  // Guardar eventos en localStorage cuando cambian
   useEffect(() => {
     if (scheduleEvents.length > 0) {
       localStorage.setItem('weeklySchedule', JSON.stringify(scheduleEvents));
@@ -177,19 +173,38 @@ export function WeeklySchedule({
       return;
     }
     
-    // Verificar que la hora de inicio sea válida
-    if (!isValid(new Date(newEvent.date))) {
-      toast.error("La fecha de inicio no es válida");
+    const startTime = newEvent.date ? newEvent.date.split("T")[1] : "";
+    const endTime = newEvent.endDate ? newEvent.endDate.split("T")[1] : "";
+    
+    if (!startTime) {
+      toast.error("La hora de inicio no es válida");
       return;
     }
     
-    // Verificar que la hora de fin sea válida y posterior a la de inicio
-    if (newEvent.endDate && (!isValid(new Date(newEvent.endDate)) || new Date(newEvent.endDate) <= new Date(newEvent.date))) {
+    if (!endTime) {
+      toast.error("La hora de finalización no es válida");
+      return;
+    }
+    
+    const day = weekDays[selectedDay];
+    const [startHours, startMinutes] = startTime.split(":").map(Number);
+    const [endHours, endMinutes] = endTime.split(":").map(Number);
+    
+    const startDateTime = setMinutes(setHours(day, startHours), startMinutes);
+    const endDateTime = setMinutes(setHours(day, endHours), endMinutes);
+    
+    if (endDateTime <= startDateTime) {
       toast.error("La hora de finalización debe ser posterior a la hora de inicio");
       return;
     }
     
-    setScheduleEvents(prev => [...prev, newEvent]);
+    const updatedEvent = {
+      ...newEvent,
+      date: format(startDateTime, "yyyy-MM-dd'T'HH:mm"),
+      endDate: format(endDateTime, "yyyy-MM-dd'T'HH:mm")
+    };
+    
+    setScheduleEvents(prev => [...prev, updatedEvent]);
     setShowEventDialog(false);
     toast.success("Evento agregado al cronograma");
   };
@@ -407,8 +422,8 @@ export function WeeklySchedule({
                   type="time" 
                   value={safeFormat(newEvent.date, "HH:mm")} 
                   onChange={e => {
-                    const [hours, minutes] = e.target.value.split(":").map(Number);
                     const day = weekDays[selectedDay];
+                    const [hours, minutes] = e.target.value.split(":").map(Number);
                     const newDate = setMinutes(setHours(day, hours), minutes);
                     setNewEvent({
                       ...newEvent,
@@ -425,8 +440,8 @@ export function WeeklySchedule({
                   type="time" 
                   value={safeFormat(newEvent.endDate, "HH:mm")} 
                   onChange={e => {
-                    const [hours, minutes] = e.target.value.split(":").map(Number);
                     const day = weekDays[selectedDay];
+                    const [hours, minutes] = e.target.value.split(":").map(Number);
                     const newDate = setMinutes(setHours(day, hours), minutes);
                     setNewEvent({
                       ...newEvent,
