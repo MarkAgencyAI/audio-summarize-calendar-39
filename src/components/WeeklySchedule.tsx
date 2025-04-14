@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, addDays, startOfWeek, setHours, setMinutes, addMinutes, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
@@ -55,13 +56,23 @@ export function WeeklySchedule({
   const weekStart = startOfWeek(date, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   
+  // Ajustamos las horas a un formato más normal (de 8:00 a 22:00)
   const timeSlots = Array.from({ length: 15 }, (_, i) => {
-    const hour = i + 7;
-    return format(setHours(date, hour), "HH:mm");
+    const hour = i + 8;
+    return `${hour}:00`;
   });
   
   useEffect(() => {
-    if (hasExistingSchedule) {
+    // Cargamos eventos del almacenamiento local si existen
+    const storedSchedule = localStorage.getItem('weeklySchedule');
+    if (storedSchedule) {
+      try {
+        const parsedSchedule = JSON.parse(storedSchedule) as WeeklyEventWithTemp[];
+        setScheduleEvents(parsedSchedule);
+      } catch (e) {
+        console.error("Error parsing stored schedule:", e);
+      }
+    } else if (hasExistingSchedule) {
       const scheduleItems = existingEvents.filter(event => 
         event.type === "class" && event.repeat && typeof event.repeat === 'object' && event.repeat.frequency === "weekly"
       );
@@ -124,6 +135,13 @@ export function WeeklySchedule({
       setScheduleEvents(loadedEvents);
     }
   }, [hasExistingSchedule, existingEvents]);
+  
+  // Guardar eventos en localStorage cuando cambian
+  useEffect(() => {
+    if (scheduleEvents.length > 0) {
+      localStorage.setItem('weeklySchedule', JSON.stringify(scheduleEvents));
+    }
+  }, [scheduleEvents]);
   
   const handleAddTimeSlot = (dayIndex: number, time: string) => {
     if (onAddEvent) {
@@ -242,13 +260,10 @@ export function WeeklySchedule({
         <div className="weekly-schedule-grid">
           <div className="weekly-schedule-header">
             <div className="weekly-time-column"></div>
-            {weekDays.map((day, index) => (
+            {weekDays.map((_, index) => (
               <div key={index} className="weekly-day-column">
                 <div className="text-center font-medium py-2">
-                  {format(day, "EEE", { locale: es })}
-                  <div className="text-sm text-muted-foreground">
-                    {format(day, "d MMM", { locale: es })}
-                  </div>
+                  {format(weekDays[index], "EEE", { locale: es })}
                 </div>
               </div>
             ))}
