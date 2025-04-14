@@ -1,4 +1,3 @@
-
 import React, {
   useState,
   useRef,
@@ -59,12 +58,30 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
 
     // Imperative handle to control the audio player from parent components
     useImperativeHandle(ref, () => ({
-      seekTo: (time: number) => {
+      play: () => {
+        if (audioRef.current) {
+          audioRef.current.play();
+          setIsPlaying(true);
+        }
+      },
+      pause: () => {
+        if (audioRef.current) {
+          audioRef.current.pause();
+          setIsPlaying(false);
+        }
+      },
+      seek: (time: number) => {
         if (audioRef.current) {
           audioRef.current.currentTime = time;
           setCurrentTime(time);
         }
       },
+      getDuration: () => {
+        return duration;
+      },
+      getCurrentTime: () => {
+        return currentTime;
+      }
     }));
 
     // Load audio source

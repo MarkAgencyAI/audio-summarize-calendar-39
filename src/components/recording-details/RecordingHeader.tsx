@@ -59,6 +59,10 @@ export function RecordingHeader({ recording, onDeleteEvent }: RecordingHeaderPro
     }
   };
   
+  // Check if recording has events property and it's an array
+  const events = recording.events as any[] || [];
+  const hasEvents = events && events.length > 0;
+  
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
       <div className="flex-1">
@@ -90,10 +94,10 @@ export function RecordingHeader({ recording, onDeleteEvent }: RecordingHeaderPro
           </h2>
         )}
         
-        {recording.events && recording.events.length > 0 && (
+        {hasEvents && (
           <div className="flex flex-wrap gap-2 mt-2">
             <span className="text-xs text-slate-500 dark:text-slate-400">Eventos: </span>
-            {recording.events.map((event) => (
+            {events.map((event) => (
               <Popover key={event.id}>
                 <PopoverTrigger asChild>
                   <Button

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -111,12 +112,17 @@ export default function RecordingDetailsPage() {
   };
   
   const handleDeleteEvent = (eventId: string) => {
-    if (recording && recording.events) {
+    if (recording) {
+      // Use type assertion to work with events
+      const currentEvents = (recording.events as any[] || []);
       // Filter out the event to be deleted
-      const updatedEvents = recording.events.filter(event => event.id !== eventId);
+      const updatedEvents = currentEvents.filter(event => event.id !== eventId);
       
       // Update the recording with the new events array
-      updateRecording(recording.id, { events: updatedEvents });
+      updateRecording(recording.id, { 
+        events: updatedEvents 
+      } as any);
+      
       toast.success("Evento eliminado");
     }
   };

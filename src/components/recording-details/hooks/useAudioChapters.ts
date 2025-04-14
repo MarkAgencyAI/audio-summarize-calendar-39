@@ -3,8 +3,7 @@ import { useState, useEffect, RefObject } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
 import { AudioChapter, Recording } from "@/context/RecordingsContext";
-import { chapterColors } from "../types";
-import { AudioPlayerHandle } from "../types";
+import { AudioPlayerHandle, chapterColors } from "../types";
 
 export function useAudioChapters(
   recording: Recording,
@@ -126,8 +125,8 @@ export function useAudioChapters(
   };
 
   const handleChapterClick = (chapter: AudioChapter) => {
-    if (audioPlayerRef.current && audioPlayerRef.current.seekTo) {
-      audioPlayerRef.current.seekTo(chapter.startTime);
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.seek(chapter.startTime);
       setActiveChapterId(chapter.id);
     }
   };
