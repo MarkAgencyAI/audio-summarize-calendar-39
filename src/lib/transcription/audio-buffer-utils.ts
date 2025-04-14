@@ -1,4 +1,3 @@
-
 /**
  * Utilidades para trabajar con buffers de audio en el navegador
  */
@@ -108,8 +107,7 @@ export async function splitAudioIntoChunks(audioBlob: Blob, maxChunkDuration: nu
       chunks.push({
         blob: chunkBlob,
         startTime,
-        endTime,
-        url: chunkUrl
+        endTime
       });
       
       // Pequeña pausa para permitir recolección de basura

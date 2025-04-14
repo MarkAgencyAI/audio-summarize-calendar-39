@@ -22,7 +22,7 @@ export interface TranscriptionResult {
   processingTime?: number;
   webhookResponse?: any;
   errors?: string[];
-  // Añadir los campos faltantes que se utilizan en AudioRecorderV2
+  // Added fields that are used in AudioRecorderV2
   summary?: string;
   keyPoints?: string[];
   language?: string;
@@ -43,4 +43,31 @@ export interface AudioChunk {
   isProcessed?: boolean;
   transcript?: string;
   error?: string;
+  // We don't need the url property as it's causing a TypeScript error
+}
+
+// Add the missing types that were referenced in index.ts
+export interface TranscriptionApiResponse {
+  id: string;
+  text: string;
+  status: string;
+  created_at: string;
+  completed_at?: string;
+  error?: string;
+}
+
+export interface WordTiming {
+  word: string;
+  start: number;
+  end: number;
+  confidence?: number;
+}
+
+export interface Segment {
+  id: number;
+  start: number;
+  end: number;
+  text: string;
+  words?: WordTiming[];
+  speaker?: string;
 }
