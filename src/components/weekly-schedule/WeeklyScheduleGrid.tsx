@@ -11,6 +11,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { ChevronLeft, ChevronRight, Save, X } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
 import { toast } from "sonner";
+import { loadFromStorage, saveToStorage } from "@/lib/storage";
 
 export interface WeeklyEventWithTemp extends Omit<CalendarEvent, "id"> {
   tempId: string;
@@ -49,23 +50,36 @@ export function WeeklyScheduleGrid({
   // Hours for the day
   const hours = Array.from({ length: 14 }, (_, i) => i + 7); // 7 AM to 8 PM
 
-  // Load existing events that match the weekly pattern
+  // Cargar eventos guardados localmente o los existentes
   useEffect(() => {
-    const existingWeeklyEvents: WeeklyEventWithTemp[] = existingEvents
-      .filter(event => {
-        const eventDate = parseISO(event.date);
-        const eventHour = eventDate.getHours();
-        
-        // Only include events within our schedule hours (7am-8pm)
-        return eventHour >= 7 && eventHour <= 20 && event.repeat?.frequency === "weekly";
-      })
-      .map(event => ({
-        ...event,
-        tempId: uuidv4()
-      }));
+    const savedEvents = loadFromStorage<WeeklyEventWithTemp[]>("weeklyScheduleEvents");
+    
+    if (savedEvents && savedEvents.length > 0) {
+      setEvents(savedEvents);
+    } else {
+      const existingWeeklyEvents: WeeklyEventWithTemp[] = existingEvents
+        .filter(event => {
+          const eventDate = parseISO(event.date);
+          const eventHour = eventDate.getHours();
+          
+          // Only include events within our schedule hours (7am-8pm)
+          return eventHour >= 7 && eventHour <= 20 && event.repeat?.frequency === "weekly";
+        })
+        .map(event => ({
+          ...event,
+          tempId: uuidv4()
+        }));
 
-    setEvents(existingWeeklyEvents);
+      setEvents(existingWeeklyEvents);
+    }
   }, [existingEvents]);
+
+  // Guardar eventos localmente cuando cambien
+  useEffect(() => {
+    if (events.length > 0) {
+      saveToStorage("weeklyScheduleEvents", events);
+    }
+  }, [events]);
 
   const generateTimeSlotKey = (day: Date, hour: number) => {
     return `${format(day, 'EEEE', { locale: es })}-${hour}`;
@@ -111,6 +125,7 @@ export function WeeklyScheduleGrid({
 
   const handleDeleteEvent = (tempId: string) => {
     setEvents(prev => prev.filter(event => event.tempId !== tempId));
+    saveToStorage("weeklyScheduleEvents", events.filter(event => event.tempId !== tempId));
     toast.success("Evento eliminado del cronograma");
   };
 
@@ -156,7 +171,9 @@ export function WeeklyScheduleGrid({
       }
     };
     
-    setEvents(prev => [...prev, newEventWithDates]);
+    const updatedEvents = [...events, newEventWithDates];
+    setEvents(updatedEvents);
+    saveToStorage("weeklyScheduleEvents", updatedEvents);
     setShowDialog(false);
     toast.success("Evento agregado al cronograma");
   };

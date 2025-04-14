@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { eventTypeColors } from "@/components/Calendar";
 import { WeeklyEventWithTemp } from "./WeeklyScheduleGrid";
 
@@ -48,8 +48,8 @@ export function TimeSlot({ event, onClick, onDelete, getFolderName }: TimeSlotPr
           </div>
         </div>
       ) : (
-        <div className="h-full flex items-center justify-center weekly-add-slot">
-          <Plus className="h-4 w-4 opacity-50" />
+        <div className="h-full weekly-add-slot">
+          {/* Se ha eliminado el icono de Plus */}
         </div>
       )}
     </div>
