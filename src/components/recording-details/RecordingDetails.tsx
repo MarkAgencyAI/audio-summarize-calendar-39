@@ -36,7 +36,7 @@ export function RecordingDetails({
   const [activeTab, setActiveTab] = useState("transcription");
   const [currentAudioTime, setCurrentAudioTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(recording.duration || 0);
-  const [mainView, setMainView] = useState<"content" | "notes">("content");
+  const [mainView, setMainView] = useState<"content" | "notes" | "player">("content");
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const audioPlayerRef = useRef<AudioPlayerHandle>(null);
   const isMobile = useIsMobile();
@@ -148,31 +148,14 @@ export function RecordingDetails({
             <RecordingHeader recording={recording} onDeleteEvent={onDeleteEvent} />
           </div>
           
-          {/* Audio player section - Always visible */}
-          <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-            <AudioPlayerV2 
-              audioUrl={recording.audioUrl} 
-              audioBlob={audioBlob || undefined}
-              initialDuration={recording.duration} 
-              onTimeUpdate={handleTimeUpdate} 
-              ref={audioPlayerRef}
-              onDurationChange={setAudioDuration}
-              onAddChapter={handleAddChapterFromPlayer}
-              chapters={chapters}
-              isSelectionMode={isSelectionMode}
-              onChapterClick={handleChapterClick}
-              onToggleSelectionMode={toggleSelectionMode}
-            />
-          </div>
-          
-          {/* Content tabs - Transcription, Summary, Notes */}
+          {/* Content tabs - Transcription, Summary, Notes, Player */}
           <Tabs 
             value={mainView} 
-            onValueChange={(value) => setMainView(value as "content" | "notes")} 
+            onValueChange={(value) => setMainView(value as "content" | "notes" | "player")} 
             className="flex-grow overflow-hidden flex flex-col"
           >
             <div className="px-4 pt-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
-              <TabsList className="grid grid-cols-2 w-full bg-slate-100 dark:bg-slate-800/50 p-1 rounded-lg">
+              <TabsList className="grid grid-cols-3 w-full bg-slate-100 dark:bg-slate-800/50 p-1 rounded-lg">
                 <TabsTrigger value="content" className="flex items-center gap-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm">
                   <FileText className="h-4 w-4" />
                   <span>Contenido</span>
@@ -180,6 +163,10 @@ export function RecordingDetails({
                 <TabsTrigger value="notes" className="flex items-center gap-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm">
                   <PenLine className="h-4 w-4" />
                   <span>Apuntes</span>
+                </TabsTrigger>
+                <TabsTrigger value="player" className="flex items-center gap-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm">
+                  <Headphones className="h-4 w-4" />
+                  <span>Reproductor</span>
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -200,6 +187,25 @@ export function RecordingDetails({
                   folderId={recording.folderId} 
                   sectionTitle="Apuntes de esta grabación" 
                 />
+              </TabsContent>
+              
+              <TabsContent value="player" className="m-0 p-4 h-full overflow-y-auto">
+                <div className="max-w-3xl mx-auto">
+                  <h2 className="text-xl font-semibold mb-4 text-slate-800 dark:text-slate-200">Reproductor de Audio</h2>
+                  <AudioPlayerV2 
+                    audioUrl={recording.audioUrl} 
+                    audioBlob={audioBlob || undefined}
+                    initialDuration={recording.duration} 
+                    onTimeUpdate={handleTimeUpdate} 
+                    ref={audioPlayerRef}
+                    onDurationChange={setAudioDuration}
+                    onAddChapter={handleAddChapterFromPlayer}
+                    chapters={chapters}
+                    isSelectionMode={isSelectionMode}
+                    onChapterClick={handleChapterClick}
+                    onToggleSelectionMode={toggleSelectionMode}
+                  />
+                </div>
               </TabsContent>
             </div>
           </Tabs>

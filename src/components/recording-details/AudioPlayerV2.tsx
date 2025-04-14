@@ -255,6 +255,14 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       );
       
       if (clickedChapter && onChapterClick) {
+        if (audioRef.current) {
+          audioRef.current.currentTime = clickedChapter.startTime;
+          setCurrentTime(clickedChapter.startTime);
+          if (!isPlaying) {
+            audioRef.current.play();
+            setIsPlaying(true);
+          }
+        }
         onChapterClick(clickedChapter);
       } else {
         if (audioRef.current) {
@@ -278,6 +286,14 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       );
       
       if (clickedChapter && onChapterClick) {
+        if (audioRef.current) {
+          audioRef.current.currentTime = clickedChapter.startTime;
+          setCurrentTime(clickedChapter.startTime);
+          if (!isPlaying) {
+            audioRef.current.play();
+            setIsPlaying(true);
+          }
+        }
         onChapterClick(clickedChapter);
       } else {
         if (audioRef.current) {
@@ -516,11 +532,11 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
     };
 
     return (
-      <div className="flex flex-col space-y-3">
+      <div className="flex flex-col space-y-5">
         <audio ref={audioRef} preload="metadata" />
 
         {activeChapter && (
-          <div className="mb-3 flex items-center justify-center">
+          <div className="mb-2 flex items-center justify-center">
             {renderActiveChapter()}
           </div>
         )}
@@ -536,8 +552,18 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
           <span>{formatTime(duration)}</span>
         </div>
 
-        <div className={`flex flex-col space-y-3 ${isMobile ? 'items-stretch' : 'items-center'}`}>
-          <div className="flex items-center justify-center space-x-2">
+        <div className="flex flex-col space-y-5">
+          <div className="flex justify-center items-center space-x-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => skip(-10)}
+              aria-label="Skip Back 10 seconds"
+              className="h-10 w-10"
+            >
+              <SkipBack className="h-5 w-5" />
+            </Button>
+
             <Button
               variant="outline"
               size="icon"
@@ -551,26 +577,16 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => skip(-10)}
-              aria-label="Skip Back 10 seconds"
-              className="h-12 w-12"
-            >
-              <SkipBack className="h-6 w-6" />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
               onClick={() => skip(10)}
               aria-label="Skip Forward 10 seconds"
-              className="h-12 w-12"
+              className="h-10 w-10"
             >
-              <SkipForward className="h-6 w-6" />
+              <SkipForward className="h-5 w-5" />
             </Button>
           </div>
 
           <div className="flex items-center space-x-2 w-full">
-            <span className="text-xs text-muted-foreground">{formatTime(currentTime)}</span>
+            <span className="text-xs text-muted-foreground w-8 text-right">{formatTime(currentTime)}</span>
             <Slider
               defaultValue={[0]}
               max={100}
@@ -580,7 +596,7 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
               value={[(currentTime / duration) * 100 || 0]}
               className="flex-1"
             />
-            <span className="text-xs text-muted-foreground">{formatTime(duration)}</span>
+            <span className="text-xs text-muted-foreground w-8">{formatTime(duration)}</span>
           </div>
 
           <div className="flex items-center justify-center space-x-2 w-full">
@@ -604,7 +620,7 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
             />
           </div>
 
-          <div className="flex items-center justify-center space-x-2 w-full">
+          <div className="flex items-center justify-center space-x-2 w-full mt-2">
             {isSelectionMode && selectionStart !== null && selectionEnd !== null && (
               <Button 
                 variant="outline" 
