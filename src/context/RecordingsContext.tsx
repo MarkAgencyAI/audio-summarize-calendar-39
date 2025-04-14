@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from "sonner";
 import { loadFromStorage, saveToStorage } from "@/lib/storage";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "./AuthContext";
 
 export interface AudioChapter {
   id: string;
@@ -115,46 +117,65 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [folders, setFolders] = useState<Folder[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
+  const { user } = useAuth();
 
+  // Cargar datos cuando el usuario inicia sesión
   useEffect(() => {
-    const loadedRecordings = loadFromStorage<Recording[]>("recordings") || [];
-    const loadedFolders = loadFromStorage<Folder[]>("folders") || [];
-    const loadedNotes = loadFromStorage<Note[]>("notes") || [];
-    const loadedGrades = loadFromStorage<Grade[]>("grades") || [];
+    const loadUserData = async () => {
+      if (!user) {
+        // Limpiar datos si no hay usuario
+        setRecordings([]);
+        setFolders([]);
+        setNotes([]);
+        setGrades([]);
+        return;
+      }
 
-    if (loadedFolders.length === 0) {
-      const defaultFolder: Folder = {
-        id: "default",
-        name: "General",
-        color: "#4f46e5",
-        icon: "Book", // Default icon
-        createdAt: new Date().toISOString()
-      };
-      loadedFolders.push(defaultFolder);
-      saveToStorage("folders", loadedFolders);
-    }
+      try {
+        // Cargar carpetas
+        const { data: foldersData, error: foldersError } = await supabase
+          .from('folders')
+          .select('*')
+          .order('created_at', { ascending: true });
 
-    setRecordings(loadedRecordings);
-    setFolders(loadedFolders);
-    setNotes(loadedNotes);
-    setGrades(loadedGrades);
-  }, []);
+        if (foldersError) throw foldersError;
+        setFolders(foldersData || []);
 
-  useEffect(() => {
-    saveToStorage("recordings", recordings);
-  }, [recordings]);
+        // Cargar grabaciones
+        const { data: recordingsData, error: recordingsError } = await supabase
+          .from('recordings')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-  useEffect(() => {
-    saveToStorage("folders", folders);
-  }, [folders]);
+        if (recordingsError) throw recordingsError;
+        setRecordings(recordingsData || []);
 
-  useEffect(() => {
-    saveToStorage("notes", notes);
-  }, [notes]);
+        // Cargar notas
+        const { data: notesData, error: notesError } = await supabase
+          .from('notes')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-  useEffect(() => {
-    saveToStorage("grades", grades);
-  }, [grades]);
+        if (notesError) throw notesError;
+        setNotes(notesData || []);
+
+        // Cargar calificaciones
+        const { data: gradesData, error: gradesError } = await supabase
+          .from('grades')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (gradesError) throw gradesError;
+        setGrades(gradesData || []);
+
+      } catch (error) {
+        console.error('Error cargando datos:', error);
+        toast.error('Error al cargar los datos');
+      }
+    };
+
+    loadUserData();
+  }, [user]);
 
   const addRecording = (recording: Omit<Recording, "id">) => {
     const newRecording: Recording = {
@@ -298,4 +319,12 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       {children}
     </RecordingsContext.Provider>
   );
+};
+
+export function useRecordings() {
+  const context = useContext(RecordingsContext);
+  if (!context) {
+    throw new Error("useRecordings must be used within a RecordingsProvider");
+  }
+  return context;
 };
