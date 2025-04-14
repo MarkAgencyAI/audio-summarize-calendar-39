@@ -46,7 +46,13 @@ export function useTranscription(options?: Partial<TranscriptionOptions>) {
   const transcribeAudio = React.useCallback(async (audioBlob: Blob): Promise<TranscriptionResult> => {
     if (!audioBlob) {
       toast.error("No se proporcionó un archivo de audio válido");
-      return { transcript: "", errors: ["No se proporcionó un archivo de audio válido"] };
+      return { 
+        transcript: "", 
+        errors: ["No se proporcionó un archivo de audio válido"],
+        duration: 0,
+        segmentCount: 0,
+        processingTime: 0
+      };
     }
     
     if (!transcriptionServiceRef.current) {
@@ -132,7 +138,14 @@ export function useTranscription(options?: Partial<TranscriptionOptions>) {
       });
       window.dispatchEvent(errorEvent);
       
-      throw err;
+      // Return a properly formatted TranscriptionResult even in case of error
+      return {
+        transcript: "",
+        duration: 0,
+        segmentCount: 0,
+        processingTime: 0,
+        errors: [errorMessage]
+      };
     } finally {
       setIsTranscribing(false);
     }
