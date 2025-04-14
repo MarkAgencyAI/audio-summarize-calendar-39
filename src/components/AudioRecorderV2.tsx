@@ -41,6 +41,7 @@ export function AudioRecorderV2({
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
   const audioUrlRef = useRef<string | null>(null);
   const [showTranscriptionSheet, setShowTranscriptionSheet] = useState(false);
+  const [hasProcessedRecording, setHasProcessedRecording] = useState(false);
   const {
     transcribeAudio,
     isTranscribing,
@@ -148,6 +149,7 @@ export function AudioRecorderV2({
   const clearRecording = () => {
     setAudioBlob(null);
     setRecordingName("");
+    setHasProcessedRecording(false);
     if (audioUrlRef.current) {
       URL.revokeObjectURL(audioUrlRef.current);
       audioUrlRef.current = null;
@@ -210,10 +212,12 @@ export function AudioRecorderV2({
   };
 
   const processAndSaveRecording = async () => {
-    if (!audioBlob) return;
+    if (!audioBlob || hasProcessedRecording) return;
+    
     try {
       toast.info("Procesando grabación...");
       setShowTranscriptionSheet(true);
+      setHasProcessedRecording(true);
       
       const recordingId = crypto.randomUUID();
       const finalName = recordingName || `Grabación ${formatDate(new Date())}`;
@@ -259,7 +263,7 @@ export function AudioRecorderV2({
         name: finalName,
         duration: recordingDuration,
         folderId: selectedFolder || folders[0]?.id || null,
-        audioData: "", // Add this empty string for audioData property
+        audioData: "", // Needed for TypeScript
         output: result.transcript || "",
         subject: subject,
         speakerMode: speakerMode,
@@ -276,7 +280,7 @@ export function AudioRecorderV2({
       
       const savedRecordingId = await addRecording(finalRecordingData);
       
-      if (savedRecordingId) { // This will be fixed by the next statement
+      if (typeof savedRecordingId === 'string') {
         setAudioBlob(null);
         setRecordingName('');
         setSubject('');
@@ -307,6 +311,7 @@ export function AudioRecorderV2({
           duration: 5000
         });
       }
+      setHasProcessedRecording(false); // Reset to allow retry
     } finally {
       setShowTranscriptionSheet(false);
     }
@@ -435,11 +440,11 @@ export function AudioRecorderV2({
                 Borrar
               </Button>
               
-              <Button onClick={processAndSaveRecording} disabled={isTranscribing} className="bg-custom-primary hover:bg-custom-primary/90 text-white">
+              <Button onClick={processAndSaveRecording} disabled={isTranscribing || hasProcessedRecording} className="bg-custom-primary hover:bg-custom-primary/90 text-white">
                 {isTranscribing ? <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Procesando... {progress}%
-                  </> : "Guardar grabación"}
+                  </> : hasProcessedRecording ? "Procesado" : "Guardar grabación"}
               </Button>
             </div>}
           

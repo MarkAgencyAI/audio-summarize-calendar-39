@@ -43,10 +43,8 @@ export interface AudioChunk {
   isProcessed?: boolean;
   transcript?: string;
   error?: string;
-  // We don't need the url property as it's causing a TypeScript error
 }
 
-// Add the missing types that were referenced in index.ts
 export interface TranscriptionApiResponse {
   id: string;
   text: string;
