@@ -1,4 +1,3 @@
-
 import { getAudioDuration, splitAudioIntoChunks, compressAudioBlob } from './audio-buffer-utils';
 import { sendToWebhook } from '../webhook';
 import { transcribeAudio as groqTranscribeAudio } from '../groq';
@@ -169,4 +168,14 @@ export class TranscriptionService {
       this.isProcessing = false;
     }
   }
+}
+
+// Add a separate processAudio function that can be used directly
+export async function processAudio(
+  audioBlob: Blob, 
+  options: Partial<TranscriptionOptions> = {},
+  onProgress?: (progress: TranscriptionProgress) => void
+): Promise<TranscriptionResult> {
+  const service = new TranscriptionService(options);
+  return service.processAudio(audioBlob, onProgress);
 }
