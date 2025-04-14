@@ -7,12 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, profile, logout } = useAuth();
   
-  const [profile, setProfile] = useState({
+  const [profileData, setProfileData] = useState({
     name: "",
     email: "",
     career: ""
@@ -22,23 +23,38 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!user) {
       navigate("/login");
-    } else {
-      setProfile({
-        name: user.name,
-        email: user.email,
-        career: user.career || ""
+    } else if (profile) {
+      setProfileData({
+        name: profile.name,
+        email: profile.email,
+        career: profile.career || ""
       });
     }
-  }, [user, navigate]);
+  }, [user, profile, navigate]);
   
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
   
-  const handleSaveProfile = () => {
-    // In a real app, this would update the user's profile
-    toast.success("Perfil actualizado");
+  const handleSaveProfile = async () => {
+    if (!user || !profile) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: profileData.name,
+          career: profileData.career
+        })
+        .eq('id', user.id);
+        
+      if (error) throw error;
+      toast.success("Perfil actualizado");
+    } catch (error) {
+      console.error("Error actualizando perfil:", error);
+      toast.error("Error al actualizar el perfil");
+    }
   };
   
   return (
@@ -55,9 +71,9 @@ export default function ProfilePage() {
                 <Label htmlFor="name">Nombre</Label>
                 <Input 
                   id="name" 
-                  value={profile.name} 
-                  onChange={e => setProfile({
-                    ...profile,
+                  value={profileData.name} 
+                  onChange={e => setProfileData({
+                    ...profileData,
                     name: e.target.value
                   })} 
                 />
@@ -67,7 +83,7 @@ export default function ProfilePage() {
                 <Label htmlFor="email">Correo electrónico</Label>
                 <Input 
                   id="email" 
-                  value={profile.email} 
+                  value={profileData.email} 
                   readOnly 
                 />
               </div>
@@ -76,9 +92,9 @@ export default function ProfilePage() {
                 <Label htmlFor="career">Carrera</Label>
                 <Input 
                   id="career" 
-                  value={profile.career} 
-                  onChange={e => setProfile({
-                    ...profile,
+                  value={profileData.career} 
+                  onChange={e => setProfileData({
+                    ...profileData,
                     career: e.target.value
                   })} 
                 />
