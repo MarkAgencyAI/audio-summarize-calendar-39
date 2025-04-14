@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { extractWebhookOutput } from "@/lib/transcription-service";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRecordings } from "@/context/RecordingsContext";
 import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 
 interface LiveTranscriptionSheetProps {
   isTranscribing: boolean;
@@ -90,7 +90,7 @@ export function LiveTranscriptionSheet({
             date: new Date().toISOString(),
             duration: event.detail.data.duration || 0,
             audioData: "",
-            folderId: "default",
+            folderId: null,
             output: event.detail.data.output,
             language: "es",
             subject: "",
@@ -102,13 +102,18 @@ export function LiveTranscriptionSheet({
           try {
             // Guardar la transcripción y obtener el ID
             const newRecordingId = await addRecording(transcriptionData);
-            // Fix: Check if newRecordingId exists before setting it
-            if (newRecordingId !== null && newRecordingId !== undefined) {
+            // Corregir: Comprobar que newRecordingId exista y sea de tipo string antes de asignarlo
+            if (typeof newRecordingId === 'string') {
               setRecordingId(newRecordingId);
               console.log("Grabación guardada con ID:", newRecordingId);
+              toast.success("Grabación guardada correctamente");
+            } else {
+              console.error("Error: No se recibió un ID válido al guardar la grabación");
+              toast.error("Error al guardar la grabación");
             }
           } catch (error) {
             console.error("Error al guardar la grabación:", error);
+            toast.error("Error al guardar la grabación");
           }
         }
         

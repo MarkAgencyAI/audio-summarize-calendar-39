@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from "sonner";
@@ -128,10 +127,8 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
-  // Función para cargar todos los datos desde Supabase
   const loadUserData = async () => {
     if (!user) {
-      // Limpiar datos si no hay usuario
       setRecordings([]);
       setFolders([]);
       setNotes([]);
@@ -143,7 +140,6 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     setIsLoading(true);
     try {
-      // Cargar carpetas
       const { data: foldersData, error: foldersError } = await supabase
         .from('folders')
         .select('*')
@@ -151,7 +147,6 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       if (foldersError) throw foldersError;
       
-      // Convertir el formato de Supabase al formato de la aplicación
       const formattedFolders: Folder[] = (foldersData || []).map(folder => ({
         id: folder.id,
         name: folder.name,
@@ -162,7 +157,6 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       
       setFolders(formattedFolders);
 
-      // Cargar grabaciones
       const { data: recordingsData, error: recordingsError } = await supabase
         .from('recordings')
         .select('*')
@@ -170,13 +164,12 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       if (recordingsError) throw recordingsError;
       
-      // Convertir el formato de Supabase al formato de la aplicación
       const formattedRecordings: Recording[] = (recordingsData || []).map(recording => ({
         id: recording.id,
         name: recording.name,
         date: recording.date,
         duration: recording.duration,
-        audioData: "", // Necesario porque no se almacena en Supabase
+        audioData: "",
         folderId: recording.folder_id,
         output: recording.output,
         language: recording.language,
@@ -190,7 +183,6 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       
       setRecordings(formattedRecordings);
 
-      // Cargar notas
       const { data: notesData, error: notesError } = await supabase
         .from('notes')
         .select('*')
@@ -198,7 +190,6 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       if (notesError) throw notesError;
       
-      // Convertir el formato de Supabase al formato de la aplicación
       const formattedNotes: Note[] = (notesData || []).map(note => ({
         id: note.id,
         title: note.title,
@@ -211,7 +202,6 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       
       setNotes(formattedNotes);
 
-      // Cargar calificaciones
       const { data: gradesData, error: gradesError } = await supabase
         .from('grades')
         .select('*')
@@ -219,7 +209,6 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       if (gradesError) throw gradesError;
       
-      // Convertir el formato de Supabase al formato de la aplicación
       const formattedGrades: Grade[] = (gradesData || []).map(grade => ({
         id: grade.id,
         name: grade.name,
@@ -230,7 +219,6 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       
       setGrades(formattedGrades);
 
-      // Cargar eventos
       const { data: eventsData, error: eventsError } = await supabase
         .from('events')
         .select('*')
@@ -238,7 +226,6 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       if (eventsError) throw eventsError;
       
-      // Convertir el formato de Supabase al formato de la aplicación
       const formattedEvents: Event[] = (eventsData || []).map(event => ({
         id: event.id,
         title: event.title,
@@ -257,22 +244,18 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
 
-  // Función pública para recargar datos
   const refreshData = async () => {
     await loadUserData();
     toast.success('Datos actualizados');
   };
 
-  // Cargar datos cuando el usuario inicia sesión o cambia
   useEffect(() => {
     loadUserData();
   }, [user]);
 
-  // Configurar actualización automática con Supabase Realtime
   useEffect(() => {
     if (!user) return;
 
-    // Suscribirse a cambios en la tabla recordings
     const recordingsChannel = supabase
       .channel('public:recordings')
       .on('postgres_changes', {
@@ -284,7 +267,6 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       })
       .subscribe();
 
-    // Suscribirse a cambios en la tabla folders
     const foldersChannel = supabase
       .channel('public:folders')
       .on('postgres_changes', {
@@ -296,7 +278,6 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       })
       .subscribe();
 
-    // Suscribirse a cambios en la tabla notes
     const notesChannel = supabase
       .channel('public:notes')
       .on('postgres_changes', {
@@ -308,7 +289,6 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       })
       .subscribe();
 
-    // Suscribirse a cambios en la tabla grades
     const gradesChannel = supabase
       .channel('public:grades')
       .on('postgres_changes', {
@@ -320,7 +300,6 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       })
       .subscribe();
 
-    // Suscribirse a cambios en la tabla events
     const eventsChannel = supabase
       .channel('public:events')
       .on('postgres_changes', {
@@ -332,7 +311,6 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       })
       .subscribe();
 
-    // Limpiar suscripciones al desmontar
     return () => {
       supabase.removeChannel(recordingsChannel);
       supabase.removeChannel(foldersChannel);
@@ -344,32 +322,81 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const addRecording = async (recording: Omit<Recording, "id">) => {
     try {
+      const folderId = recording.folderId || null;
+      
+      let targetFolderId = folderId;
+      if (!folderId) {
+        if (folders.length === 0) {
+          try {
+            const newFolder = {
+              name: "General",
+              color: "#4f46e5",
+              icon: "Book",
+              createdAt: new Date().toISOString()
+            };
+            const { data: folderData } = await supabase
+              .from('folders')
+              .insert({
+                name: newFolder.name,
+                color: newFolder.color,
+                icon: newFolder.icon,
+                user_id: user?.id
+              })
+              .select()
+              .single();
+            
+            if (folderData) {
+              targetFolderId = folderData.id;
+              setFolders(prev => [...prev, {
+                id: folderData.id,
+                name: folderData.name,
+                color: folderData.color,
+                icon: folderData.icon,
+                createdAt: folderData.created_at
+              }]);
+            }
+          } catch (error) {
+            console.error("Error al crear carpeta por defecto:", error);
+          }
+        } else {
+          targetFolderId = folders[0].id;
+        }
+      }
+      
       const { data, error } = await supabase
         .from('recordings')
         .insert({
           name: recording.name,
           date: recording.date,
           duration: recording.duration,
-          folder_id: recording.folderId,
+          folder_id: targetFolderId,
           language: recording.language,
-          subject: recording.subject,
+          subject: recording.subject || "", 
           webhook_data: recording.webhookData,
           speaker_mode: recording.speakerMode,
           understood: recording.understood || false,
-          output: recording.output,
+          output: recording.output || "",
           user_id: user?.id
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error Supabase al guardar grabación:", error);
+        throw error;
+      }
+
+      if (!data) {
+        console.error("No se recibieron datos al guardar la grabación");
+        throw new Error("No se recibieron datos al guardar la grabación");
+      }
 
       const newRecording: Recording = {
         id: data.id,
         name: data.name,
         date: data.date,
         duration: data.duration,
-        audioData: recording.audioData, // No se almacena en Supabase
+        audioData: recording.audioData,
         folderId: data.folder_id,
         language: data.language,
         subject: data.subject,
@@ -661,8 +688,6 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
 
-  // NUEVOS MÉTODOS PARA MANEJAR EVENTOS
-  
   const addEvent = async (event: Omit<Event, "id">) => {
     try {
       const { data, error } = await supabase
