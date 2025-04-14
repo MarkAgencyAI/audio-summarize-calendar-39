@@ -50,7 +50,7 @@ export interface SummaryTabProps {
   data: RecordingDetails;
 }
 
-// Add the missing WebhookTabProps which is used in SummaryTab.tsx
+// Add the WebhookTabProps which is used in SummaryTab.tsx
 export interface WebhookTabProps {
   data: RecordingDetails;
 }
@@ -88,4 +88,5 @@ export const chapterColors = [
   "#84cc16", // lime-500
 ];
 
-// Make sure to export the chapterColors array
+// Explicitly export the chapterColors array
+export { chapterColors };
