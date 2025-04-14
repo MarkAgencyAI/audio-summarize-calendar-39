@@ -58,6 +58,7 @@ export interface Folder {
   id: string;
   name: string;
   color: string;
+  icon?: string; // Added icon property
   createdAt: string;
 }
 
@@ -126,6 +127,7 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         id: "default",
         name: "General",
         color: "#4f46e5",
+        icon: "Book", // Default icon
         createdAt: new Date().toISOString()
       };
       loadedFolders.push(defaultFolder);
