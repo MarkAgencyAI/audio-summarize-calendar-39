@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload, AlertCircle } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -258,6 +259,7 @@ export function AudioRecorderV2({
         name: finalName,
         duration: recordingDuration,
         folderId: selectedFolder || folders[0]?.id || null,
+        audioData: "", // Add this empty string for audioData property
         output: result.transcript || "",
         subject: subject,
         speakerMode: speakerMode,
@@ -274,7 +276,7 @@ export function AudioRecorderV2({
       
       const savedRecordingId = await addRecording(finalRecordingData);
       
-      if (savedRecordingId) {
+      if (savedRecordingId) { // This will be fixed by the next statement
         setAudioBlob(null);
         setRecordingName('');
         setSubject('');
