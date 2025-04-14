@@ -38,6 +38,13 @@ export interface TranscriptionResult {
   duration?: number;          // Duración total del audio procesado
   segmentCount?: number;      // Número de segmentos procesados
   processingTime?: number;    // Tiempo total de procesamiento en ms
+  summary?: string;           // Resumen de la transcripción
+  keyPoints?: string[];       // Puntos clave de la transcripción
+  suggestedEvents?: Array<{   // Eventos sugeridos basados en la transcripción
+    title: string;
+    description: string;
+    date?: string;
+  }>;
 }
 
 /**

@@ -253,7 +253,7 @@ export function AudioRecorderV2({
         toast.warning("No se pudo guardar el audio localmente. La reproducción podría no estar disponible sin conexión.");
       }
       
-      let suggestedEvents = [];
+      let suggestedEvents: Array<{ title: string; description: string; date?: string }> = [];
       if (result.suggestedEvents && Array.isArray(result.suggestedEvents)) {
         suggestedEvents = result.suggestedEvents;
       } else if (result.webhookResponse) {
@@ -304,7 +304,8 @@ export function AudioRecorderV2({
             data: {
               id: savedRecordingId,
               webhookResponse: webhookOutput || result.webhookResponse,
-              transcript: result.transcript
+              transcript: result.transcript,
+              output: result.transcript
             }
           }
         }));
