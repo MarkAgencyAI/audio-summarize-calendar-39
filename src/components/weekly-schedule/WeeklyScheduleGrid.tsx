@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, parseISO, addHours } from "date-fns";
 import { es } from "date-fns/locale";
@@ -13,6 +12,7 @@ import { useRecordings } from "@/context/RecordingsContext";
 import { toast } from "sonner";
 import { loadFromStorage, saveToStorage } from "@/lib/storage";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export interface WeeklyEventWithTemp extends Omit<CalendarEvent, "id"> {
   tempId: string;
