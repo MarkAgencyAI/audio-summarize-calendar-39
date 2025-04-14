@@ -241,7 +241,8 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           webhook_data: recording.webhookData,
           speaker_mode: recording.speakerMode,
           understood: recording.understood || false,
-          output: recording.output
+          output: recording.output,
+          user_id: user?.id // Añadido user_id que faltaba
         })
         .select()
         .single();
@@ -253,7 +254,7 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         name: data.name,
         date: data.date,
         duration: data.duration,
-        audioData: "", // No se almacena en Supabase
+        audioData: recording.audioData, // No se almacena en Supabase
         folderId: data.folder_id,
         language: data.language,
         subject: data.subject,
@@ -332,7 +333,8 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         .insert({
           name: folder.name,
           color: folder.color,
-          icon: folder.icon
+          icon: folder.icon,
+          user_id: user?.id // Añadido user_id que faltaba
         })
         .select()
         .single();
@@ -422,7 +424,8 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           title: note.title,
           content: note.content,
           folder_id: note.folderId,
-          image_url: note.imageUrl
+          image_url: note.imageUrl,
+          user_id: user?.id // Añadido user_id que faltaba
         })
         .select()
         .single();
@@ -497,7 +500,8 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         .insert({
           name,
           score,
-          folder_id: folderId
+          folder_id: folderId,
+          user_id: user?.id // Añadido user_id que faltaba
         })
         .select()
         .single();
