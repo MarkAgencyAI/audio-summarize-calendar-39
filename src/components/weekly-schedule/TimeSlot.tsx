@@ -52,35 +52,6 @@ export function TimeSlot({ event, onClick, onDelete, getFolderName }: TimeSlotPr
           <Plus className="h-4 w-4 opacity-0 group-hover:opacity-100" />
         </div>
       )}
-
-      <style jsx>{`
-        .weekly-time-slot {
-          border-left: 1px solid var(--border);
-          border-right: 1px solid var(--border);
-          padding: 4px;
-          cursor: pointer;
-          min-height: 80px;
-          transition: background-color 0.2s;
-        }
-        
-        .weekly-time-slot:hover {
-          background-color: var(--accent-light, rgba(0,0,0,0.05));
-        }
-        
-        .weekly-event {
-          height: 100%;
-          padding: 8px;
-          border-radius: 4px;
-          overflow: hidden;
-        }
-        
-        .weekly-add-slot {
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-      `}</style>
     </div>
   );
 }
