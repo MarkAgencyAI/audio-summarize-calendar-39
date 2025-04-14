@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -111,6 +110,17 @@ export default function RecordingDetailsPage() {
     }
   };
   
+  const handleDeleteEvent = (eventId: string) => {
+    if (recording && recording.events) {
+      // Filter out the event to be deleted
+      const updatedEvents = recording.events.filter(event => event.id !== eventId);
+      
+      // Update the recording with the new events array
+      updateRecording(recording.id, { events: updatedEvents });
+      toast.success("Evento eliminado");
+    }
+  };
+  
   const getRelativeTime = (dateString: string) => {
     try {
       return formatDistanceToNow(new Date(dateString), { 
@@ -199,7 +209,8 @@ export default function RecordingDetailsPage() {
         <RecordingDetails 
           recording={recording} 
           isOpen={isOpen} 
-          onOpenChange={handleOpenChange} 
+          onOpenChange={handleOpenChange}
+          onDeleteEvent={handleDeleteEvent} 
         />
       </div>
       

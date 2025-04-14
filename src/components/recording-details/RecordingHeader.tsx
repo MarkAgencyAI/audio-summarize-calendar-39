@@ -1,201 +1,154 @@
 
-import { useState } from "react";
-import { useRecordings } from "@/context/RecordingsContext";
-import { Button } from "@/components/ui/button";
+import React, { useState } from "react";
+import { Recording } from "@/context/RecordingsContext";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Pencil, Save, X, FolderOpen, Trash2, Globe, Clock, Tag } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Edit, Check, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { RecordingHeaderProps } from "./types";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { formatDistanceToNow } from "date-fns";
-import { es } from "date-fns/locale";
-import { Badge } from "@/components/ui/badge";
+import { useRecordings } from "@/context/RecordingsContext";
+import { cn } from "@/lib/utils";
+import { 
+  Popover,
+  PopoverContent,
+  PopoverTrigger 
+} from "@/components/ui/popover";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
 
-export function RecordingHeader({ recording }: RecordingHeaderProps) {
-  const { updateRecording, deleteRecording, folders } = useRecordings();
-  const [isRenaming, setIsRenaming] = useState(false);
+interface RecordingHeaderProps {
+  recording: Recording;
+  onDeleteEvent?: (eventId: string) => void;
+}
+
+export function RecordingHeader({ recording, onDeleteEvent }: RecordingHeaderProps) {
+  const { updateRecording } = useRecordings();
+  const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(recording.name);
-  const [selectedFolder, setSelectedFolder] = useState(recording.folderId);
-  const isMobile = useIsMobile();
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [showDeleteEventDialog, setShowDeleteEventDialog] = useState(false);
   
-  const folder = folders.find(f => f.id === recording.folderId) || folders[0];
-  
-  const handleSaveRename = () => {
-    if (newName.trim() === "") {
-      toast.error("El nombre no puede estar vacío");
-      return;
+  const handleSaveName = () => {
+    if (newName.trim()) {
+      updateRecording(recording.id, { name: newName.trim() });
+      setIsEditing(false);
+      toast.success("Nombre actualizado");
     }
-    updateRecording(recording.id, { name: newName });
-    setIsRenaming(false);
-    toast.success("Nombre actualizado");
   };
   
-  const handleCancelRename = () => {
-    setNewName(recording.name);
-    setIsRenaming(false);
-  };
-  
-  const handleDelete = () => {
-    deleteRecording(recording.id);
-    toast.success("Grabación eliminada");
-  };
-  
-  const handleFolderChange = (folderId: string) => {
-    setSelectedFolder(folderId);
-    updateRecording(recording.id, { folderId });
-    toast.success("Carpeta actualizada");
-  };
-  
-  const getRelativeTime = (dateString: string) => {
-    try {
-      return formatDistanceToNow(new Date(dateString), { 
-        addSuffix: true,
-        locale: es
-      });
-    } catch (e) {
-      return "fecha desconocida";
-    }
+  const handleEventClick = (eventId: string) => {
+    setSelectedEventId(eventId);
   };
 
+  const handleDeleteEventClick = () => {
+    setShowDeleteEventDialog(true);
+  };
+
+  const confirmDeleteEvent = () => {
+    if (selectedEventId && onDeleteEvent) {
+      onDeleteEvent(selectedEventId);
+      setSelectedEventId(null);
+      setShowDeleteEventDialog(false);
+    }
+  };
+  
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        {/* Title area */}
-        <div className="flex-1 min-w-0">
-          {isRenaming ? (
-            <div className="flex items-center gap-2">
-              <Input 
-                value={newName} 
-                onChange={e => setNewName(e.target.value)} 
-                className="h-9 max-w-md" 
-                autoFocus 
-              />
-              <div className="flex gap-1">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={handleSaveRename} 
-                  className="h-9 w-9 rounded-full bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/40"
-                >
-                  <Save className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={handleCancelRename} 
-                  className="h-9 w-9 rounded-full bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-200 truncate">
-                {recording.name}
-              </h2>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setIsRenaming(true)} 
-                className="h-7 w-7 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          )}
-          
-          {/* Time and badges */}
-          <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-slate-500 dark:text-slate-400">
-            <div className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
-              <span>{getRelativeTime(recording.createdAt || recording.date)}</span>
-            </div>
-            
-            {recording.subject && (
-              <Badge variant="outline" className="flex items-center gap-1 px-2 py-0 h-5 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800">
-                <Tag className="h-3 w-3" />
-                <span className="text-xs">{recording.subject}</span>
-              </Badge>
-            )}
-            
-            <Badge 
-              variant={recording.understood ? "default" : "secondary"}
-              className={recording.understood 
-                ? "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50" 
-                : "bg-orange-100 text-orange-800 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:hover:bg-orange-900/50"
-              }
-            >
-              {recording.understood ? "Entendida" : "No entendida"}
-            </Badge>
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div className="flex-1">
+        {isEditing ? (
+          <div className="flex items-center gap-2">
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="max-w-sm text-lg font-semibold border-slate-300 dark:border-slate-700"
+              autoFocus
+            />
+            <Button size="sm" onClick={handleSaveName}>
+              <Check className="h-4 w-4 mr-1" />
+              <span>Guardar</span>
+            </Button>
           </div>
-        </div>
+        ) : (
+          <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+            {recording.name}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300"
+              onClick={() => setIsEditing(true)}
+            >
+              <Edit className="h-3.5 w-3.5" />
+              <span className="sr-only">Editar nombre</span>
+            </Button>
+          </h2>
+        )}
         
-        {/* Actions area */}
-        <div className="flex items-center">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
-              >
-                <Trash2 className="h-4 w-4 mr-1.5" />
-                <span className={isMobile ? "sr-only" : ""}>Eliminar</span>
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="dark:bg-slate-900 dark:border-slate-800 max-w-[95vw] md:max-w-md">
-              <AlertDialogHeader>
-                <AlertDialogTitle>¿Eliminar esta grabación?</AlertDialogTitle>
-                <AlertDialogDescription className="dark:text-slate-400">
-                  Esta acción no se puede deshacer. Se eliminará permanentemente esta grabación.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700">
-                  Cancelar
-                </AlertDialogCancel>
-                <AlertDialogAction 
-                  onClick={handleDelete} 
-                  className="bg-red-500 hover:bg-red-600 text-white dark:bg-red-600 dark:hover:bg-red-700"
-                >
-                  Eliminar
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
+        {recording.events && recording.events.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            <span className="text-xs text-slate-500 dark:text-slate-400">Eventos: </span>
+            {recording.events.map((event) => (
+              <Popover key={event.id}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "h-7 py-0 px-2 text-xs border-slate-200 dark:border-slate-700",
+                      selectedEventId === event.id && "ring-2 ring-blue-500 dark:ring-blue-400"
+                    )}
+                    onClick={() => handleEventClick(event.id)}
+                  >
+                    {event.title}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-3">
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-sm">{event.title}</h4>
+                    {event.description && (
+                      <p className="text-xs text-slate-600 dark:text-slate-400">{event.description}</p>
+                    )}
+                    <div className="flex justify-end">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleDeleteEventClick}
+                        className="h-8 text-xs mt-2"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" />
+                        <span>Eliminar evento</span>
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            ))}
+          </div>
+        )}
       </div>
       
-      {/* Folder selection */}
-      <div className="flex items-center gap-2 max-w-md bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg">
-        <div className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-          <div className="h-6 w-6 rounded-md flex items-center justify-center" style={{ backgroundColor: folder.color }}>
-            <FolderOpen className="h-3.5 w-3.5 text-white" />
-          </div>
-          <span className="whitespace-nowrap">Carpeta:</span>
-        </div>
-        
-        <Select value={selectedFolder} onValueChange={handleFolderChange}>
-          <SelectTrigger 
-            className="h-8 flex-1 min-w-[120px] text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
-          >
-            <SelectValue placeholder="Seleccionar carpeta" />
-          </SelectTrigger>
-          <SelectContent className="dark:bg-slate-900 dark:border-slate-800 max-h-[300px]">
-            {folders.map(f => (
-              <SelectItem key={f.id} value={f.id}>
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: f.color }} />
-                  <span className="truncate">{f.name}</span>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <AlertDialog open={showDeleteEventDialog} onOpenChange={setShowDeleteEventDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar evento</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que quieres eliminar este evento? Esta acción no puede deshacerse.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteEvent} className="bg-red-500 hover:bg-red-600">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

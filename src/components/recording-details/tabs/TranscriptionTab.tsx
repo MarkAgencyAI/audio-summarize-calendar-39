@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { TranscriptionTabProps } from "../types";
 import { FileText, Search, Copy, Highlighter, Settings2, X } from "lucide-react";
@@ -22,6 +21,7 @@ export function TranscriptionTab({
   const [highlightColor, setHighlightColor] = useState("#FFEB3B");
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
   const [isHighlightMenuOpen, setIsHighlightMenuOpen] = useState(false);
+  const [preventAutoClose, setPreventAutoClose] = useState(false);
   
   // State for UI controls
   const [searchTerm, setSearchTerm] = useState("");
@@ -78,10 +78,27 @@ export function TranscriptionTab({
   
   // Clear the current selection
   const clearSelection = () => {
-    setSelectedText("");
-    setSelectionRange(null);
-    setIsHighlightMenuOpen(false);
+    if (!preventAutoClose) {
+      setSelectedText("");
+      setSelectionRange(null);
+      setIsHighlightMenuOpen(false);
+    }
   };
+
+  // Handle popover interactions
+  useEffect(() => {
+    if (!isHighlightMenuOpen) {
+      setPreventAutoClose(false);
+      setIsColorPickerOpen(false);
+    }
+  }, [isHighlightMenuOpen]);
+
+  // Reset preventAutoClose when color picker is closed
+  useEffect(() => {
+    if (!isColorPickerOpen) {
+      setPreventAutoClose(false);
+    }
+  }, [isColorPickerOpen]);
   
   // Apply highlight to selected text
   const applyHighlight = () => {
@@ -122,6 +139,17 @@ export function TranscriptionTab({
       highlights: highlights.filter(h => h.id !== highlightId)
     });
     toast.success("Resaltado eliminado");
+  };
+
+  // Toggle color picker
+  const handleColorPickerToggle = () => {
+    setPreventAutoClose(true);
+    setIsColorPickerOpen(!isColorPickerOpen);
+  };
+
+  // Handle color selection
+  const handleColorSelect = (color: string) => {
+    setHighlightColor(color);
   };
 
   // Render the transcription content with highlights
@@ -256,7 +284,6 @@ export function TranscriptionTab({
         </div>
         
         <div className="flex items-center gap-1.5">
-          {/* Search Input */}
           <div className="relative">
             <div className="absolute inset-y-0 left-2 flex items-center pointer-events-none">
               <Search className="h-3.5 w-3.5 text-slate-400" />
@@ -278,7 +305,6 @@ export function TranscriptionTab({
             )}
           </div>
           
-          {/* Settings Button */}
           <Button
             variant="outline"
             size="sm"
@@ -289,7 +315,6 @@ export function TranscriptionTab({
             <span className="sr-only sm:not-sr-only sm:inline-block">Opciones</span>
           </Button>
           
-          {/* Copy Button */}
           {data.recording.output && (
             <Button
               variant="outline"
@@ -305,12 +330,10 @@ export function TranscriptionTab({
             </Button>
           )}
           
-          {/* Highlight Button */}
           <Popover 
             open={isHighlightMenuOpen} 
             onOpenChange={(open) => {
-              // Only close if we're not in a color picker mode
-              if (!isColorPickerOpen) {
+              if (!preventAutoClose) {
                 setIsHighlightMenuOpen(open);
               }
             }}
@@ -357,7 +380,7 @@ export function TranscriptionTab({
                               highlightColor === color ? "ring-2 ring-blue-500 ring-offset-2" : "border-slate-200 dark:border-slate-700"
                             )}
                             style={{ backgroundColor: color }}
-                            onClick={() => setHighlightColor(color)}
+                            onClick={() => handleColorSelect(color)}
                           />
                         ))}
                       </div>
@@ -366,7 +389,7 @@ export function TranscriptionTab({
                         variant="ghost" 
                         size="sm" 
                         className="w-full mt-2 text-xs py-1 h-auto"
-                        onClick={() => setIsColorPickerOpen(true)}
+                        onClick={handleColorPickerToggle}
                       >
                         Personalizar color
                       </Button>
@@ -409,7 +432,7 @@ export function TranscriptionTab({
                         variant="outline"
                         size="sm"
                         className="flex-1"
-                        onClick={() => setIsColorPickerOpen(false)}
+                        onClick={handleColorPickerToggle}
                       >
                         Volver
                       </Button>
@@ -429,7 +452,6 @@ export function TranscriptionTab({
         </div>
       </div>
       
-      {/* Settings Panel */}
       {showSettings && (
         <div className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/30">
           <div className="flex items-center gap-4">
@@ -450,7 +472,6 @@ export function TranscriptionTab({
         </div>
       )}
       
-      {/* Main Content */}
       <div className="border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800/30 p-5">
         <div
           ref={transcriptionRef}

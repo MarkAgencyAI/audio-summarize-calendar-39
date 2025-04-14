@@ -22,12 +22,14 @@ interface RecordingDetailsProps {
   recording: Recording;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onDeleteEvent?: (eventId: string) => void;
 }
 
 export function RecordingDetails({
   recording,
   isOpen: propIsOpen,
-  onOpenChange
+  onOpenChange,
+  onDeleteEvent
 }: RecordingDetailsProps) {
   const { updateRecording } = useRecordings();
   const [isOpen, setIsOpenState] = useState(false);
@@ -126,7 +128,8 @@ export function RecordingDetails({
     audioDuration,
     activeTab,
     renderHighlightedText,
-    updateRecording
+    updateRecording,
+    onDeleteEvent
   };
 
   const renderPlayerContent = () => (
@@ -161,7 +164,7 @@ export function RecordingDetails({
       <DialogContent className="p-0 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg w-[95vw] md:w-[90vw] lg:w-[80vw] max-w-6xl h-[90vh] flex flex-col overflow-hidden">
         <div className="flex flex-col w-full h-full">
           <div className="p-5 pb-3 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
-            <RecordingHeader recording={recording} />
+            <RecordingHeader recording={recording} onDeleteEvent={onDeleteEvent} />
           </div>
           
           <Tabs 
