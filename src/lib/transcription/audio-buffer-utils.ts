@@ -16,7 +16,6 @@ export async function getAudioDuration(audioBlob: Blob): Promise<number> {
     audioElement.onerror = () => {
       console.error("Error loading audio for duration calculation");
       URL.revokeObjectURL(audioElement.src);
-      // Return a default duration if we can't determine it
       resolve(0);
     };
   });
@@ -28,39 +27,43 @@ export async function getAudioDuration(audioBlob: Blob): Promise<number> {
 export async function splitAudioIntoChunks(
   audioBlob: Blob, 
   maxChunkDurationSeconds: number
-): Promise<{ blob: Blob; startTime: number; endTime: number }[]> {
+): Promise<{ blob: Blob; startTime: number; endTime: number; isProcessed?: boolean; transcript?: string; error?: string }[]> {
   const totalDuration = await getAudioDuration(audioBlob);
-  const chunks = [];
   
   // If the audio is shorter than the max chunk duration, return it as is
   if (totalDuration <= maxChunkDurationSeconds) {
-    chunks.push({
+    return [{
       blob: audioBlob,
       startTime: 0,
-      endTime: totalDuration
-    });
-    return chunks;
+      endTime: totalDuration,
+      isProcessed: false
+    }];
   }
   
-  // TODO: Implement actual audio chunking if needed
-  // Since this is complex and requires audio manipulation libraries,
-  // we'll just return the full blob for now
-  console.warn("Audio chunking not implemented yet, returning the full audio");
-  chunks.push({
-    blob: audioBlob,
-    startTime: 0,
-    endTime: totalDuration
-  });
+  // Calculate number of chunks needed
+  const numberOfChunks = Math.ceil(totalDuration / maxChunkDurationSeconds);
+  const chunks = [];
+  
+  // Create chunks of specified duration
+  for (let i = 0; i < numberOfChunks; i++) {
+    const startTime = i * maxChunkDurationSeconds;
+    const endTime = Math.min(startTime + maxChunkDurationSeconds, totalDuration);
+    
+    chunks.push({
+      blob: audioBlob.slice(i * (audioBlob.size / numberOfChunks), (i + 1) * (audioBlob.size / numberOfChunks)),
+      startTime,
+      endTime,
+      isProcessed: false
+    });
+  }
   
   return chunks;
 }
 
 /**
- * Compress an audio blob to optimize for speech
+ * Compress an audio blob to optimize for voice
  */
 export async function compressAudioBlob(audioBlob: Blob): Promise<Blob> {
-  // TODO: Implement audio compression if needed
-  // Since this requires additional libraries, we'll just return the original blob for now
-  console.warn("Audio compression not implemented yet, returning the original audio");
+  // Por ahora devolvemos el blob original, la compresión se implementará después
   return audioBlob;
 }

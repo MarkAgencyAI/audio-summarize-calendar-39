@@ -1,3 +1,4 @@
+
 import { getAudioDuration, splitAudioIntoChunks, compressAudioBlob } from './audio-buffer-utils';
 import { sendToWebhook } from '../webhook';
 import { transcribeAudio as groqTranscribeAudio } from '../groq';
@@ -46,11 +47,11 @@ export class TranscriptionService {
       this.currentOutput = '';
       this.chunks = [];
 
-      // Get audio duration
+      // Get audio duration and split into chunks
       this.totalDuration = await getAudioDuration(audioBlob);
       console.log(`Duración total del audio: ${this.totalDuration}s`);
 
-      // Split into chunks if needed
+      // Split into chunks for processing
       this.chunks = await splitAudioIntoChunks(audioBlob, this.options.maxChunkDuration);
       console.log(`Audio dividido en ${this.chunks.length} segmentos`);
 
@@ -59,15 +60,13 @@ export class TranscriptionService {
       let progress = 0;
       let combinedTranscript = '';
       const errors: string[] = [];
+      const webhookResponses = [];
 
       for (let i = 0; i < this.chunks.length; i++) {
         const chunk = this.chunks[i];
         
         try {
-          // Utilizar la función de transcripción real de GROQ
-          console.log(`Procesando segmento ${i + 1} de ${this.chunks.length}...`);
-          
-          // Actualizar el progreso al inicio del procesamiento del segmento
+          // Update progress at start of chunk processing
           if (onProgress) {
             progress = ((i / this.chunks.length) * 100);
             onProgress({
@@ -75,95 +74,107 @@ export class TranscriptionService {
               progress: progress
             });
           }
-          
-          // Si compression is enabled, compress the audio
+
+          // Compress audio if enabled
           let processedBlob = chunk.blob;
           if (this.options.compressAudio) {
             processedBlob = await compressAudioBlob(chunk.blob);
           }
-          
-          // Usar la API real de GROQ para transcribir
+
+          // Use GROQ API for transcription
           const transcriptionResult = await groqTranscribeAudio(
             processedBlob, 
             this.options.subject, 
             this.options.speakerMode
           );
-          
+
           if (!transcriptionResult.transcript) {
             throw new Error(`No se obtuvo transcripción del segmento ${i + 1}`);
           }
-          
+
           const chunkText = transcriptionResult.transcript;
-          
-          // Update current output and notify progress
           combinedTranscript += chunkText + ' ';
-          this.currentOutput = combinedTranscript;
           
-          // Actualizar el progreso después de procesar el segmento
+          // Send chunk to webhook for processing if URL is provided
+          let webhookResponse = null;
+          if (this.options.webhookUrl) {
+            try {
+              webhookResponse = await sendToWebhook(this.options.webhookUrl, {
+                transcript: chunkText,
+                language: "es",
+                subject: this.options.subject || "No especificado",
+                speakerMode: this.options.speakerMode,
+                isChunk: true,
+                chunkIndex: i,
+                totalChunks: this.chunks.length,
+                startTime: chunk.startTime,
+                endTime: chunk.endTime
+              });
+              webhookResponses.push(webhookResponse);
+            } catch (webhookError) {
+              console.error(`Error enviando chunk ${i + 1} al webhook:`, webhookError);
+            }
+          }
+
+          // Update progress and notify
           progress = ((i + 1) / this.chunks.length) * 100;
-          
           if (onProgress) {
             onProgress({
-              output: this.currentOutput,
+              output: combinedTranscript.trim(),
               progress: progress
             });
           }
-          
+
+          // Store chunk results
           results.push({
             text: chunkText,
             startTime: chunk.startTime,
             endTime: chunk.endTime,
-            webhookResponse: transcriptionResult.webhookResponse
+            webhookResponse
           });
-          
-          // Mark chunk as processed
+
           chunk.isProcessed = true;
           chunk.transcript = chunkText;
+
         } catch (error) {
           console.error(`Error procesando fragmento ${i + 1}:`, error);
           const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
           chunk.error = errorMessage;
           errors.push(`Error en segmento ${i + 1}: ${errorMessage}`);
-          
-          // Try to continue with other chunks
         }
       }
 
-      // Final processing - get combined results
+      // Process complete transcript with webhook if needed
       const processingTime = Date.now() - this.processingStartTime;
-      
-      // Intentar enviar los resultados completos al webhook si no se ha hecho por segmento
-      let webhookResponse = null;
+      let finalWebhookResponse = null;
+
       if (this.options.webhookUrl && combinedTranscript) {
         try {
-          console.log("Enviando transcripción completa al webhook para procesamiento...");
-          webhookResponse = await sendToWebhook(this.options.webhookUrl, {
+          console.log("Enviando transcripción completa al webhook...");
+          finalWebhookResponse = await sendToWebhook(this.options.webhookUrl, {
             transcript: combinedTranscript.trim(),
             language: "es",
             subject: this.options.subject || "No especificado",
             speakerMode: this.options.speakerMode,
             processed: true,
             totalDuration: this.totalDuration,
-            processingTime
+            processingTime,
+            chunkResponses: webhookResponses
           });
-          console.log("Respuesta del webhook recibida:", webhookResponse);
         } catch (webhookError) {
-          console.error("Error enviando datos al webhook:", webhookError);
+          console.error("Error enviando transcripción completa al webhook:", webhookError);
         }
       }
-      
-      // Obtener la última respuesta del webhook si está disponible
-      const lastWebhookResponse = results.length > 0 ? 
-        results[results.length - 1].webhookResponse : webhookResponse;
-      
+
       return {
         transcript: combinedTranscript.trim(),
         duration: this.totalDuration,
         segmentCount: this.chunks.length,
         processingTime,
         errors: errors.length > 0 ? errors : undefined,
-        webhookResponse: webhookResponse || lastWebhookResponse
+        webhookResponse: finalWebhookResponse || webhookResponses[webhookResponses.length - 1]
       };
+
     } finally {
       this.isProcessing = false;
     }
