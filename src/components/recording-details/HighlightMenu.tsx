@@ -1,27 +1,15 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { HexColorPicker } from "react-colorful";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { X, Copy, Check } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Copy, Pencil, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Paleta de colores predefinidos
+// Simplified palette based on the image
 const predefinedColors = [
-  "#FEF7CD", // Amarillo claro (default)
-  "#D3E4FD", // Azul claro
-  "#F2FCE2", // Verde claro
-  "#FDE1D3", // Naranja claro
-  "#E5DEFF", // Morado claro
-  "#FFDEE2", // Rosa claro
-  "#FFEB3B", // Amarillo
-  "#4CAF50", // Verde
-  "#2196F3", // Azul
-  "#F44336", // Rojo
-  "#9C27B0", // Morado
-  "#FF9800", // Naranja
+  "#FDF59B", // Yellow (first circle)
+  "#B6D9FF", // Blue (second circle)
+  "#FFB6C1", // Pink (third circle)
+  "#FFD1A1", // Orange (fourth circle)
 ];
 
 interface HighlightMenuProps {
@@ -42,119 +30,60 @@ export function HighlightMenu({
   onApply,
   onRemove,
   onCopy,
-  initialColor = "#FEF7CD",
+  initialColor = "#FDF59B",
   selectedText
 }: HighlightMenuProps) {
-  const [color, setColor] = useState(initialColor);
-  const [activeTab, setActiveTab] = useState<string>("predefined");
-
-  // Posicionar el menú cerca del texto seleccionado
+  // Position the menu near the selected text
   const menuStyle: React.CSSProperties = {
     position: "fixed",
     top: `${Math.max(position.y - 10, 10)}px`,
     left: `${position.x}px`,
     transform: "translateX(-50%)",
     zIndex: 50,
-    display: isOpen ? "block" : "none",
-  };
-
-  const handleApply = () => {
-    onApply(color);
+    display: isOpen ? "flex" : "none",
   };
 
   return (
-    <div style={menuStyle} className="animate-in fade-in zoom-in duration-200">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 p-3 w-64">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium">Resaltar texto</h3>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0"
-            onClick={onClose}
-          >
-            <X className="h-4 w-4" />
-            <span className="sr-only">Cerrar</span>
-          </Button>
-        </div>
+    <div 
+      style={menuStyle} 
+      className="animate-in fade-in zoom-in duration-200 bg-slate-800/90 backdrop-blur-sm p-2 rounded-lg shadow-lg border border-slate-700 flex items-center gap-2"
+    >
+      {/* Color circles */}
+      {predefinedColors.map((color) => (
+        <button
+          key={color}
+          className={cn(
+            "w-7 h-7 rounded-full flex items-center justify-center transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-white/20"
+          )}
+          style={{ backgroundColor: color }}
+          onClick={() => onApply(color)}
+          title="Resaltar con este color"
+        />
+      ))}
 
-        {selectedText && (
-          <div className="mb-3 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 p-2 rounded border border-slate-200 dark:border-slate-700">
-            <p className="truncate">{selectedText}</p>
-          </div>
-        )}
+      {/* Divider */}
+      <div className="h-6 w-px bg-slate-600 mx-1"></div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-3">
-          <TabsList className="grid grid-cols-2 h-8">
-            <TabsTrigger value="predefined" className="text-xs">Colores</TabsTrigger>
-            <TabsTrigger value="custom" className="text-xs">Personalizado</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="predefined" className="mt-2">
-            <div className="grid grid-cols-4 gap-2">
-              {predefinedColors.map((presetColor) => (
-                <button
-                  key={presetColor}
-                  className={cn(
-                    "w-full h-8 rounded border",
-                    color === presetColor
-                      ? "ring-2 ring-offset-1 ring-blue-500"
-                      : "border-slate-200 dark:border-slate-700"
-                  )}
-                  style={{ backgroundColor: presetColor }}
-                  onClick={() => setColor(presetColor)}
-                >
-                  {color === presetColor && (
-                    <Check className="h-3 w-3 text-slate-700 mx-auto" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="custom" className="mt-2">
-            <div>
-              <HexColorPicker color={color} onChange={setColor} className="w-full mb-2" />
-              <Input
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                className="mb-2 text-sm"
-              />
-            </div>
-          </TabsContent>
-        </Tabs>
+      {/* Action buttons */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onCopy}
+        className="h-7 w-7 rounded-full text-slate-300 hover:text-white hover:bg-slate-700"
+        title="Copiar texto"
+      >
+        <Copy className="h-4 w-4" />
+      </Button>
 
-        <div className="grid grid-cols-3 gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onCopy}
-            className="text-xs h-8"
-          >
-            <Copy className="h-3 w-3 mr-1" />
-            Copiar
-          </Button>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onRemove}
-            className="text-xs h-8 border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400"
-          >
-            <X className="h-3 w-3 mr-1" />
-            Eliminar
-          </Button>
-          
-          <Button
-            size="sm"
-            onClick={handleApply}
-            className="text-xs h-8"
-          >
-            <Check className="h-3 w-3 mr-1" />
-            Aplicar
-          </Button>
-        </div>
-      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onRemove}
+        className="h-7 w-7 rounded-full text-slate-300 hover:text-white hover:bg-slate-700"
+        title="Eliminar resaltado"
+      >
+        <X className="h-4 w-4" />
+      </Button>
     </div>
   );
 }

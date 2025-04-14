@@ -21,7 +21,6 @@ const ResizablePanelGroup = ({
 
 const ResizablePanel = ResizablePrimitive.Panel
 
-// Using forwardRef to properly handle ref
 const ResizableHandle = forwardRef<
   React.ElementRef<typeof ResizablePrimitive.PanelResizeHandle>,
   React.ComponentProps<typeof ResizablePrimitive.PanelResizeHandle>
@@ -37,7 +36,6 @@ const ResizableHandle = forwardRef<
 ))
 ResizableHandle.displayName = "ResizableHandle"
 
-// Styled handle with grip icon
 const ResizableHandleWithGrip = forwardRef<
   React.ElementRef<typeof ResizablePrimitive.PanelResizeHandle>,
   React.ComponentProps<typeof ResizablePrimitive.PanelResizeHandle>

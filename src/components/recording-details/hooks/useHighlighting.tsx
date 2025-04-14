@@ -22,7 +22,7 @@ export function useHighlighting({
   const [isHighlightMenuOpen, setIsHighlightMenuOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   
-  // Función para manejar la selección de texto
+  // Function to handle text selection
   const handleTextSelection = useCallback(() => {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0 || selection.toString().trim() === "") {
@@ -39,14 +39,14 @@ export function useHighlighting({
       return;
     }
     
-    // Calcular la posición del rango para mostrar el menú
+    // Calculate position to show the menu
     const rect = range.getBoundingClientRect();
     setHighlightMenuPosition({
       x: rect.left + rect.width / 2,
       y: rect.top
     });
     
-    // Calcular la posición de inicio y fin en el texto completo
+    // Calculate start and end position in the full text
     const textContent = contentRef.current.textContent || "";
     const preSelectionRange = document.createRange();
     preSelectionRange.selectNodeContents(contentRef.current);
@@ -61,32 +61,32 @@ export function useHighlighting({
     setIsHighlightMenuOpen(true);
   }, []);
   
-  // Cerrar el menú de resaltado
+  // Close the highlight menu
   const closeHighlightMenu = useCallback(() => {
     setIsHighlightMenuOpen(false);
     setSelectedText("");
     setSelectionRange(null);
   }, []);
   
-  // Aplicar un nuevo resaltado
+  // Apply a new highlight
   const applyHighlight = useCallback((color: string) => {
     if (!selectionRange || !selectedText) {
       return;
     }
     
-    // Verificar si ya existe un resaltado en este rango
+    // Check if a highlight already exists in this range
     const existingHighlight = highlights.find(h => 
       (selectionRange.start >= h.startPosition && selectionRange.start <= h.endPosition) ||
       (selectionRange.end >= h.startPosition && selectionRange.end <= h.endPosition) ||
       (selectionRange.start <= h.startPosition && selectionRange.end >= h.endPosition)
     );
     
-    // Si existe, eliminar el resaltado anterior
+    // If it exists, remove the previous highlight
     if (existingHighlight) {
       onRemoveHighlight(existingHighlight.id);
     }
     
-    // Crear y guardar el nuevo resaltado
+    // Create and save the new highlight
     onSaveHighlight({
       text: selectedText,
       color,
@@ -99,7 +99,7 @@ export function useHighlighting({
     toast.success("Texto resaltado");
   }, [selectionRange, selectedText, highlights, onRemoveHighlight, onSaveHighlight, closeHighlightMenu]);
   
-  // Copiar el texto seleccionado
+  // Copy the selected text
   const copySelectedText = useCallback(() => {
     if (selectedText) {
       navigator.clipboard.writeText(selectedText);
@@ -108,13 +108,13 @@ export function useHighlighting({
     }
   }, [selectedText, closeHighlightMenu]);
   
-  // Eliminar un resaltado existente
+  // Remove an existing highlight
   const removeHighlightAtSelection = useCallback(() => {
     if (!selectionRange) {
       return;
     }
     
-    // Buscar todos los resaltados que se solapan con la selección actual
+    // Find all highlights that overlap with the current selection
     const overlappingHighlights = highlights.filter(h => 
       (selectionRange.start >= h.startPosition && selectionRange.start <= h.endPosition) ||
       (selectionRange.end >= h.startPosition && selectionRange.end <= h.endPosition) ||
@@ -122,7 +122,7 @@ export function useHighlighting({
     );
     
     if (overlappingHighlights.length > 0) {
-      // Eliminar todos los resaltados que se solapan
+      // Remove all overlapping highlights
       overlappingHighlights.forEach(h => {
         onRemoveHighlight(h.id);
       });
@@ -134,7 +134,7 @@ export function useHighlighting({
     window.getSelection()?.removeAllRanges();
   }, [selectionRange, highlights, onRemoveHighlight, closeHighlightMenu]);
   
-  // Renderizar el texto con los resaltados
+  // Render text with highlights
   const renderHighlightedText = useCallback((text: string) => {
     if (!text) {
       return null;
@@ -144,10 +144,10 @@ export function useHighlighting({
       return <p className="whitespace-pre-wrap">{text}</p>;
     }
     
-    // Ordenar los resaltados por posición
+    // Sort highlights by position
     const sortedHighlights = [...highlights].sort((a, b) => a.startPosition - b.startPosition);
     
-    // Verificar y resolver solapamientos
+    // Check and resolve overlaps
     const nonOverlappingHighlights: TextHighlight[] = [];
     for (const highlight of sortedHighlights) {
       const overlaps = nonOverlappingHighlights.some(h => 
@@ -159,7 +159,7 @@ export function useHighlighting({
       }
     }
     
-    // Construir el texto con resaltados
+    // Build text with highlights
     const segments: React.ReactNode[] = [];
     let lastIndex = 0;
     

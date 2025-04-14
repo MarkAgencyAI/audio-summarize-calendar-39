@@ -15,7 +15,7 @@ export function TranscriptionTab({
   data,
   onTextSelection
 }: TranscriptionTabProps) {
-  // Estado para controles de UI
+  // UI control states
   const [searchTerm, setSearchTerm] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [fontSize, setFontSize] = useState(16);
@@ -56,11 +56,11 @@ export function TranscriptionTab({
     onRemoveHighlight: handleRemoveHighlight
   });
   
-  // Función para renderizar el contenido de la transcripción
+  // Function to render transcription content
   const renderTranscriptionContent = () => {
     const transcription = data.recording.output || "";
     
-    // Si no hay transcripción disponible
+    // If no transcription available
     if (!transcription || transcription.trim() === "") {
       return (
         <div className="text-center p-6">
@@ -75,7 +75,7 @@ export function TranscriptionTab({
       );
     }
     
-    // Si hay búsqueda activa, destacar los resultados
+    // If active search, highlight results
     if (searchTerm.trim()) {
       const regex = new RegExp(`(${searchTerm})`, 'gi');
       const parts = transcription.split(regex);
@@ -95,7 +95,7 @@ export function TranscriptionTab({
       );
     }
     
-    // Renderizar con resaltados
+    // Render with highlights
     return (
       <div style={{ fontSize: `${fontSize}px` }}>
         {renderHighlightedText(transcription)}
@@ -212,7 +212,7 @@ export function TranscriptionTab({
         </div>
       </div>
       
-      {/* Menú de resaltado */}
+      {/* Highlight menu */}
       {isHighlightMenuOpen && (
         <HighlightMenu
           position={highlightMenuPosition}
@@ -228,7 +228,7 @@ export function TranscriptionTab({
   );
 }
 
-// Definición de TextHighlight para uso local
+// Local TextHighlight interface
 interface TextHighlight {
   id: string;
   text: string;
