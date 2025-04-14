@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import { LiveTranscriptionSheet } from "./LiveTranscriptionSheet";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -9,6 +10,7 @@ import { Mic, Square, Loader2, Upload, User, Users } from "lucide-react";
 import { saveAudioToStorage } from "@/lib/storage";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { TranscriptionService } from "@/lib/transcription/transcription-service";
 
 interface AudioRecorderProps {
   onTranscriptionComplete?: (data: any) => void;
@@ -31,6 +33,7 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
   const [speakerMode, setSpeakerMode] = useState<"single" | "multiple">("single");
   const isProcessingRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const transcriptionServiceRef = useRef<TranscriptionService | null>(null);
 
   useEffect(() => {
     recordingNameRef.current = recordingName;
@@ -49,7 +52,16 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
     if (!isRecording) {
       resetRecording();
     }
-  }, [isRecording]);
+
+    // Initialize transcription service when needed
+    if (!transcriptionServiceRef.current) {
+      transcriptionServiceRef.current = new TranscriptionService({
+        speakerMode: speakerMode,
+        maxChunkDuration: 60,
+        webhookUrl: "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4"
+      });
+    }
+  }, [isRecording, speakerMode]);
   
   const startRecording = async () => {
     try {
@@ -71,77 +83,56 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
         setFinalDuration(duration);
         setIsTranscribing(true);
         
-        // Upload audio and get transcription
+        // Process audio and get transcription
         try {
-          const formData = new FormData();
-          formData.append("file", audioBlob, "recording.webm");
-          
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/transcribe`, {
-            method: "POST",
-            body: formData,
-          });
-          
-          if (!response.ok) {
-            console.error("Transcription failed:", response.statusText);
-            toast.error("La transcripción falló. Por favor, inténtalo de nuevo.");
-            setIsTranscribing(false);
-            return;
+          if (!transcriptionServiceRef.current) {
+            transcriptionServiceRef.current = new TranscriptionService({
+              speakerMode: speakerMode,
+              maxChunkDuration: 60,
+              webhookUrl: "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4"
+            });
           }
-          
-          const reader = response.body?.getReader();
-          if (!reader) {
-            console.error("Failed to get reader from response body");
-            toast.error("Error al leer la respuesta del servidor.");
-            setIsTranscribing(false);
-            return;
-          }
-          
-          let receivedLength = 0;
-          let chunks: Uint8Array[] = [];
-          
-          while (true) {
-            const { done, value } = await reader.read();
-            
-            if (done) {
-              break;
+
+          // Process the audio using transcription service
+          const result = await transcriptionServiceRef.current.processAudio(
+            audioBlob,
+            (progressData) => {
+              setTranscriptionProgress(progressData.progress);
+              setTranscriptionOutput(progressData.output);
             }
-            
-            if (value) {
-              chunks.push(value);
-              receivedLength += value.length;
-              
-              // Calculate progress
-              const progress = response.headers.get('x-progress') ? parseFloat(response.headers.get('x-progress')!) : 0;
-              setTranscriptionProgress(progress);
-            }
+          );
+          
+          setTranscriptionOutput(result.transcript);
+          setWebhookResponse(result.webhookResponse);
+          
+          // Notify parent component about transcription completion
+          if (onTranscriptionComplete) {
+            onTranscriptionComplete({
+              output: result.transcript,
+              duration: duration,
+              webhookResponse: result.webhookResponse,
+              id: recordingId
+            });
           }
-          
-          let responseText = new TextDecoder().decode(new Uint8Array(chunks.flatMap(chunk => Array.from(chunk))));
-          
-          try {
-            const parsedResponse = JSON.parse(responseText);
-            setTranscriptionOutput(parsedResponse.output);
-            setWebhookResponse(parsedResponse);
-            
-            // Notify parent component about transcription completion
-            if (onTranscriptionComplete) {
-              onTranscriptionComplete({
-                output: parsedResponse.output,
+
+          // Dispatch event for LiveTranscriptionSheet
+          const event = new CustomEvent('audioRecorderMessage', {
+            detail: {
+              type: 'transcriptionComplete',
+              data: {
+                output: result.transcript,
                 duration: duration,
-                webhookResponse: parsedResponse,
+                webhookResponse: result.webhookResponse,
                 id: recordingId
-              });
+              }
             }
-          } catch (e) {
-            console.error("Error parsing JSON response:", e);
-            console.log("Raw response text:", responseText);
-            toast.error("Error al procesar la respuesta del servidor.");
-          } finally {
-            setIsTranscribing(false);
-          }
+          });
+          window.dispatchEvent(event);
+          
         } catch (error) {
           console.error("Error during transcription:", error);
           toast.error("Error al procesar la transcripción. Por favor, inténtalo de nuevo.");
+        } finally {
           setIsTranscribing(false);
         }
         
@@ -175,10 +166,10 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
       date: new Date().toISOString(),
       duration: finalDuration,
       folderId: null,
-      output: "",
+      output: transcriptionOutput || "",
       language: "es",
       subject: "",
-      webhookData: null,
+      webhookData: webhookResponse,
       speakerMode: speakerMode,
       understood: false,
       audioData: ""
@@ -227,13 +218,58 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
     const audio = new Audio();
     audio.src = URL.createObjectURL(file);
     
-    audio.onloadedmetadata = () => {
+    audio.onloadedmetadata = async () => {
       const durationInSeconds = Math.floor(audio.duration);
       setFinalDuration(durationInSeconds);
-      handleRecordingComplete(file);
       
-      // Release the object URL
-      URL.revokeObjectURL(audio.src);
+      // Start transcription process
+      setIsTranscribing(true);
+      
+      try {
+        if (!transcriptionServiceRef.current) {
+          transcriptionServiceRef.current = new TranscriptionService({
+            speakerMode: speakerMode,
+            maxChunkDuration: 60,
+            webhookUrl: "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4"
+          });
+        }
+        
+        // Process the audio file
+        const result = await transcriptionServiceRef.current.processAudio(
+          file,
+          (progressData) => {
+            setTranscriptionProgress(progressData.progress);
+            setTranscriptionOutput(progressData.output);
+          }
+        );
+        
+        setTranscriptionOutput(result.transcript);
+        setWebhookResponse(result.webhookResponse);
+        
+        // Dispatch event for LiveTranscriptionSheet
+        const event = new CustomEvent('audioRecorderMessage', {
+          detail: {
+            type: 'transcriptionComplete',
+            data: {
+              output: result.transcript,
+              duration: durationInSeconds,
+              webhookResponse: result.webhookResponse
+            }
+          }
+        });
+        window.dispatchEvent(event);
+        
+        // Save recording
+        handleRecordingComplete(file);
+        
+      } catch (error) {
+        console.error("Error processing uploaded audio:", error);
+        toast.error("Error al procesar el archivo de audio.");
+      } finally {
+        setIsTranscribing(false);
+        // Release the object URL
+        URL.revokeObjectURL(audio.src);
+      }
     };
 
     audio.onerror = () => {
