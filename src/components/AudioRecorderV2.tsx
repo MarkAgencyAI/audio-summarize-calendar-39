@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload, AlertCircle } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -288,8 +289,10 @@ export function AudioRecorderV2({
         errors: result.errors
       } : recordingData;
       
+      // Store the result of addRecording
       const savedRecordingId = await addRecording(finalRecordingData);
       
+      // Fix: Check if savedRecordingId exists instead of checking the void return value
       if (savedRecordingId) {
         setAudioBlob(null);
         setRecordingName('');
@@ -298,6 +301,7 @@ export function AudioRecorderV2({
         
         toast.success('Grabación guardada correctamente con transcripción y resumen');
         
+        // Dispatch event with the saved recording information
         window.dispatchEvent(new CustomEvent('audioRecorderMessage', {
           detail: {
             type: 'transcriptionComplete',
