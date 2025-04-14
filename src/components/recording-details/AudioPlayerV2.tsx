@@ -1,3 +1,4 @@
+
 import React, {
   useState,
   useRef,
@@ -21,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AudioPlayerHandle } from "./types";
 import { toast } from "sonner";
+import { AudioChapter } from "@/context/RecordingsContext";
 
 interface AudioPlayerProps {
   audioUrl?: string;
@@ -29,6 +31,7 @@ interface AudioPlayerProps {
   onTimeUpdate?: (time: number) => void;
   onDurationChange?: (duration: number) => void;
   onAddChapter?: (startTime: number, endTime: number) => void;
+  chapters?: AudioChapter[];
 }
 
 export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
@@ -40,6 +43,7 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       onTimeUpdate,
       onDurationChange,
       onAddChapter,
+      chapters = [],
     },
     ref
   ) => {
@@ -248,7 +252,7 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
     };
     
-    // Calculamos posición y ancho de la selección para el render
+    // Calculate position and width for selection visual
     const selectionStartPercent = selectionStart !== null ? (selectionStart / duration) * 100 : null;
     const selectionEndPercent = selectionEnd !== null ? (selectionEnd / duration) * 100 : null;
     const selectionLeftPercent = selectionStartPercent !== null && selectionEndPercent !== null 
@@ -257,6 +261,15 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
     const selectionWidthPercent = selectionStartPercent !== null && selectionEndPercent !== null 
       ? Math.abs(selectionEndPercent - selectionStartPercent) 
       : null;
+
+    // Sort chapters by start time to ensure they render in correct order
+    const sortedChapters = [...chapters].sort((a, b) => a.startTime - b.startTime);
+
+    // Find the active chapter based on current time
+    const activeChapter = sortedChapters.find(
+      chapter => currentTime >= chapter.startTime && 
+      (!chapter.endTime || currentTime <= chapter.endTime)
+    );
 
     // Generate audio wave bars for visualization
     const renderAudioWave = () => {
@@ -288,10 +301,70 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
              onMouseLeave={handleWaveMouseUp}
              onClick={handleWaveClick}
         >
-          {/* Wave visualization */}
-          <div className="absolute bottom-0 left-0 right-0 flex items-end justify-center h-12 px-2">
-            {bars}
-          </div>
+          {/* Chapter visualization - render colored sections for each chapter */}
+          {sortedChapters.length > 0 && (
+            <div className="absolute bottom-0 left-0 right-0 h-12 flex">
+              {sortedChapters.map((chapter, index) => {
+                const startPercent = (chapter.startTime / duration) * 100;
+                const endPercent = chapter.endTime 
+                  ? (chapter.endTime / duration) * 100 
+                  : (index < sortedChapters.length - 1 
+                    ? (sortedChapters[index + 1].startTime / duration) * 100 
+                    : 100);
+                const width = endPercent - startPercent;
+                
+                return (
+                  <div 
+                    key={chapter.id}
+                    className="h-full flex flex-col items-center justify-end overflow-hidden relative"
+                    style={{ 
+                      width: `${width}%`, 
+                      marginLeft: index === 0 ? `${startPercent}%` : 0,
+                      background: `${chapter.color}40`, // Add transparency
+                      borderLeft: index > 0 ? `2px dashed ${chapter.color}` : '',
+                    }}
+                    title={chapter.title}
+                  >
+                    {/* Chapter title indicator on top */}
+                    {width > 10 && (
+                      <div 
+                        className="absolute -top-1 left-2 text-xs truncate max-w-[90%] px-1 rounded"
+                        style={{ backgroundColor: `${chapter.color}80`, color: '#333' }}
+                      >
+                        {chapter.title}
+                      </div>
+                    )}
+                    
+                    {/* Audio wave visualization */}
+                    <div className="flex items-end justify-center h-10 w-full">
+                      {Array.from({ length: Math.max(3, Math.floor(width / 3)) }).map((_, i) => {
+                        // Bar height based on position within chapter
+                        const barHeight = 8 + Math.sin(i / (width / 10) * Math.PI) * 5;
+                        return (
+                          <div
+                            key={i}
+                            className="audio-wave-bar w-0.5 mx-0.5 rounded-t-full"
+                            style={{
+                              height: `${barHeight}px`,
+                              backgroundColor: chapter.color,
+                              opacity: isPlaying ? 0.9 : 0.5,
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          
+          {/* Base audio wave when no chapters */}
+          {sortedChapters.length === 0 && (
+            <div className="absolute bottom-0 left-0 right-0 flex items-end justify-center h-12 px-2">
+              {bars}
+            </div>
+          )}
           
           {/* Played portion overlay */}
           <div 
@@ -305,14 +378,15 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
               className="absolute bottom-0 h-12 bg-blue-500/30 border-l border-r border-blue-500 pointer-events-none" 
               style={{
                 left: `${selectionLeftPercent}%`,
-                width: `${selectionWidthPercent}%`
+                width: `${selectionWidthPercent}%`,
+                zIndex: 5
               }}
             />
           )}
           
           {/* Current position indicator */}
           <div 
-            className="absolute bottom-0 h-12 w-0.5 bg-red-500 pointer-events-none" 
+            className="absolute bottom-0 h-12 w-0.5 bg-red-500 pointer-events-none z-10" 
             style={{ left: `${(currentTime / duration) * 100}%` }}
           >
             <div className="w-2 h-2 rounded-full bg-red-500 absolute -top-1 left-1/2 transform -translate-x-1/2"></div>
@@ -324,6 +398,23 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
             <span>{formatTime(Math.floor(duration / 2))}</span>
             <span>{formatTime(Math.floor(duration))}</span>
           </div>
+        </div>
+      );
+    };
+
+    // Render chapter badges/indicators
+    const renderChapterIndicator = () => {
+      if (!activeChapter) return null;
+
+      return (
+        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
+          <div 
+            className="h-3 w-3 rounded-full shrink-0" 
+            style={{ backgroundColor: activeChapter.color }}
+          />
+          <span className="text-xs font-medium truncate">
+            {activeChapter.title}
+          </span>
         </div>
       );
     };
@@ -384,6 +475,8 @@ export const AudioPlayerV2 = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
               {formatTime(currentTime)} / {formatTime(duration || 0)}
             </span>
           </div>
+
+          {activeChapter && renderChapterIndicator()}
 
           <Button
             variant="ghost"

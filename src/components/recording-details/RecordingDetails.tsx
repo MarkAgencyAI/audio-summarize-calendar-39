@@ -11,7 +11,6 @@ import { RecordingTabs } from "./RecordingTabs";
 import { ChapterDialog } from "./ChapterDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AudioPlayerV2 } from "./AudioPlayerV2";
-import { AudioChaptersTimeline } from "@/components/AudioChapter";
 import { AudioPlayerHandle } from "./types";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -143,19 +142,8 @@ export function RecordingDetails({
         ref={audioPlayerRef}
         onDurationChange={setAudioDuration}
         onAddChapter={handleAddChapterFromPlayer}
+        chapters={chapters}
       />
-      
-      {chapters && chapters.length > 0 && (
-        <div className="mt-3 max-w-full overflow-hidden">
-          <h4 className="text-sm font-medium mb-2">Capítulos</h4>
-          <AudioChaptersTimeline 
-            chapters={chapters} 
-            duration={audioDuration} 
-            currentTime={currentAudioTime} 
-            onChapterClick={handleChapterClick}
-          />
-        </div>
-      )}
     </div>
   );
 
