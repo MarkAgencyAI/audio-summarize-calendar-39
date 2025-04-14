@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CalendarEvent, eventTypeColors } from "@/components/Calendar";
 import { useRecordings } from "@/context/RecordingsContext";
+import { toast } from "sonner";
 
 interface WeeklyScheduleProps {
   date: Date;
@@ -172,15 +173,30 @@ export function WeeklySchedule({
   
   const handleSaveEvent = () => {
     if (!newEvent.title.trim()) {
+      toast.error("El título es obligatorio");
+      return;
+    }
+    
+    // Verificar que la hora de inicio sea válida
+    if (!isValid(new Date(newEvent.date))) {
+      toast.error("La fecha de inicio no es válida");
+      return;
+    }
+    
+    // Verificar que la hora de fin sea válida y posterior a la de inicio
+    if (newEvent.endDate && (!isValid(new Date(newEvent.endDate)) || new Date(newEvent.endDate) <= new Date(newEvent.date))) {
+      toast.error("La hora de finalización debe ser posterior a la hora de inicio");
       return;
     }
     
     setScheduleEvents(prev => [...prev, newEvent]);
     setShowEventDialog(false);
+    toast.success("Evento agregado al cronograma");
   };
   
   const handleDeleteEvent = (tempId: string) => {
     setScheduleEvents(prev => prev.filter(event => event.tempId !== tempId));
+    toast.success("Evento eliminado del cronograma");
   };
   
   const handleSaveSchedule = () => {
@@ -189,6 +205,7 @@ export function WeeklySchedule({
       type: event.type || "class"
     }));
     onSave(calendarEvents);
+    toast.success("Cronograma guardado correctamente");
   };
   
   const safeFormat = (dateStr: string | undefined, formatStr: string): string => {
