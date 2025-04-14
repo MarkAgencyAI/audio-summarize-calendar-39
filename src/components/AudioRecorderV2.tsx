@@ -11,9 +11,12 @@ import { formatTime } from "@/lib/audio-utils";
 import { useTranscription } from "@/lib/transcription";
 import { LiveTranscriptionSheet } from "./LiveTranscriptionSheet";
 import { saveAudioToStorage } from "@/lib/storage";
+
 type RecordingState = "idle" | "recording" | "paused";
 type SpeakerMode = "single" | "multiple";
+
 const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
+
 export function AudioRecorderV2({
   compact = false
 }: {
@@ -50,6 +53,7 @@ export function AudioRecorderV2({
     webhookUrl: WEBHOOK_URL,
     maxChunkDuration: 420
   });
+
   useEffect(() => {
     const checkPermissions = async () => {
       try {
@@ -65,6 +69,7 @@ export function AudioRecorderV2({
     };
     checkPermissions();
   }, []);
+
   useEffect(() => {
     return () => {
       if (timerInterval.current) {
@@ -72,6 +77,7 @@ export function AudioRecorderV2({
       }
     };
   }, []);
+
   const startRecording = async () => {
     if (!hasPermission) {
       toast.error("Por favor, permite el acceso al micrófono");
@@ -109,6 +115,7 @@ export function AudioRecorderV2({
       toast.error("Error al iniciar la grabación");
     }
   };
+
   const pauseRecording = () => {
     if (mediaRecorder.current && mediaRecorder.current.state === "recording") {
       mediaRecorder.current.pause();
@@ -116,6 +123,7 @@ export function AudioRecorderV2({
       pauseTimer();
     }
   };
+
   const resumeRecording = () => {
     if (mediaRecorder.current && mediaRecorder.current.state === "paused") {
       mediaRecorder.current.resume();
@@ -123,6 +131,7 @@ export function AudioRecorderV2({
       startTimer();
     }
   };
+
   const stopRecording = () => {
     if (mediaRecorder.current && mediaRecorder.current.state !== "inactive") {
       mediaRecorder.current.stop();
@@ -134,6 +143,7 @@ export function AudioRecorderV2({
       }
     }
   };
+
   const clearRecording = () => {
     setAudioBlob(null);
     setRecordingName("");
@@ -142,21 +152,25 @@ export function AudioRecorderV2({
       audioUrlRef.current = null;
     }
   };
+
   const startTimer = () => {
     timerInterval.current = setInterval(() => {
       setRecordingDuration(prev => prev + 1);
     }, 1000) as unknown as NodeJS.Timeout;
   };
+
   const pauseTimer = () => {
     if (timerInterval.current) {
       clearInterval(timerInterval.current);
     }
   };
+
   const stopTimer = () => {
     if (timerInterval.current) {
       clearInterval(timerInterval.current);
     }
   };
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!subject.trim()) {
       toast.error("Por favor, ingresa la materia antes de subir un audio");
@@ -193,6 +207,7 @@ export function AudioRecorderV2({
       }
     };
   };
+
   const processAndSaveRecording = async () => {
     if (!audioBlob) return;
     try {
@@ -210,19 +225,39 @@ export function AudioRecorderV2({
       if (recordingDuration > 600) {
         toast.info(`El audio dura más de 10 minutos (${Math.floor(recordingDuration / 60)} minutos). Se dividirá en segmentos de 7 minutos para procesarlo.`);
       }
+      
       const result = await transcribeAudio(audioBlob);
+      
       const {
         extractWebhookOutput
       } = await import('@/lib/transcription-service');
+      
       const webhookOutput = extractWebhookOutput(result.webhookResponse);
-      if (!webhookOutput) {
-        toast.error("No se recibió respuesta del servicio de procesamiento. No se puede guardar la grabación.");
-        return;
+      
+      if (!result.transcript) {
+        toast.warning("No se obtuvo texto de la transcripción, pero se intentará guardar lo disponible");
       }
-      toast.success("Resumen y puntos fuertes recibidos y guardados");
+      
+      if (result.errors && result.errors.length > 0) {
+        toast.warning(`Se completó con ${result.errors.length} errores en algunas partes`);
+        console.error("Errores durante la transcripción:", result.errors);
+      }
+      
+      const recordingId = crypto.randomUUID();
+      
+      try {
+        await saveAudioToStorage(recordingId, audioBlob);
+        console.log("Audio guardado en IndexedDB correctamente");
+      } catch (error) {
+        console.error("Error guardando audio en IndexedDB:", error);
+        toast.warning("No se pudo guardar el audio localmente. La reproducción podría no estar disponible sin conexión.");
+      }
+      
       let suggestedEvents = [];
-      if (result.webhookResponse && typeof result.webhookResponse === 'object') {
-        if (result.webhookResponse.suggestedEvents) {
+      if (result.suggestedEvents && Array.isArray(result.suggestedEvents)) {
+        suggestedEvents = result.suggestedEvents;
+      } else if (result.webhookResponse) {
+        if (typeof result.webhookResponse === 'object' && result.webhookResponse.suggestedEvents) {
           suggestedEvents = result.webhookResponse.suggestedEvents;
         } else if (Array.isArray(result.webhookResponse) && result.webhookResponse.length > 0) {
           const firstItem = result.webhookResponse[0];
@@ -231,56 +266,51 @@ export function AudioRecorderV2({
           }
         }
       }
-      if (!result.transcript) {
-        toast.warning("No se obtuvo texto de la transcripción, pero se guardarán los puntos fuertes");
-      }
-      if (result.errors && result.errors.length > 0) {
-        toast.warning(`Se completó con ${result.errors.length} errores en algunas partes`);
-        console.error("Errores durante la transcripción:", result.errors);
-      }
-      const recordingId = crypto.randomUUID();
-      try {
-        await saveAudioToStorage(recordingId, audioBlob);
-        console.log("Audio guardado en IndexedDB correctamente");
-      } catch (error) {
-        console.error("Error guardando audio en IndexedDB:", error);
-        toast.warning("No se pudo guardar el audio localmente. La reproducción podría no estar disponible sin conexión.");
-      }
+      
       const recordingData = {
         id: recordingId,
         name: recordingName || `Grabación ${formatDate(new Date())}`,
         audioUrl: audioUrlRef.current,
         audioData: audioUrlRef.current,
-        output: result.transcript,
-        folderId: selectedFolder,
+        output: result.transcript || "",
+        folderId: selectedFolder || folders[0]?.id || null,
         duration: recordingDuration,
         subject: subject,
         speakerMode: speakerMode,
         suggestedEvents: suggestedEvents,
-        webhookData: webhookOutput,
+        webhookData: webhookOutput || result.webhookResponse,
         date: new Date().toISOString(),
         createdAt: new Date().toISOString()
       };
+      
       const finalRecordingData = result.errors && result.errors.length > 0 ? {
         ...recordingData,
         errors: result.errors
       } : recordingData;
-      addRecording(finalRecordingData);
-      setAudioBlob(null);
-      setRecordingName('');
-      setSubject('');
-      setRecordingDuration(0);
-      setShowTranscriptionSheet(false);
-      toast.success('Grabación guardada correctamente con resumen y puntos fuertes');
-      window.dispatchEvent(new CustomEvent('audioRecorderMessage', {
-        detail: {
-          type: 'transcriptionComplete',
-          data: {
-            webhookResponse: webhookOutput,
-            transcript: result.transcript
+      
+      const savedRecordingId = await addRecording(finalRecordingData);
+      
+      if (savedRecordingId) {
+        setAudioBlob(null);
+        setRecordingName('');
+        setSubject('');
+        setRecordingDuration(0);
+        
+        toast.success('Grabación guardada correctamente con transcripción y resumen');
+        
+        window.dispatchEvent(new CustomEvent('audioRecorderMessage', {
+          detail: {
+            type: 'transcriptionComplete',
+            data: {
+              id: savedRecordingId,
+              webhookResponse: webhookOutput || result.webhookResponse,
+              transcript: result.transcript
+            }
           }
-        }
-      }));
+        }));
+      } else {
+        toast.error('No se pudo guardar la grabación en la base de datos');
+      }
     } catch (error) {
       console.error('Error procesando y guardando grabación:', error);
       const errorMessage = error instanceof Error ? error.message : "Ocurrió un error desconocido";
@@ -290,8 +320,11 @@ export function AudioRecorderV2({
           duration: 5000
         });
       }
+    } finally {
+      setShowTranscriptionSheet(false);
     }
   };
+
   if (compact) {
     return <div className="flex items-center space-x-2">
         <Input placeholder="Materia" value={subject} onChange={e => setSubject(e.target.value)} className="w-32 h-8 text-xs" />
@@ -309,6 +342,7 @@ export function AudioRecorderV2({
         </div>
       </div>;
   }
+
   return <>
       <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-[0_0px_3px_rgba(0,0,0,0.25)] backdrop-blur-xl border border-white/10 dark:border-white/5 bg-white/5">
         <h2 className="text-xl font-semibold mb-4 text-custom-primary">Nueva grabación</h2>

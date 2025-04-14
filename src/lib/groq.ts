@@ -1,3 +1,4 @@
+
 import { sendToWebhook } from "./webhook";
 import { useState, useCallback } from "react";
 
@@ -20,6 +21,10 @@ interface TranscriptionResult {
     description: string;
     date?: string;
   }>;
+  webhookResponse?: any;
+  errors?: string[];
+  duration?: number;
+  processingTime?: number;
 }
 
 // Interface para la respuesta de GROQ API
@@ -218,6 +223,10 @@ export async function transcribeAudio(
       throw new Error("El audio no contiene suficiente contenido para transcribir");
     }
     
+    // Variables para almacenar el tiempo de procesamiento y la duración
+    const startTime = Date.now();
+    const audioDuration = audioData.duration;
+    
     // Paso 1: Crear formulario de datos para la API de transcripción de audio GROQ
     const formData = new FormData();
     formData.append("file", processedAudio, "audio.wav");
@@ -271,8 +280,9 @@ export async function transcribeAudio(
     // Siempre establecer el idioma a español para este caso particular
     const language = "es"; 
     
-    // Paso 3: Enviar la transcripción al webhook con metadatos del tema y modo de orador
-    await sendToWebhook(WEBHOOK_URL, {
+    // Paso 2: Enviar la transcripción al webhook con metadatos del tema y modo de orador
+    console.log("Enviando transcripción al webhook para procesamiento adicional...");
+    const webhookResponseData = await sendToWebhook(WEBHOOK_URL, {
       transcript: transcript,
       language: language,
       subject: subject || "No subject specified",
@@ -280,16 +290,45 @@ export async function transcribeAudio(
       processed: true
     });
     
-    // Paso 4: Generar un resumen y puntos clave basados en la transcripción y el modo de orador
+    console.log("Respuesta del webhook recibida:", webhookResponseData);
+    
+    // Calcular tiempo de procesamiento
+    const processingTime = Date.now() - startTime;
+    
+    // Paso 3: Comprobar si la respuesta del webhook es válida
     let analysisResult = { summary: "", keyPoints: [], suggestedEvents: [] };
     
-    try {
-      analysisResult = await generateAnalysis(transcript, language, speakerMode);
-    } catch (error) {
-      console.error("Error generando análisis, devolviendo solo transcripción:", error);
-      // Continuar incluso si el análisis falla - la transcripción es lo que importa
+    if (webhookResponseData) {
+      try {
+        // Intentar extraer el análisis de la respuesta del webhook
+        if (typeof webhookResponseData === 'string') {
+          try {
+            const parsed = JSON.parse(webhookResponseData);
+            if (parsed.summary || parsed.keyPoints || parsed.suggestedEvents) {
+              analysisResult = parsed;
+            }
+          } catch (e) {
+            console.error("Error al parsear la respuesta del webhook:", e);
+          }
+        } else if (typeof webhookResponseData === 'object') {
+          // Si ya es un objeto, verificar si tiene las propiedades esperadas
+          if (webhookResponseData.summary || webhookResponseData.keyPoints || webhookResponseData.suggestedEvents) {
+            analysisResult = webhookResponseData;
+          } else if (webhookResponseData.output && typeof webhookResponseData.output === 'object') {
+            // A veces el resultado está dentro de una propiedad 'output'
+            if (webhookResponseData.output.summary || webhookResponseData.output.keyPoints || webhookResponseData.output.suggestedEvents) {
+              analysisResult = webhookResponseData.output;
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error procesando la respuesta del webhook:", error);
+      }
+    } else {
+      console.warn("No se recibió respuesta del webhook o formato no reconocido.");
     }
     
+    // Devolver resultado final
     return {
       transcript,
       summary: analysisResult.summary,
@@ -297,7 +336,10 @@ export async function transcribeAudio(
       suggestedEvents: analysisResult.suggestedEvents,
       language,
       subject,
-      speakerMode
+      speakerMode,
+      webhookResponse: webhookResponseData,
+      duration: audioDuration,
+      processingTime
     };
   } catch (error) {
     console.error("Error en transcribeAudio:", error);

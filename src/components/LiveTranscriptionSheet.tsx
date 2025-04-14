@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -85,35 +86,44 @@ export function LiveTranscriptionSheet({
         
         if (event.detail.data.output && user) {
           console.log("Guardando transcripción completada en la base de datos");
-          const transcriptionData = {
-            name: `Transcripción ${new Date().toLocaleString()}`,
-            date: new Date().toISOString(),
-            duration: event.detail.data.duration || 0,
-            audioData: "",
-            folderId: null,
-            output: event.detail.data.output,
-            language: "es",
-            subject: "",
-            webhookData: event.detail.data.webhookResponse || null,
-            speakerMode: "single" as "single" | "multiple",
-            understood: false
-          };
           
-          try {
-            // Guardar la transcripción y obtener el ID
-            const newRecordingId = await addRecording(transcriptionData);
-            // Corregir: Comprobar que newRecordingId exista y sea de tipo string antes de asignarlo
-            if (typeof newRecordingId === 'string') {
-              setRecordingId(newRecordingId);
-              console.log("Grabación guardada con ID:", newRecordingId);
-              toast.success("Grabación guardada correctamente");
-            } else {
-              console.error("Error: No se recibió un ID válido al guardar la grabación");
+          // Verificar si ya hay un ID en la respuesta
+          if (event.detail.data.id) {
+            console.log("Usando ID de grabación proporcionado:", event.detail.data.id);
+            setRecordingId(event.detail.data.id);
+          } else {
+            // Si no hay ID, crear una nueva grabación
+            const transcriptionData = {
+              name: `Transcripción ${new Date().toLocaleString()}`,
+              date: new Date().toISOString(),
+              duration: event.detail.data.duration || 0,
+              audioData: "",
+              folderId: null,
+              output: event.detail.data.output,
+              language: "es",
+              subject: "",
+              webhookData: event.detail.data.webhookResponse || null,
+              speakerMode: "single" as "single" | "multiple",
+              understood: false
+            };
+            
+            try {
+              // Guardar la transcripción y obtener el ID
+              const newRecordingId = await addRecording(transcriptionData);
+              
+              // Comprobar que newRecordingId exista y sea de tipo string antes de asignarlo
+              if (typeof newRecordingId === 'string') {
+                setRecordingId(newRecordingId);
+                console.log("Grabación guardada con ID:", newRecordingId);
+                toast.success("Grabación guardada correctamente");
+              } else {
+                console.error("Error: No se recibió un ID válido al guardar la grabación");
+                toast.error("Error al guardar la grabación");
+              }
+            } catch (error) {
+              console.error("Error al guardar la grabación:", error);
               toast.error("Error al guardar la grabación");
             }
-          } catch (error) {
-            console.error("Error al guardar la grabación:", error);
-            toast.error("Error al guardar la grabación");
           }
         }
         
