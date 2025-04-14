@@ -10,6 +10,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useRecordings } from "@/context/RecordingsContext";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import { loadAudioFromStorage } from "@/lib/storage";
 
 interface LiveTranscriptionSheetProps {
   isTranscribing: boolean;
@@ -37,6 +38,7 @@ export function LiveTranscriptionSheet({
   const [activeTab, setActiveTab] = useState("transcription");
   const [processedWebhookResponse, setProcessedWebhookResponse] = useState<any>(null);
   const [recordingId, setRecordingId] = useState<string | null>(null);
+  const [loadedAudio, setLoadedAudio] = useState<Blob | null>(null);
   const processedRequestRef = useRef(false);
   const isControlled = open !== undefined && onOpenChange !== undefined;
   const isOpen = isControlled ? open : internalOpen;
@@ -69,7 +71,6 @@ export function LiveTranscriptionSheet({
       const extracted = extractWebhookOutput(webhookResponse);
       setProcessedWebhookResponse(extracted);
       
-      // Si hay un ID de grabación guardado, actualizar con la respuesta del webhook
       if (recordingId) {
         console.log("Actualizando grabación con respuesta de webhook:", recordingId);
         updateRecording(recordingId, {
@@ -80,9 +81,28 @@ export function LiveTranscriptionSheet({
   }, [webhookResponse, recordingId, updateRecording]);
   
   useEffect(() => {
+    const loadAudio = async () => {
+      if (recordingId) {
+        try {
+          const audioBlob = await loadAudioFromStorage(recordingId);
+          if (audioBlob) {
+            console.log("Audio loaded from storage for ID:", recordingId);
+            setLoadedAudio(audioBlob);
+          } else {
+            console.log("No audio found in storage for ID:", recordingId);
+          }
+        } catch (error) {
+          console.error("Error loading audio from storage:", error);
+        }
+      }
+    };
+
+    loadAudio();
+  }, [recordingId]);
+  
+  useEffect(() => {
     const handleTranscriptionComplete = async (event: CustomEvent) => {
       if (event.detail?.data && !userClosed) {
-        // Prevent duplicate processing
         if (processedRequestRef.current) {
           console.log("Already processed this transcription, skipping");
           return;
@@ -90,8 +110,6 @@ export function LiveTranscriptionSheet({
         
         handleOpenChange(true);
         
-        // If we have an ID, this means the recording was already saved by AudioRecorderV2
-        // So we don't need to save it again
         if (event.detail.data.id) {
           console.log("This recording was already saved with ID:", event.detail.data.id);
           setRecordingId(event.detail.data.id);
@@ -106,12 +124,10 @@ export function LiveTranscriptionSheet({
           return;
         }
         
-        // Only proceed if user exists and we have transcription output
         if (event.detail.data.output && user && !processedRequestRef.current) {
           console.log("Saving new transcription to database");
           processedRequestRef.current = true;
           
-          // Create a new recording
           const transcriptionData = {
             name: `Transcripción ${new Date().toLocaleString()}`,
             date: new Date().toISOString(),
@@ -127,7 +143,6 @@ export function LiveTranscriptionSheet({
           };
           
           try {
-            // Save the transcription and get the ID
             const newRecordingId = await addRecording(transcriptionData);
             
             if (typeof newRecordingId === 'string') {
@@ -151,7 +166,6 @@ export function LiveTranscriptionSheet({
           const extracted = extractWebhookOutput(event.detail.data.webhookResponse);
           setProcessedWebhookResponse(extracted);
           
-          // If we have a recording ID and webhook response, update
           if (recordingId) {
             console.log("Updating recording with webhook response:", recordingId);
             updateRecording(recordingId, {
@@ -267,46 +281,48 @@ export function LiveTranscriptionSheet({
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="transcription" className="flex-1 overflow-hidden mt-0">
-              <div className="p-2 sm:p-4 pb-2">
-                <div className="text-xs sm:text-sm text-muted-foreground mb-2">
-                  {isTranscribing ? "Transcribiendo audio en tiempo real..." : "Transcripción completada"}
-                </div>
-              </div>
-              
-              <div className="px-2 sm:px-4 h-[calc(100vh-220px)] overflow-hidden">
-                <ScrollArea className="h-full overflow-y-auto">
-                  <div className="pr-2 sm:pr-4 max-w-full overflow-x-hidden">
-                    <TranscriptionPanel 
-                      output={safeOutput} 
-                      isLoading={isTranscribing && !safeOutput} 
-                      showProgress={isTranscribing} 
-                      progress={progress} 
-                    />
+            <div className="flex-grow overflow-auto">
+              <TabsContent value="transcription" className="flex-1 overflow-hidden mt-0">
+                <div className="p-2 sm:p-4 pb-2">
+                  <div className="text-xs sm:text-sm text-muted-foreground mb-2">
+                    {isTranscribing ? "Transcribiendo audio en tiempo real..." : "Transcripción completada"}
                   </div>
-                </ScrollArea>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="webhook" className="flex-1 overflow-hidden mt-0">
-              <div className="p-2 sm:p-4 pb-2">
-                <div className="text-xs sm:text-sm text-muted-foreground mb-2">
-                  {hasWebhookResponse ? "Resumen y puntos fuertes (datos procesados)" : "Esperando procesamiento de la transcripción..."}
                 </div>
-              </div>
+                
+                <div className="px-2 sm:px-4 h-[calc(100vh-220px)] overflow-hidden">
+                  <ScrollArea className="h-full overflow-y-auto">
+                    <div className="pr-2 sm:pr-4 max-w-full overflow-x-hidden">
+                      <TranscriptionPanel 
+                        output={safeOutput} 
+                        isLoading={isTranscribing && !safeOutput} 
+                        showProgress={isTranscribing} 
+                        progress={progress} 
+                      />
+                    </div>
+                  </ScrollArea>
+                </div>
+              </TabsContent>
               
-              <div className="px-2 sm:px-4 h-[calc(100vh-220px)] overflow-hidden">
-                <ScrollArea className="h-full overflow-y-auto">
-                  <div className="pr-2 sm:pr-4 max-w-full overflow-x-hidden">
-                    <TranscriptionPanel 
-                      output={webhookContent} 
-                      isLoading={isTranscribing && !hasWebhookResponse} 
-                      showProgress={false} 
-                    />
+              <TabsContent value="webhook" className="flex-1 overflow-hidden mt-0">
+                <div className="p-2 sm:p-4 pb-2">
+                  <div className="text-xs sm:text-sm text-muted-foreground mb-2">
+                    {hasWebhookResponse ? "Resumen y puntos fuertes (datos procesados)" : "Esperando procesamiento de la transcripción..."}
                   </div>
-                </ScrollArea>
-              </div>
-            </TabsContent>
+                </div>
+                
+                <div className="px-2 sm:px-4 h-[calc(100vh-220px)] overflow-hidden">
+                  <ScrollArea className="h-full overflow-y-auto">
+                    <div className="pr-2 sm:pr-4 max-w-full overflow-x-hidden">
+                      <TranscriptionPanel 
+                        output={webhookContent} 
+                        isLoading={isTranscribing && !hasWebhookResponse} 
+                        showProgress={false} 
+                      />
+                    </div>
+                  </ScrollArea>
+                </div>
+              </TabsContent>
+            </div>
           </Tabs>
         </div>
       </SheetContent>
