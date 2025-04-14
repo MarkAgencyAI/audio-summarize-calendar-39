@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, parseISO, addHours } from "date-fns";
 import { es } from "date-fns/locale";
@@ -12,6 +11,7 @@ import { ChevronLeft, ChevronRight, Save, X } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
 import { toast } from "sonner";
 import { loadFromStorage, saveToStorage } from "@/lib/storage";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface WeeklyEventWithTemp extends Omit<CalendarEvent, "id"> {
   tempId: string;
@@ -33,6 +33,7 @@ export function WeeklyScheduleGrid({
   existingEvents
 }: WeeklyScheduleGridProps) {
   const { folders } = useRecordings();
+  const isMobile = useIsMobile();
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<{
     day: Date;
     hour: number;
@@ -41,16 +42,13 @@ export function WeeklyScheduleGrid({
   const [weekStart, setWeekStart] = useState<Date>(startOfWeek(date, { weekStartsOn: 1 }));
   const [showDialog, setShowDialog] = useState(false);
 
-  // Generate array of days for the current week
   const weekDays = eachDayOfInterval({
     start: weekStart,
     end: endOfWeek(weekStart, { weekStartsOn: 1 })
   });
 
-  // Hours for the day
-  const hours = Array.from({ length: 14 }, (_, i) => i + 7); // 7 AM to 8 PM
+  const hours = Array.from({ length: 14 }, (_, i) => i + 7);
 
-  // Cargar eventos guardados localmente o los existentes
   useEffect(() => {
     const savedEvents = loadFromStorage<WeeklyEventWithTemp[]>("weeklyScheduleEvents");
     
@@ -62,7 +60,6 @@ export function WeeklyScheduleGrid({
           const eventDate = parseISO(event.date);
           const eventHour = eventDate.getHours();
           
-          // Only include events within our schedule hours (7am-8pm)
           return eventHour >= 7 && eventHour <= 20 && event.repeat?.frequency === "weekly";
         })
         .map(event => ({
@@ -74,7 +71,6 @@ export function WeeklyScheduleGrid({
     }
   }, [existingEvents]);
 
-  // Guardar eventos localmente cuando cambien
   useEffect(() => {
     if (events.length > 0) {
       saveToStorage("weeklyScheduleEvents", events);
@@ -96,19 +92,15 @@ export function WeeklyScheduleGrid({
   const handleAddEvent = (day: Date, hour: number) => {
     setSelectedTimeSlot({ day, hour });
     
-    // Create a new date representing this time slot
     const eventDate = new Date(day);
     eventDate.setHours(hour, 0, 0, 0);
     
-    // End date is 1 hour later
     const endDate = new Date(eventDate);
     endDate.setHours(hour + 1, 0, 0, 0);
     
-    // Format times to HH:MM for the time inputs
     const formattedStartTime = `${hour.toString().padStart(2, '0')}:00`;
     const formattedEndTime = `${(hour + 1).toString().padStart(2, '0')}:00`;
     
-    // Initialize new event with these dates
     setNewEvent({
       title: "",
       description: "",
@@ -143,18 +135,15 @@ export function WeeklyScheduleGrid({
   const handleSaveEvent = (event: WeeklyEventWithTemp & { day: string }) => {
     const { day, ...eventWithoutDay } = event;
     
-    // Find the corresponding day in our week
     const dayDate = weekDays.find(d => 
       format(d, "EEEE", { locale: es }).toLowerCase() === day
     );
     
     if (!dayDate) return;
     
-    // Extract hours and minutes
     const [hours, minutes] = event.date.split(":").map(Number);
     const [endHours, endMinutes] = event.endDate.split(":").map(Number);
     
-    // Create new Date objects for the start and end times
     const startDate = new Date(dayDate);
     startDate.setHours(hours, minutes, 0, 0);
     
@@ -193,7 +182,6 @@ export function WeeklyScheduleGrid({
     return folder ? folder.name : "Sin materia";
   };
 
-  // Find event for a specific time slot
   const getEventForTimeSlot = (day: Date, hour: number) => {
     const dayName = format(day, "EEEE", { locale: es }).toLowerCase();
     
@@ -225,23 +213,23 @@ export function WeeklyScheduleGrid({
         
         <CardContent className="p-4 pt-0">
           <div className="overflow-x-auto">
-            <div className="grid grid-cols-8 min-w-[700px] max-w-full">
-              {/* Time column */}
+            <div className={`grid grid-cols-${isMobile ? '3' : '8'} min-w-[280px] sm:min-w-[700px] max-w-full`}>
               <div className="col-span-1">
-                <div className="h-10 flex items-center justify-center font-medium">Hora</div>
+                <div className="h-10 flex items-center justify-center font-medium text-xs sm:text-sm">
+                  Hora
+                </div>
                 {hours.map(hour => (
-                  <div key={hour} className="h-20 flex items-center justify-center border-t border-border">
+                  <div key={hour} className="h-20 flex items-center justify-center border-t border-border text-xs sm:text-sm">
                     {hour}:00
                   </div>
                 ))}
               </div>
               
-              {/* Day columns */}
-              {weekDays.map(day => (
+              {weekDays.slice(0, isMobile ? 2 : 7).map(day => (
                 <div key={day.toString()} className="col-span-1">
-                  <div className="h-10 flex items-center justify-center font-medium capitalize">
+                  <div className="h-10 flex items-center justify-center font-medium text-xs sm:text-sm capitalize">
                     {format(day, "EEE", { locale: es })}
-                    <span className="ml-1 text-xs font-normal text-muted-foreground">
+                    <span className="ml-1 text-[10px] sm:text-xs font-normal text-muted-foreground">
                       {format(day, "d")}
                     </span>
                   </div>
@@ -268,7 +256,7 @@ export function WeeklyScheduleGrid({
           </Button>
           <Button onClick={handleSaveSchedule}>
             <Save className="h-4 w-4 mr-2" />
-            Guardar cronograma
+            Guardar
           </Button>
         </CardFooter>
       </Card>
