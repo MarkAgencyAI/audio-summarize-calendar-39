@@ -1,11 +1,11 @@
 
-import { WebhookTabProps } from "../types";
+import { SummaryTabProps } from "../types";
 import { Sparkles, Info, Lightbulb, CheckSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
-export function SummaryTab({ data }: WebhookTabProps) {
+export function SummaryTab({ data }: SummaryTabProps) {
   const [summaryContent, setSummaryContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   

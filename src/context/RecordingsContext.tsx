@@ -25,6 +25,13 @@ export interface SuggestedEvent {
   date?: string;
 }
 
+export interface Event {
+  id: string;
+  title: string;
+  description?: string;
+  date?: string;
+}
+
 export interface Recording {
   id: string;
   name: string;
@@ -44,6 +51,7 @@ export interface Recording {
   createdAt?: string;
   updatedAt?: string; // Add this field to match what's being used in RecordingDetails
   understood?: boolean; // Field to mark if it was understood
+  events?: Event[]; // Add the events property
 }
 
 export interface Folder {
@@ -151,7 +159,8 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       ...recording,
       id: uuidv4(),
       date: recording.date || recording.createdAt || new Date().toISOString(),
-      understood: recording.understood || false // Initialize as not understood by default
+      understood: recording.understood || false,
+      events: recording.events || []
     };
     setRecordings(prev => [...prev, newRecording]);
   };
@@ -162,7 +171,7 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         recording.id === id ? { 
           ...recording, 
           ...data,
-          updatedAt: data.updatedAt || new Date().toISOString() // Add updatedAt timestamp when updating
+          updatedAt: data.updatedAt || new Date().toISOString()
         } : recording
       )
     );

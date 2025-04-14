@@ -50,6 +50,11 @@ export interface SummaryTabProps {
   data: RecordingDetails;
 }
 
+// Add the missing WebhookTabProps which is used in SummaryTab.tsx
+export interface WebhookTabProps {
+  data: RecordingDetails;
+}
+
 export interface ChaptersTabProps {
   data: RecordingDetails;
   onEditChapter?: (chapter: AudioChapter) => void;
@@ -82,3 +87,5 @@ export const chapterColors = [
   "#6366f1", // indigo-500
   "#84cc16", // lime-500
 ];
+
+// Make sure to export the chapterColors array
