@@ -15,12 +15,12 @@ interface TimeSlotProps {
 export function TimeSlot({ event, onClick, onDelete, getFolderName }: TimeSlotProps) {
   return (
     <div 
-      className="weekly-time-slot"
+      className="border-l border-r border-border p-1 cursor-pointer min-h-[80px] transition-colors hover:bg-accent/20 weekly-time-slot"
       onClick={() => !event && onClick()}
     >
       {event ? (
         <div 
-          className="weekly-event"
+          className="h-full p-2 rounded-md overflow-hidden weekly-event"
           style={{ 
             backgroundColor: `${eventTypeColors[event.type]}20`,
             borderLeft: `3px solid ${eventTypeColors[event.type]}`,
@@ -48,7 +48,7 @@ export function TimeSlot({ event, onClick, onDelete, getFolderName }: TimeSlotPr
           </div>
         </div>
       ) : (
-        <div className="weekly-add-slot">
+        <div className="h-full flex items-center justify-center weekly-add-slot">
           <Plus className="h-4 w-4 opacity-0 group-hover:opacity-100" />
         </div>
       )}

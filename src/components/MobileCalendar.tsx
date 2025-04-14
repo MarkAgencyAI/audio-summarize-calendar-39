@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -10,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { CalendarEvent, eventTypeColors } from '@/components/Calendar';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { WeeklySchedule } from '@/components/weekly-schedule';
 
 interface MobileCalendarProps {
   initialDate?: Date;
@@ -37,10 +37,10 @@ export function MobileCalendar({
   const [showDayView, setShowDayView] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showWeeklySchedule, setShowWeeklySchedule] = useState(false);
   
   const isMobile = useIsMobile();
   
-  // Helper function to safely parse dates
   const safeParseISO = (dateString: string): Date | null => {
     try {
       if (!dateString) return null;
@@ -52,19 +52,16 @@ export function MobileCalendar({
     }
   };
   
-  // Filter events based on search query
   const filteredEvents = events.filter(event => 
     event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (event.description && event.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
   
-  // Events for the current month
   const currentMonthEvents = filteredEvents.filter(event => {
     const eventDate = safeParseISO(event.date);
     return eventDate ? isSameMonth(eventDate, currentDate) : false;
   });
   
-  // Events for the selected day
   const selectedDayEvents = filteredEvents.filter(event => {
     const eventDate = safeParseISO(event.date);
     return eventDate ? isSameDay(eventDate, selectedDate) : false;
@@ -111,7 +108,6 @@ export function MobileCalendar({
     return eachDayOfInterval({ start, end });
   };
   
-  // Safely format date with fallback
   const safeFormat = (date: Date | string | null, formatString: string, options = {}): string => {
     try {
       if (!date) return '';
@@ -232,78 +228,112 @@ export function MobileCalendar({
         </div>
       </div>
       
-      <Card className="p-3">
-        {renderCalendarGrid()}
-      </Card>
-      
-      <div className="pt-2">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium">Próximos eventos</h3>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            onClick={onAddEvent}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-        
-        <ScrollArea className="h-[calc(100vh-380px)]">
-          {filteredEvents.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-              <CalendarIcon className="h-8 w-8 mb-2 opacity-50" />
-              <p className="text-sm">No hay eventos</p>
+      {showWeeklySchedule ? (
+        <WeeklySchedule
+          date={selectedDate}
+          events={events}
+          onEdit={onEditEvent}
+          onDelete={onDeleteEvent}
+          onCancel={() => setShowWeeklySchedule(false)}
+          hasExistingSchedule={true}
+          existingEvents={events}
+          onSave={(newEvents) => {
+            newEvents.forEach(event => {
+              if (onEditEvent) {
+                onEditEvent({
+                  ...event,
+                  id: crypto.randomUUID(),
+                });
+              }
+            });
+            setShowWeeklySchedule(false);
+          }}
+        />
+      ) : (
+        <>
+          <Card className="p-3">
+            {renderCalendarGrid()}
+          </Card>
+          
+          <div className="pt-2">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex space-x-2">
+                <h3 className="text-sm font-medium">Próximos eventos</h3>
+                <Button
+                  variant="outline" 
+                  size="sm"
+                  className="h-6 text-xs"
+                  onClick={() => setShowWeeklySchedule(true)}
+                >
+                  Ver cronograma
+                </Button>
+              </div>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="mt-2"
+                className="h-8 w-8 p-0"
                 onClick={onAddEvent}
               >
-                <Plus className="h-3 w-3 mr-1" />
-                Agregar evento
+                <Plus className="h-4 w-4" />
               </Button>
             </div>
-          ) : (
-            <div className="space-y-2">
-              {filteredEvents
-                .filter(event => {
-                  if (activeFilter === 'all') return true;
-                  return event.type === activeFilter;
-                })
-                .sort((a, b) => {
-                  const dateA = safeParseISO(a.date);
-                  const dateB = safeParseISO(b.date);
-                  if (!dateA || !dateB) return 0;
-                  return dateA.getTime() - dateB.getTime();
-                })
-                .slice(0, 30)
-                .map(event => (
-                  <div 
-                    key={event.id}
-                    className="p-2 rounded-md cursor-pointer hover:bg-accent/50 transition-colors"
-                    onClick={() => onEventClick?.(event)}
+            
+            <ScrollArea className="h-[calc(100vh-380px)]">
+              {filteredEvents.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                  <CalendarIcon className="h-8 w-8 mb-2 opacity-50" />
+                  <p className="text-sm">No hay eventos</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={onAddEvent}
                   >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-sm font-medium truncate">{event.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {safeFormat(event.date, 'PPP • HH:mm', { locale: es })}
-                        </p>
-                      </div>
+                    <Plus className="h-3 w-3 mr-1" />
+                    Agregar evento
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filteredEvents
+                    .filter(event => {
+                      if (activeFilter === 'all') return true;
+                      return event.type === activeFilter;
+                    })
+                    .sort((a, b) => {
+                      const dateA = safeParseISO(a.date);
+                      const dateB = safeParseISO(b.date);
+                      if (!dateA || !dateB) return 0;
+                      return dateA.getTime() - dateB.getTime();
+                    })
+                    .slice(0, 30)
+                    .map(event => (
                       <div 
-                        className="w-3 h-3 rounded-full mt-1"
-                        style={{ backgroundColor: eventTypeColors[event.type] }}
-                      />
-                    </div>
-                  </div>
-                ))}
-            </div>
-          )}
-        </ScrollArea>
-      </div>
+                        key={event.id}
+                        className="p-2 rounded-md cursor-pointer hover:bg-accent/50 transition-colors"
+                        onClick={() => onEventClick?.(event)}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-sm font-medium truncate">{event.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {safeFormat(event.date, 'PPP • HH:mm', { locale: es })}
+                            </p>
+                          </div>
+                          <div 
+                            className="w-3 h-3 rounded-full mt-1"
+                            style={{ backgroundColor: eventTypeColors[event.type] }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+        </>
+      )}
       
-      {/* Day View Sheet */}
       <Sheet open={showDayView} onOpenChange={setShowDayView}>
         <SheetContent side="bottom" className="h-[80vh] p-0">
           <SheetHeader className="p-4 border-b">
@@ -385,7 +415,6 @@ export function MobileCalendar({
         </SheetContent>
       </Sheet>
       
-      {/* Filter Sheet */}
       <Sheet open={showFilters} onOpenChange={setShowFilters}>
         <SheetContent side="right" className="w-[250px]">
           <SheetHeader className="mb-4">

@@ -13,8 +13,8 @@ import { Folder } from "@/context/RecordingsContext";
 interface WeeklyEventDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  event: WeeklyEventWithTemp;
-  onSave: (event: WeeklyEventWithTemp) => void;
+  event: WeeklyEventWithTemp & { day: string };
+  onSave: (event: WeeklyEventWithTemp & { day: string }) => void;
   folders: Folder[];
 }
 
@@ -25,7 +25,7 @@ export function WeeklyEventDialog({
   onSave,
   folders 
 }: WeeklyEventDialogProps) {
-  const [editedEvent, setEditedEvent] = useState<WeeklyEventWithTemp>(event);
+  const [editedEvent, setEditedEvent] = useState<WeeklyEventWithTemp & { day: string }>(event);
 
   const handleSave = () => {
     if (!editedEvent.title.trim()) {

@@ -12,7 +12,7 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterv
 import { es } from 'date-fns/locale';
 import { useRecordings } from '@/context/RecordingsContext';
 import { DailyView } from '@/components/DailyView';
-import { WeeklySchedule } from '@/components/WeeklySchedule';
+import { WeeklySchedule } from '@/components/weekly-schedule';
 import { v4 as uuidv4 } from 'uuid';
 import { saveToStorage, loadFromStorage } from '@/lib/storage';
 import { 
