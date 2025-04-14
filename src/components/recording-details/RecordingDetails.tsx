@@ -40,6 +40,7 @@ export function RecordingDetails({
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const audioPlayerRef = useRef<AudioPlayerHandle>(null);
   const isMobile = useIsMobile();
+  const hasLoadedAudioRef = useRef(false);
 
   const {
     chapters,
@@ -71,34 +72,40 @@ export function RecordingDetails({
   useEffect(() => {
     const loadAudio = async () => {
       try {
+        if (hasLoadedAudioRef.current || !recording.id) return;
+        
+        console.log("Intentando cargar audio para:", recording.id);
         const blob = await loadAudioFromStorage(recording.id);
         if (blob) {
+          console.log("Audio cargado desde IndexedDB");
           setAudioBlob(blob);
+          hasLoadedAudioRef.current = true;
+        } else if (recording.audioUrl) {
+          console.log("Descargando audio desde URL:", recording.audioUrl);
+          try {
+            const response = await fetch(recording.audioUrl);
+            if (response.ok) {
+              const blob = await response.blob();
+              await saveAudioToStorage(recording.id, blob);
+              setAudioBlob(blob);
+              hasLoadedAudioRef.current = true;
+              console.log("Audio descargado y guardado correctamente");
+            } else {
+              console.error("Error al descargar audio:", response.status);
+            }
+          } catch (fetchError) {
+            console.error("Error al descargar audio:", fetchError);
+          }
+        } else {
+          console.warn("No se encontró audio para la grabación");
         }
       } catch (error) {
-        console.error("Error loading audio from storage:", error);
+        console.error("Error cargando audio:", error);
       }
     };
+    
     loadAudio();
-  }, [recording.id]);
-
-  useEffect(() => {
-    const saveAudio = async () => {
-      if (recording.audioUrl && !audioBlob) {
-        try {
-          const response = await fetch(recording.audioUrl);
-          if (response.ok) {
-            const blob = await response.blob();
-            await saveAudioToStorage(recording.id, blob);
-            setAudioBlob(blob);
-          }
-        } catch (error) {
-          console.error("Error saving audio to storage:", error);
-        }
-      }
-    };
-    saveAudio();
-  }, [recording.audioUrl, recording.id, audioBlob]);
+  }, [recording.id, recording.audioUrl]);
 
   const handleTimeUpdate = (time: number) => {
     setCurrentAudioTime(time);

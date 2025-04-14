@@ -47,6 +47,7 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
       setIsTranscribing(false);
       setFinalDuration(0);
       setWebhookResponse(null);
+      setRecordingId(null); // Reset recording ID to prevent duplicate saves
     };
     
     if (!isRecording) {
@@ -129,15 +130,15 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
           });
           window.dispatchEvent(event);
           
+          // Save recording if user is authenticated
+          handleRecordingComplete(audioBlob);
+          
         } catch (error) {
           console.error("Error during transcription:", error);
           toast.error("Error al procesar la transcripción. Por favor, inténtalo de nuevo.");
         } finally {
           setIsTranscribing(false);
         }
-        
-        // Save recording if user is authenticated
-        handleRecordingComplete(audioBlob);
       };
       
       mediaRecorder.current.start();
@@ -156,26 +157,35 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
   };
 
   const handleRecordingComplete = async (audioBlob: Blob) => {
+    // Prevent duplicate saves
+    if (isProcessingRef.current || recordingId) {
+      console.log("Skipping save - already processed or has ID:", recordingId);
+      return;
+    }
+
     if (!user) {
       toast.error("Debes iniciar sesión para guardar grabaciones");
       return;
     }
 
-    const recordingData = {
-      name: recordingNameRef.current || `Transcripción ${new Date().toLocaleString()}`,
-      date: new Date().toISOString(),
-      duration: finalDuration,
-      folderId: null,
-      output: transcriptionOutput || "",
-      language: "es",
-      subject: "",
-      webhookData: webhookResponse,
-      speakerMode: speakerMode,
-      understood: false,
-      audioData: ""
-    };
-
     try {
+      // Mark as processing to prevent duplicate saves
+      isProcessingRef.current = true;
+      
+      const recordingData = {
+        name: recordingNameRef.current || `Transcripción ${new Date().toLocaleString()}`,
+        date: new Date().toISOString(),
+        duration: finalDuration,
+        folderId: null,
+        output: transcriptionOutput || "",
+        language: "es",
+        subject: "",
+        webhookData: webhookResponse,
+        speakerMode: speakerMode,
+        understood: false,
+        audioData: ""
+      };
+
       const newRecordingId = await addRecording(recordingData);
 
       if (typeof newRecordingId === 'string') {
@@ -189,10 +199,12 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
       } else {
         console.error("Error: No valid ID received when saving recording");
         toast.error("Error al guardar la grabación");
+        isProcessingRef.current = false;
       }
     } catch (error) {
       console.error("Error saving recording:", error);
       toast.error("Error al guardar la grabación");
+      isProcessingRef.current = false;
     }
   };
 
@@ -226,6 +238,10 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
       setIsTranscribing(true);
       
       try {
+        // Reset recording ID to prevent duplicate saves
+        setRecordingId(null);
+        isProcessingRef.current = false;
+        
         if (!transcriptionServiceRef.current) {
           transcriptionServiceRef.current = new TranscriptionService({
             speakerMode: speakerMode,
