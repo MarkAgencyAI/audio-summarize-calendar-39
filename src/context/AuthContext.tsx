@@ -1,9 +1,12 @@
 
 import { createContext, useState, useContext, ReactNode, useEffect } from "react";
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export type UserRole = "student" | "teacher";
 
-export interface User {
+export interface UserProfile {
   id: string;
   name: string;
   email: string;
@@ -13,6 +16,7 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
+  profile: UserProfile | null;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, career: string, role: UserRole) => Promise<void>;
   logout: () => void;
@@ -23,46 +27,89 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [session, setSession] = useState<Session | null>(null);
 
-  useEffect(() => {
-    // Check if user is logged in
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+  // Cargar perfil del usuario
+  const loadUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        setProfile({
+          id: data.id,
+          name: data.name,
+          email: user?.email || '',
+          career: data.career,
+          role: data.role as UserRole,
+        });
+      }
+    } catch (error) {
+      console.error('Error cargando perfil:', error);
     }
-    setIsLoading(false);
+  };
+
+  // Listener para cambios en la autenticación
+  useEffect(() => {
+    // Configurar el listener de autenticación
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        setIsLoading(false);
+
+        if (currentSession?.user) {
+          setTimeout(() => {
+            loadUserProfile(currentSession.user.id);
+          }, 0);
+        } else {
+          setProfile(null);
+        }
+      }
+    );
+
+    // Verificar sesión inicial
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      setIsLoading(false);
+
+      if (currentSession?.user) {
+        loadUserProfile(currentSession.user.id);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // In a real app, we would make an API call here
-      // For now, we'll simulate a successful login
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Check if email is registered (in localStorage for demo)
-      const users = JSON.parse(localStorage.getItem("users") || "[]");
-      const foundUser = users.find((u: any) => u.email === email);
-      
-      if (!foundUser) {
-        throw new Error("Usuario no encontrado");
-      }
-      
-      if (foundUser.password !== password) {
-        throw new Error("Contraseña incorrecta");
-      }
-      
-      // Remove password from user object
-      const { password: _, ...userWithoutPassword } = foundUser;
-      
-      // Set user in state and localStorage
-      setUser(userWithoutPassword);
-      localStorage.setItem("user", JSON.stringify(userWithoutPassword));
-      
+      toast.success('¡Bienvenido de nuevo!');
     } catch (error) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error('Error al iniciar sesión');
+      }
       throw error;
     } finally {
       setIsLoading(false);
@@ -72,52 +119,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (name: string, email: string, password: string, career: string, role: UserRole) => {
     setIsLoading(true);
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Get existing users from localStorage
-      const users = JSON.parse(localStorage.getItem("users") || "[]");
-      
-      // Check if email is already registered
-      if (users.some((u: any) => u.email === email)) {
-        throw new Error("El correo ya está registrado");
-      }
-      
-      // Create new user
-      const newUser = {
-        id: crypto.randomUUID(),
-        name,
+      const { error } = await supabase.auth.signUp({
         email,
-        password, // In a real app, this would be hashed
-        career,
-        role
-      };
+        password,
+        options: {
+          data: {
+            name,
+            career,
+            role,
+          },
+        },
+      });
+
+      if (error) throw error;
       
-      // Add user to localStorage
-      users.push(newUser);
-      localStorage.setItem("users", JSON.stringify(users));
-      
-      // Remove password from user object
-      const { password: _, ...userWithoutPassword } = newUser;
-      
-      // Set user in state and localStorage
-      setUser(userWithoutPassword);
-      localStorage.setItem("user", JSON.stringify(userWithoutPassword));
-      
+      toast.success('¡Registro exitoso! Bienvenido a Cali.');
     } catch (error) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error('Error al registrarse');
+      }
       throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("user");
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      toast.success('¡Hasta pronto!');
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+      toast.error('Error al cerrar sesión');
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, profile, login, register, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
