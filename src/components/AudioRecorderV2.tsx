@@ -42,6 +42,7 @@ export function AudioRecorderV2({
   const audioUrlRef = useRef<string | null>(null);
   const [showTranscriptionSheet, setShowTranscriptionSheet] = useState(false);
   const [hasProcessedRecording, setHasProcessedRecording] = useState(false);
+  const recordingNameRef = useRef(recordingName);
   const {
     transcribeAudio,
     isTranscribing,
@@ -55,6 +56,11 @@ export function AudioRecorderV2({
     webhookUrl: WEBHOOK_URL,
     maxChunkDuration: 420
   });
+
+  // Update the ref when recordingName changes
+  useEffect(() => {
+    recordingNameRef.current = recordingName;
+  }, [recordingName]);
 
   useEffect(() => {
     const checkPermissions = async () => {
@@ -220,7 +226,8 @@ export function AudioRecorderV2({
       setHasProcessedRecording(true);
       
       const recordingId = crypto.randomUUID();
-      const finalName = recordingName || `Grabación ${formatDate(new Date())}`;
+      // Use the current value of the recordingName ref to ensure we have the latest value
+      const finalName = recordingNameRef.current.trim() || `Grabación ${formatDate(new Date())}`;
       
       try {
         await saveAudioToStorage(recordingId, audioBlob);
