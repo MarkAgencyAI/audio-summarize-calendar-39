@@ -6,20 +6,22 @@ import { useRecordings } from "@/context/RecordingsContext";
 import { RecordingDetails } from "@/components/recording-details";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { ArrowLeft, Check, X, Clock, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, X, Clock, Loader2, Trash2 } from "lucide-react";
 import { loadAudioFromStorage } from "@/lib/storage";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function RecordingDetailsPage() {
   const { recordingId } = useParams<{ recordingId: string }>();
   const navigate = useNavigate();
-  const { recordings, updateRecording } = useRecordings();
+  const { recordings, updateRecording, deleteRecording } = useRecordings();
   const [isOpen, setIsOpen] = useState(true);
   const [isAudioLoaded, setIsAudioLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const isMobile = useIsMobile();
   
   // Find the recording
@@ -101,6 +103,14 @@ export default function RecordingDetailsPage() {
     }
   };
   
+  const handleDeleteRecording = () => {
+    if (recording) {
+      deleteRecording(recording.id);
+      toast.success("Grabación eliminada");
+      navigate("/dashboard");
+    }
+  };
+  
   const getRelativeTime = (dateString: string) => {
     try {
       return formatDistanceToNow(new Date(dateString), { 
@@ -144,6 +154,16 @@ export default function RecordingDetailsPage() {
               <span>{getRelativeTime(recording.createdAt || recording.date)}</span>
             </div>
             
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDeleteDialog(true)}
+              className="flex items-center gap-1 border-red-200 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-800/50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Eliminar</span>
+            </Button>
+            
             <ToggleGroup 
               type="single" 
               value={recording.understood ? "understood" : "not-understood"}
@@ -182,6 +202,23 @@ export default function RecordingDetailsPage() {
           onOpenChange={handleOpenChange} 
         />
       </div>
+      
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar grabación</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que quieres eliminar esta grabación? Esta acción no puede deshacerse.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteRecording} className="bg-red-500 hover:bg-red-600">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 }

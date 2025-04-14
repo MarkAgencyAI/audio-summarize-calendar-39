@@ -308,7 +308,12 @@ export function TranscriptionTab({
           {/* Highlight Button */}
           <Popover 
             open={isHighlightMenuOpen} 
-            onOpenChange={setIsHighlightMenuOpen}
+            onOpenChange={(open) => {
+              // Only close if we're not in a color picker mode
+              if (!isColorPickerOpen) {
+                setIsHighlightMenuOpen(open);
+              }
+            }}
           >
             <PopoverTrigger asChild>
               <Button 
@@ -324,7 +329,7 @@ export function TranscriptionTab({
                 <span className="sr-only sm:not-sr-only sm:inline-block">Resaltar</span>
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-64 p-4">
+            <PopoverContent className="w-64 p-4 z-50">
               <h4 className="text-sm font-medium mb-3">Resaltar texto seleccionado</h4>
               
               <div className="space-y-4">
@@ -346,6 +351,7 @@ export function TranscriptionTab({
                         ].map(color => (
                           <button
                             key={color}
+                            type="button"
                             className={cn(
                               "w-8 h-8 rounded-full border",
                               highlightColor === color ? "ring-2 ring-blue-500 ring-offset-2" : "border-slate-200 dark:border-slate-700"

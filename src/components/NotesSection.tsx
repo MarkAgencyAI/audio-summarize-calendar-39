@@ -86,7 +86,7 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
   };
   
   return (
-    <div className="space-y-6 p-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-md">
