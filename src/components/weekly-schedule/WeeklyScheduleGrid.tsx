@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, parseISO } from "date-fns";
+import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, parseISO, addHours } from "date-fns";
 import { es } from "date-fns/locale";
 import { v4 as uuidv4 } from "uuid";
 import { TimeSlot } from "./TimeSlot";
@@ -54,7 +54,6 @@ export function WeeklyScheduleGrid({
     const existingWeeklyEvents: WeeklyEventWithTemp[] = existingEvents
       .filter(event => {
         const eventDate = parseISO(event.date);
-        const eventDay = eventDate.getDay();
         const eventHour = eventDate.getHours();
         
         // Only include events within our schedule hours (7am-8pm)
@@ -91,12 +90,16 @@ export function WeeklyScheduleGrid({
     const endDate = new Date(eventDate);
     endDate.setHours(hour + 1, 0, 0, 0);
     
+    // Format times to HH:MM for the time inputs
+    const formattedStartTime = `${hour.toString().padStart(2, '0')}:00`;
+    const formattedEndTime = `${(hour + 1).toString().padStart(2, '0')}:00`;
+    
     // Initialize new event with these dates
     setNewEvent({
       title: "",
       description: "",
-      date: format(eventDate, "HH:mm"),
-      endDate: format(endDate, "HH:mm"),
+      date: formattedStartTime,
+      endDate: formattedEndTime,
       day: format(day, "EEEE", { locale: es }).toLowerCase(),
       type: "class",
       folderId: "",

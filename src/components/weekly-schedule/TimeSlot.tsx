@@ -49,7 +49,7 @@ export function TimeSlot({ event, onClick, onDelete, getFolderName }: TimeSlotPr
         </div>
       ) : (
         <div className="h-full flex items-center justify-center weekly-add-slot">
-          <Plus className="h-4 w-4 opacity-0 group-hover:opacity-100" />
+          <Plus className="h-4 w-4 opacity-50" />
         </div>
       )}
     </div>
