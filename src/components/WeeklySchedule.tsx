@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, startOfWeek, setHours, setMinutes, addMinutes, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
@@ -53,30 +52,25 @@ export function WeeklySchedule({
     folderId: ""
   });
   
-  // Days of the week - start from Monday (1) instead of Sunday (0)
   const weekStart = startOfWeek(date, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   
-  // Time slots from 7:00 AM to 9:00 PM
   const timeSlots = Array.from({ length: 15 }, (_, i) => {
     const hour = i + 7;
     return format(setHours(date, hour), "HH:mm");
   });
   
-  // Load existing schedule if available
   useEffect(() => {
     if (hasExistingSchedule) {
       const scheduleItems = existingEvents.filter(event => 
         event.type === "class" && event.repeat && typeof event.repeat === 'object' && event.repeat.frequency === "weekly"
       );
       
-      // Group by day of week to avoid duplicates
       const uniqueByDayAndTime: Record<string, CalendarEvent> = {};
       
       scheduleItems.forEach(event => {
         try {
           const eventDate = new Date(event.date);
-          // Check if the date is valid before proceeding
           if (isValid(eventDate)) {
             const dayOfWeek = eventDate.getDay();
             const timeKey = format(eventDate, "HH:mm");
@@ -91,14 +85,12 @@ export function WeeklySchedule({
         }
       });
       
-      // Convert to array format needed for the schedule
       const loadedEvents = Object.values(uniqueByDayAndTime).map(event => {
         try {
           const eventDate = new Date(event.date);
           let eventEnd;
           let endDateStr;
           
-          // Check if the date is valid before proceeding
           if (isValid(eventDate)) {
             eventEnd = event.endDate ? new Date(event.endDate) : addMinutes(eventDate, 60);
             endDateStr = isValid(eventEnd) ? format(eventEnd, "yyyy-MM-dd'T'HH:mm") : "";
@@ -135,7 +127,6 @@ export function WeeklySchedule({
   
   const handleAddTimeSlot = (dayIndex: number, time: string) => {
     if (onAddEvent) {
-      // If we have an external event handler, use it instead
       onAddEvent();
       return;
     }
@@ -175,15 +166,13 @@ export function WeeklySchedule({
   };
   
   const handleSaveSchedule = () => {
-    // Convert schedule events to calendar events
     const calendarEvents = scheduleEvents.map(({ tempId, ...event }) => ({
       ...event,
-      type: event.type || "class" // Ensure type is set
+      type: event.type || "class"
     }));
     onSave(calendarEvents);
   };
   
-  // Safe format function to handle potential invalid dates
   const safeFormat = (dateStr: string | undefined, formatStr: string): string => {
     if (!dateStr) return "";
     try {
@@ -205,7 +194,6 @@ export function WeeklySchedule({
       try {
         const eventStart = new Date(event.date);
         
-        // Skip invalid dates
         if (!isValid(eventStart)) return false;
         
         const eventEnd = event.endDate && isValid(new Date(event.endDate)) 
@@ -252,7 +240,6 @@ export function WeeklySchedule({
       
       <ScrollArea className="h-[calc(100vh-200px)]">
         <div className="weekly-schedule-grid">
-          {/* Header row with day names */}
           <div className="weekly-schedule-header">
             <div className="weekly-time-column"></div>
             {weekDays.map((day, index) => (
@@ -267,7 +254,6 @@ export function WeeklySchedule({
             ))}
           </div>
           
-          {/* Time slots */}
           <div className="weekly-schedule-body">
             {timeSlots.map((time, timeIndex) => (
               <div key={timeIndex} className="weekly-time-row">
@@ -465,10 +451,12 @@ export function WeeklySchedule({
         }
         
         .weekly-time-slot {
-          border-left: 1px solid var(--border-light, rgba(0,0,0,0.1));
+          border-left: 1px solid var(--border);
+          border-right: 1px solid var(--border);
           padding: 4px;
           cursor: pointer;
           min-height: 80px;
+          transition: background-color 0.2s;
         }
         
         .weekly-time-slot:hover {
@@ -487,6 +475,19 @@ export function WeeklySchedule({
           display: flex;
           align-items: center;
           justify-content: center;
+        }
+
+        .dark .weekly-time-slot {
+          border-left: 1px solid hsl(215, 27.9%, 16.9%);
+          border-right: 1px solid hsl(215, 27.9%, 16.9%);
+        }
+
+        .dark .weekly-time-row {
+          border-bottom: 1px solid hsl(215, 27.9%, 16.9%);
+        }
+
+        .dark .weekly-schedule-header {
+          border-bottom: 1px solid hsl(215, 27.9%, 16.9%);
         }
         `}
       </style>
