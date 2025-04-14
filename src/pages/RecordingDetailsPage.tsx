@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -26,7 +25,6 @@ export default function RecordingDetailsPage() {
   const [refreshAttempt, setRefreshAttempt] = useState(0);
   const isMobile = useIsMobile();
   
-  // Cargar datos frescos cuando se monta el componente o el recordingId cambia
   useEffect(() => {
     console.log("RecordingDetailsPage - actualizando datos para ID:", recordingId);
     const loadData = async () => {
@@ -41,16 +39,13 @@ export default function RecordingDetailsPage() {
     };
     
     loadData();
-  }, [recordingId]); // Refrescar cuando cambia el ID del recording
+  }, [recordingId]);
   
-  // Find the recording
   const recording = recordings.find(r => r.id === recordingId);
   
-  // If recording not found, retry loading or redirect to dashboard
   useEffect(() => {
     if (!recording && !isLoading) {
       if (refreshAttempt < 2) {
-        // Intentar recargar datos otra vez
         console.log("Grabación no encontrada, intentando recargar datos");
         const retryLoad = async () => {
           try {
@@ -63,7 +58,6 @@ export default function RecordingDetailsPage() {
         };
         retryLoad();
       } else {
-        // Después de varios intentos, redirigir al dashboard
         console.log("Grabación no encontrada después de varios intentos, redirigiendo al dashboard");
         toast.error("No se pudo encontrar la grabación solicitada");
         navigate("/dashboard");
@@ -71,10 +65,8 @@ export default function RecordingDetailsPage() {
       return;
     }
     
-    // Set loading state
     setIsPageLoading(true);
     
-    // Simulate loading (combine with actual loading logic)
     const loadingTimer = setTimeout(() => {
       setIsPageLoading(false);
     }, 800);
@@ -82,7 +74,6 @@ export default function RecordingDetailsPage() {
     return () => clearTimeout(loadingTimer);
   }, [recording, navigate, isLoading, refreshAttempt, refreshData]);
   
-  // Handle closing the dialog
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
@@ -90,23 +81,19 @@ export default function RecordingDetailsPage() {
     }
   };
   
-  // Preload audio from storage when page loads
   useEffect(() => {
     if (recording) {
       const preloadAudio = async () => {
         try {
           const audioBlob = await loadAudioFromStorage(recording.id);
           if (!audioBlob && recording.audioUrl) {
-            // If not in storage, try to fetch from URL
             const response = await fetch(recording.audioUrl);
             if (response.ok) {
-              // Audio loaded successfully
               setIsAudioLoaded(true);
             } else {
               toast.error("No se pudo cargar el audio");
             }
           } else if (audioBlob) {
-            // Audio loaded from IndexedDB
             setIsAudioLoaded(true);
           }
         } catch (error) {
@@ -136,12 +123,9 @@ export default function RecordingDetailsPage() {
   
   const handleDeleteEvent = (eventId: string) => {
     if (recording) {
-      // Use type assertion to work with events
       const currentEvents = (recording.events as any[] || []);
-      // Filter out the event to be deleted
       const updatedEvents = currentEvents.filter(event => event.id !== eventId);
       
-      // Update the recording with the new events array
       updateRecording(recording.id, { 
         events: updatedEvents 
       } as any);
@@ -174,7 +158,6 @@ export default function RecordingDetailsPage() {
     }
   };
   
-  // Verificar si hay transcripción y resumen
   const hasMissingData = recording && 
     (!recording.output || recording.output.trim() === "" || 
      !recording.webhookData);
@@ -236,7 +219,7 @@ export default function RecordingDetailsPage() {
               type="single" 
               value={recording.understood ? "understood" : "not-understood"}
               onValueChange={(value) => {
-                if (value) { // Only update if a value is selected (prevents deselection)
+                if (value) {
                   handleUnderstoodChange(value === "understood");
                 }
               }}
@@ -265,7 +248,7 @@ export default function RecordingDetailsPage() {
         </div>
         
         {hasMissingData && (
-          <Alert variant="warning" className="mb-4">
+          <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Datos incompletos</AlertTitle>
             <AlertDescription>

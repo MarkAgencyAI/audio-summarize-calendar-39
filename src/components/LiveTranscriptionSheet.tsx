@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -102,7 +101,8 @@ export function LiveTranscriptionSheet({
           try {
             // Guardar la transcripción y obtener el ID
             const newRecordingId = await addRecording(transcriptionData);
-            if (newRecordingId) {
+            // Fix: Check if newRecordingId exists (not for truthiness of void)
+            if (newRecordingId !== null && newRecordingId !== undefined) {
               setRecordingId(newRecordingId);
               console.log("Grabación guardada con ID:", newRecordingId);
             }
