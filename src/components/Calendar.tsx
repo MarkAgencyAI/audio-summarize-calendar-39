@@ -306,7 +306,6 @@ export function Calendar({
     setRepeatOption('none');
   };
 
-  // Get the folder name for an event
   const getFolderName = (folderId: string | undefined) => {
     if (!folderId) return "";
     const folder = folders.find(f => f.id === folderId);
@@ -387,7 +386,7 @@ export function Calendar({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="sm" onClick={() => setView('month')}>
             <LayoutGrid className="h-4 w-4 mr-1" />

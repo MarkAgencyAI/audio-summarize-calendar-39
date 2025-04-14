@@ -4,30 +4,44 @@ import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { eventTypeColors } from "@/components/Calendar";
 import { WeeklyEventWithTemp } from "./WeeklyScheduleGrid";
+import { parseISO, differenceInMinutes } from "date-fns";
 
 interface TimeSlotProps {
   event: WeeklyEventWithTemp | undefined;
   onClick: () => void;
   onDelete: (tempId: string) => void;
   getFolderName: (folderId: string) => string;
+  rowHeight?: number;
 }
 
-export function TimeSlot({ event, onClick, onDelete, getFolderName }: TimeSlotProps) {
+export function TimeSlot({ event, onClick, onDelete, getFolderName, rowHeight = 80 }: TimeSlotProps) {
+  const getEventHeight = () => {
+    if (!event || !event.endDate) return rowHeight;
+    
+    const startTime = parseISO(event.date);
+    const endTime = parseISO(event.endDate);
+    const durationInMinutes = differenceInMinutes(endTime, startTime);
+    const hourHeight = rowHeight;
+    return (durationInMinutes / 60) * hourHeight;
+  };
+
   return (
     <div 
-      className="border-l border-r border-border p-1 cursor-pointer min-h-[80px] transition-colors hover:bg-accent/20 weekly-time-slot"
+      className="border-l border-r border-border p-1 cursor-pointer min-h-[80px] transition-colors hover:bg-accent/20 weekly-time-slot relative"
       onClick={() => !event && onClick()}
     >
       {event ? (
         <div 
-          className="h-full p-2 rounded-md overflow-hidden weekly-event"
+          className="absolute left-0 right-0 mx-1 rounded-md overflow-hidden weekly-event z-10"
           style={{ 
             backgroundColor: `${eventTypeColors[event.type]}20`,
             borderLeft: `3px solid ${eventTypeColors[event.type]}`,
-            color: eventTypeColors[event.type]
+            color: eventTypeColors[event.type],
+            height: `${getEventHeight()}px`,
+            top: '4px'
           }}
         >
-          <div className="flex justify-between items-start">
+          <div className="flex justify-between items-start p-2">
             <div>
               <p className="font-medium text-sm">{event.title}</p>
               {event.folderId && (
@@ -49,7 +63,7 @@ export function TimeSlot({ event, onClick, onDelete, getFolderName }: TimeSlotPr
         </div>
       ) : (
         <div className="h-full weekly-add-slot">
-          {/* Se ha eliminado el icono de Plus */}
+          {/* Empty slot */}
         </div>
       )}
     </div>

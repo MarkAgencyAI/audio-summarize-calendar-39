@@ -225,7 +225,7 @@ export function WeeklyScheduleGrid({
         
         <CardContent className="p-4 pt-0">
           <div className="overflow-x-auto">
-            <div className="grid grid-cols-8 min-w-[700px]">
+            <div className="grid grid-cols-8 min-w-[700px] max-w-full">
               {/* Time column */}
               <div className="col-span-1">
                 <div className="h-10 flex items-center justify-center font-medium">Hora</div>
@@ -252,6 +252,7 @@ export function WeeklyScheduleGrid({
                       onClick={() => handleAddEvent(day, hour)}
                       onDelete={handleDeleteEvent}
                       getFolderName={getFolderName}
+                      rowHeight={80}
                     />
                   ))}
                 </div>
