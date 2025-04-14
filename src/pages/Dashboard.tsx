@@ -7,7 +7,7 @@ import { RecordingItem } from "@/components/RecordingItem";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Folder, Mic, FileText, Search, Calendar, Bell, BookOpen, Filter, Check, X } from "lucide-react";
+import { Folder, Mic, FileText, Search, Calendar, Bell, BookOpen, Filter, Check, X, Loader } from "lucide-react";
 import { toast } from "sonner";
 import { parseISO, format, isWithinInterval, addDays } from "date-fns";
 import { es } from "date-fns/locale";
@@ -77,11 +77,18 @@ function UpcomingEvents({
 function Transcriptions() {
   const {
     recordings,
-    deleteRecording
+    deleteRecording,
+    isLoading,
+    refreshData
   } = useRecordings();
   const [searchQuery, setSearchQuery] = useState("");
   const [understandingFilter, setUnderstandingFilter] = useState<"all" | "understood" | "not-understood">("all");
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    refreshData();
+  }, []);
+  
   const filteredRecordings = recordings.filter(recording => {
     const matchesSearch = (recording.name || "").toLowerCase().includes(searchQuery.toLowerCase());
     if (understandingFilter === "all") {
@@ -92,15 +99,27 @@ function Transcriptions() {
       return matchesSearch && recording.understood !== true;
     }
   });
+  
   const handleAddToCalendar = (recording: any) => {
     console.log("Add to calendar:", recording);
     toast.info("Funcionalidad en desarrollo");
   };
+  
   return <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
           <FileText className="h-5 w-5 text-green-500" />
           Transcripciones
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            className="ml-auto h-8 w-8 p-1" 
+            onClick={() => refreshData()}
+            title="Actualizar datos"
+          >
+            <span className="sr-only">Actualizar</span>
+            <Loader className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -156,12 +175,18 @@ function Transcriptions() {
           </div>
         </div>
         
-        <div className="divide-y divide-border">
-          {filteredRecordings.map(recording => <RecordingItem key={recording.id} recording={recording} onAddToCalendar={handleAddToCalendar} />)}
-          {filteredRecordings.length === 0 && <div className="text-center text-muted-foreground py-4">
-              <p>No se encontraron transcripciones</p>
-            </div>}
-        </div>
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {filteredRecordings.map(recording => <RecordingItem key={recording.id} recording={recording} onAddToCalendar={handleAddToCalendar} />)}
+            {filteredRecordings.length === 0 && <div className="text-center text-muted-foreground py-4">
+                <p>No se encontraron transcripciones</p>
+              </div>}
+          </div>
+        )}
       </CardContent>
     </Card>;
 }
@@ -222,7 +247,9 @@ export default function Dashboard() {
   } = useAuth();
   const {
     recordings,
-    addRecording
+    addRecording,
+    refreshData,
+    isLoading
   } = useRecordings();
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const navigate = useNavigate();
@@ -313,6 +340,13 @@ export default function Dashboard() {
     };
   }, []);
   
+  useEffect(() => {
+    console.log("Dashboard montado - actualizando datos");
+    refreshData().catch(error => {
+      console.error("Error al actualizar datos:", error);
+    });
+  }, []);
+  
   return <Layout>
       <div className="space-y-6 max-w-full">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -324,6 +358,16 @@ export default function Dashboard() {
               {user?.role === "teacher" ? "Gestiona tus transcripciones" : "Gestiona tus recursos"}
             </p>
           </div>
+          
+          <Button 
+            variant="outline" 
+            onClick={() => refreshData()}
+            className="flex items-center gap-2"
+            disabled={isLoading}
+          >
+            <Loader className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <span>{isLoading ? 'Actualizando...' : 'Actualizar datos'}</span>
+          </Button>
         </div>
 
         {isMobile && <div className="grid grid-cols-1 gap-4">

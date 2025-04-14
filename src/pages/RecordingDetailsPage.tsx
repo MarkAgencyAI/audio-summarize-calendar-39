@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -6,7 +5,7 @@ import { useRecordings } from "@/context/RecordingsContext";
 import { RecordingDetails } from "@/components/recording-details";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { ArrowLeft, Check, X, Clock, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, X, Clock, Loader2, Trash2, RefreshCw } from "lucide-react";
 import { loadAudioFromStorage } from "@/lib/storage";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -17,47 +16,49 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 export default function RecordingDetailsPage() {
   const { recordingId } = useParams<{ recordingId: string }>();
   const navigate = useNavigate();
-  const { recordings, updateRecording, deleteRecording } = useRecordings();
+  const { recordings, updateRecording, deleteRecording, refreshData, isLoading } = useRecordings();
   const [isOpen, setIsOpen] = useState(true);
   const [isAudioLoaded, setIsAudioLoaded] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isPageLoading, setIsPageLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const isMobile = useIsMobile();
+  
+  // Cargar datos frescos cuando se monta el componente
+  useEffect(() => {
+    console.log("RecordingDetailsPage montado - actualizando datos");
+    const loadData = async () => {
+      try {
+        await refreshData();
+      } catch (error) {
+        console.error("Error al actualizar datos:", error);
+      }
+    };
+    
+    loadData();
+    // No incluimos refreshData en las dependencias para que no se ejecute en loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   // Find the recording
   const recording = recordings.find(r => r.id === recordingId);
   
   // If recording not found, redirect to dashboard
   useEffect(() => {
-    if (!recording) {
+    if (!recording && !isLoading) {
       navigate("/dashboard");
       return;
     }
     
     // Set loading state
-    setIsLoading(true);
+    setIsPageLoading(true);
     
     // Simulate loading (combine with actual loading logic)
     const loadingTimer = setTimeout(() => {
-      setIsLoading(false);
+      setIsPageLoading(false);
     }, 800);
     
     return () => clearTimeout(loadingTimer);
-  }, [recording, navigate]);
-  
-  // Log para depuración - verificar si la grabación tiene datos
-  useEffect(() => {
-    if (recording) {
-      console.log("Grabación cargada:", {
-        id: recording.id,
-        name: recording.name,
-        chapters: recording.chapters?.length || 0,
-        hasOutput: !!recording.output,
-        outputLength: recording.output?.length || 0,
-        hasWebhookData: !!recording.webhookData
-      });
-    }
-  }, [recording]);
+  }, [recording, navigate, isLoading]);
   
   // Handle closing the dialog
   const handleOpenChange = (open: boolean) => {
@@ -138,7 +139,7 @@ export default function RecordingDetailsPage() {
     }
   };
   
-  if (isLoading || !recording) {
+  if (isPageLoading || isLoading || !recording) {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-8 h-[80vh] flex items-center justify-center">
@@ -165,6 +166,17 @@ export default function RecordingDetailsPage() {
           </Button>
           
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refreshData()}
+              className="flex items-center gap-1"
+              disabled={isLoading}
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Actualizar</span>
+            </Button>
+            
             <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center mr-2">
               <Clock className="h-3.5 w-3.5 mr-1" />
               <span>{getRelativeTime(recording.createdAt || recording.date)}</span>

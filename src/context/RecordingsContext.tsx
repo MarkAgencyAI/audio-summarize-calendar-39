@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from "sonner";
@@ -100,6 +101,8 @@ export interface RecordingsContextType {
   calculateFolderAverage: (folderId: string) => number;
   addGrade: (folderId: string, name: string, score: number) => void;
   deleteGrade: (id: string) => void;
+  refreshData: () => Promise<void>; // Nueva función para recargar datos
+  isLoading: boolean; // Estado para indicar cuando se están cargando datos
 }
 
 const RecordingsContext = createContext<RecordingsContextType | undefined>(undefined);
@@ -117,114 +120,189 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [folders, setFolders] = useState<Folder[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
+  // Función para cargar todos los datos desde Supabase
+  const loadUserData = async () => {
+    if (!user) {
+      // Limpiar datos si no hay usuario
+      setRecordings([]);
+      setFolders([]);
+      setNotes([]);
+      setGrades([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Cargar carpetas
+      const { data: foldersData, error: foldersError } = await supabase
+        .from('folders')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (foldersError) throw foldersError;
+      
+      // Convertir el formato de Supabase al formato de la aplicación
+      const formattedFolders: Folder[] = (foldersData || []).map(folder => ({
+        id: folder.id,
+        name: folder.name,
+        color: folder.color,
+        icon: folder.icon,
+        createdAt: folder.created_at
+      }));
+      
+      setFolders(formattedFolders);
+
+      // Cargar grabaciones
+      const { data: recordingsData, error: recordingsError } = await supabase
+        .from('recordings')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (recordingsError) throw recordingsError;
+      
+      // Convertir el formato de Supabase al formato de la aplicación
+      const formattedRecordings: Recording[] = (recordingsData || []).map(recording => ({
+        id: recording.id,
+        name: recording.name,
+        date: recording.date,
+        duration: recording.duration,
+        audioData: "", // Necesario porque no se almacena en Supabase
+        folderId: recording.folder_id,
+        output: recording.output,
+        language: recording.language,
+        subject: recording.subject,
+        webhookData: recording.webhook_data,
+        speakerMode: recording.speaker_mode as 'single' | 'multiple',
+        understood: recording.understood || false,
+        createdAt: recording.created_at,
+        updatedAt: recording.updated_at
+      }));
+      
+      setRecordings(formattedRecordings);
+
+      // Cargar notas
+      const { data: notesData, error: notesError } = await supabase
+        .from('notes')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (notesError) throw notesError;
+      
+      // Convertir el formato de Supabase al formato de la aplicación
+      const formattedNotes: Note[] = (notesData || []).map(note => ({
+        id: note.id,
+        title: note.title,
+        content: note.content,
+        folderId: note.folder_id,
+        imageUrl: note.image_url,
+        createdAt: note.created_at,
+        updatedAt: note.updated_at
+      }));
+      
+      setNotes(formattedNotes);
+
+      // Cargar calificaciones
+      const { data: gradesData, error: gradesError } = await supabase
+        .from('grades')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (gradesError) throw gradesError;
+      
+      // Convertir el formato de Supabase al formato de la aplicación
+      const formattedGrades: Grade[] = (gradesData || []).map(grade => ({
+        id: grade.id,
+        name: grade.name,
+        score: grade.score,
+        folderId: grade.folder_id,
+        createdAt: grade.created_at
+      }));
+      
+      setGrades(formattedGrades);
+
+      console.log('Todos los datos cargados correctamente');
+    } catch (error) {
+      console.error('Error cargando datos:', error);
+      toast.error('Error al cargar los datos');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Función pública para recargar datos
+  const refreshData = async () => {
+    await loadUserData();
+    toast.success('Datos actualizados');
+  };
+
+  // Cargar datos cuando el usuario inicia sesión o cambia
   useEffect(() => {
-    const loadUserData = async () => {
-      if (!user) {
-        // Limpiar datos si no hay usuario
-        setRecordings([]);
-        setFolders([]);
-        setNotes([]);
-        setGrades([]);
-        return;
-      }
-
-      try {
-        // Cargar carpetas
-        const { data: foldersData, error: foldersError } = await supabase
-          .from('folders')
-          .select('*')
-          .order('created_at', { ascending: true });
-
-        if (foldersError) throw foldersError;
-        
-        // Convertir el formato de Supabase al formato de la aplicación
-        const formattedFolders: Folder[] = (foldersData || []).map(folder => ({
-          id: folder.id,
-          name: folder.name,
-          color: folder.color,
-          icon: folder.icon,
-          createdAt: folder.created_at
-        }));
-        
-        setFolders(formattedFolders);
-
-        // Cargar grabaciones
-        const { data: recordingsData, error: recordingsError } = await supabase
-          .from('recordings')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (recordingsError) throw recordingsError;
-        
-        // Convertir el formato de Supabase al formato de la aplicación
-        const formattedRecordings: Recording[] = (recordingsData || []).map(recording => ({
-          id: recording.id,
-          name: recording.name,
-          date: recording.date,
-          duration: recording.duration,
-          audioData: "", // Necesario porque no se almacena en Supabase
-          folderId: recording.folder_id,
-          output: recording.output,
-          language: recording.language,
-          subject: recording.subject,
-          webhookData: recording.webhook_data,
-          speakerMode: recording.speaker_mode as 'single' | 'multiple',
-          understood: recording.understood || false,
-          createdAt: recording.created_at,
-          updatedAt: recording.updated_at
-        }));
-        
-        setRecordings(formattedRecordings);
-
-        // Cargar notas
-        const { data: notesData, error: notesError } = await supabase
-          .from('notes')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (notesError) throw notesError;
-        
-        // Convertir el formato de Supabase al formato de la aplicación
-        const formattedNotes: Note[] = (notesData || []).map(note => ({
-          id: note.id,
-          title: note.title,
-          content: note.content,
-          folderId: note.folder_id,
-          imageUrl: note.image_url,
-          createdAt: note.created_at,
-          updatedAt: note.updated_at
-        }));
-        
-        setNotes(formattedNotes);
-
-        // Cargar calificaciones
-        const { data: gradesData, error: gradesError } = await supabase
-          .from('grades')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (gradesError) throw gradesError;
-        
-        // Convertir el formato de Supabase al formato de la aplicación
-        const formattedGrades: Grade[] = (gradesData || []).map(grade => ({
-          id: grade.id,
-          name: grade.name,
-          score: grade.score,
-          folderId: grade.folder_id,
-          createdAt: grade.created_at
-        }));
-        
-        setGrades(formattedGrades);
-
-      } catch (error) {
-        console.error('Error cargando datos:', error);
-        toast.error('Error al cargar los datos');
-      }
-    };
-
     loadUserData();
+  }, [user]);
+
+  // Configurar actualización automática con Supabase Realtime
+  useEffect(() => {
+    if (!user) return;
+
+    // Suscribirse a cambios en la tabla recordings
+    const recordingsChannel = supabase
+      .channel('public:recordings')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'recordings'
+      }, () => {
+        loadUserData();
+      })
+      .subscribe();
+
+    // Suscribirse a cambios en la tabla folders
+    const foldersChannel = supabase
+      .channel('public:folders')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'folders'
+      }, () => {
+        loadUserData();
+      })
+      .subscribe();
+
+    // Suscribirse a cambios en la tabla notes
+    const notesChannel = supabase
+      .channel('public:notes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'notes'
+      }, () => {
+        loadUserData();
+      })
+      .subscribe();
+
+    // Suscribirse a cambios en la tabla grades
+    const gradesChannel = supabase
+      .channel('public:grades')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'grades'
+      }, () => {
+        loadUserData();
+      })
+      .subscribe();
+
+    // Limpiar suscripciones al desmontar
+    return () => {
+      supabase.removeChannel(recordingsChannel);
+      supabase.removeChannel(foldersChannel);
+      supabase.removeChannel(notesChannel);
+      supabase.removeChannel(gradesChannel);
+    };
   }, [user]);
 
   const addRecording = async (recording: Omit<Recording, "id">) => {
@@ -574,7 +652,9 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     getFolderGrades,
     calculateFolderAverage,
     addGrade,
-    deleteGrade
+    deleteGrade,
+    refreshData, // Nueva función expuesta en el contexto
+    isLoading
   };
 
   return (
