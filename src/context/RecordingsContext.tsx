@@ -119,7 +119,6 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [grades, setGrades] = useState<Grade[]>([]);
   const { user } = useAuth();
 
-  // Cargar datos cuando el usuario inicia sesión
   useEffect(() => {
     const loadUserData = async () => {
       if (!user) {
@@ -228,109 +227,318 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     loadUserData();
   }, [user]);
 
-  const addRecording = (recording: Omit<Recording, "id">) => {
-    const newRecording: Recording = {
-      ...recording,
-      id: uuidv4(),
-      date: recording.date || recording.createdAt || new Date().toISOString(),
-      understood: recording.understood || false,
-      events: recording.events || []
-    };
-    setRecordings(prev => [...prev, newRecording]);
+  const addRecording = async (recording: Omit<Recording, "id">) => {
+    try {
+      const { data, error } = await supabase
+        .from('recordings')
+        .insert({
+          name: recording.name,
+          date: recording.date,
+          duration: recording.duration,
+          folder_id: recording.folderId,
+          language: recording.language,
+          subject: recording.subject,
+          webhook_data: recording.webhookData,
+          speaker_mode: recording.speakerMode,
+          understood: recording.understood || false,
+          output: recording.output
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newRecording: Recording = {
+        id: data.id,
+        name: data.name,
+        date: data.date,
+        duration: data.duration,
+        audioData: "", // No se almacena en Supabase
+        folderId: data.folder_id,
+        language: data.language,
+        subject: data.subject,
+        webhookData: data.webhook_data,
+        speakerMode: data.speaker_mode as 'single' | 'multiple',
+        understood: data.understood || false,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+        output: data.output
+      };
+
+      setRecordings(prev => [...prev, newRecording]);
+      toast.success('Grabación guardada correctamente');
+    } catch (error) {
+      console.error('Error al guardar la grabación:', error);
+      toast.error('Error al guardar la grabación');
+    }
   };
 
-  const updateRecording = (id: string, data: Partial<Recording>) => {
-    setRecordings(prev =>
-      prev.map(recording =>
-        recording.id === id ? { 
-          ...recording, 
-          ...data,
-          updatedAt: data.updatedAt || new Date().toISOString()
-        } : recording
-      )
-    );
+  const updateRecording = async (id: string, data: Partial<Recording>) => {
+    try {
+      const { error } = await supabase
+        .from('recordings')
+        .update({
+          name: data.name,
+          output: data.output,
+          language: data.language,
+          subject: data.subject,
+          understood: data.understood,
+          webhook_data: data.webhookData,
+          speaker_mode: data.speakerMode,
+          folder_id: data.folderId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setRecordings(prev =>
+        prev.map(recording =>
+          recording.id === id ? { 
+            ...recording, 
+            ...data,
+            updatedAt: new Date().toISOString()
+          } : recording
+        )
+      );
+      toast.success('Grabación actualizada correctamente');
+    } catch (error) {
+      console.error('Error al actualizar la grabación:', error);
+      toast.error('Error al actualizar la grabación');
+    }
   };
 
-  const deleteRecording = (id: string) => {
-    setRecordings(prev => prev.filter(recording => recording.id !== id));
+  const deleteRecording = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('recordings')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setRecordings(prev => prev.filter(recording => recording.id !== id));
+      toast.success('Grabación eliminada correctamente');
+    } catch (error) {
+      console.error('Error al eliminar la grabación:', error);
+      toast.error('Error al eliminar la grabación');
+    }
   };
 
-  const addFolder = (folder: Omit<Folder, "id">) => {
-    const newFolder: Folder = {
-      ...folder,
-      id: uuidv4()
-    };
-    setFolders(prev => [...prev, newFolder]);
+  const addFolder = async (folder: Omit<Folder, "id">) => {
+    try {
+      const { data, error } = await supabase
+        .from('folders')
+        .insert({
+          name: folder.name,
+          color: folder.color,
+          icon: folder.icon
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newFolder: Folder = {
+        id: data.id,
+        name: data.name,
+        color: data.color,
+        icon: data.icon,
+        createdAt: data.created_at
+      };
+
+      setFolders(prev => [...prev, newFolder]);
+      toast.success('Carpeta creada correctamente');
+    } catch (error) {
+      console.error('Error al crear la carpeta:', error);
+      toast.error('Error al crear la carpeta');
+    }
   };
 
-  const updateFolder = (id: string, data: Partial<Folder>) => {
-    setFolders(prev =>
-      prev.map(folder =>
-        folder.id === id ? { ...folder, ...data } : folder
-      )
-    );
+  const updateFolder = async (id: string, data: Partial<Folder>) => {
+    try {
+      const { error } = await supabase
+        .from('folders')
+        .update({
+          name: data.name,
+          color: data.color,
+          icon: data.icon
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setFolders(prev =>
+        prev.map(folder =>
+          folder.id === id ? { ...folder, ...data } : folder
+        )
+      );
+      toast.success('Carpeta actualizada correctamente');
+    } catch (error) {
+      console.error('Error al actualizar la carpeta:', error);
+      toast.error('Error al actualizar la carpeta');
+    }
   };
 
-  const deleteFolder = (id: string) => {
-    setRecordings(prev =>
-      prev.map(recording =>
-        recording.folderId === id
-          ? { ...recording, folderId: "default" }
-          : recording
-      )
-    );
+  const deleteFolder = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('folders')
+        .delete()
+        .eq('id', id);
 
-    setNotes(prev =>
-      prev.map(note =>
-        note.folderId === id
-          ? { ...note, folderId: "default" }
-          : note
-      )
-    );
+      if (error) throw error;
 
-    setGrades(prev => prev.filter(grade => grade.folderId !== id));
+      setRecordings(prev =>
+        prev.map(recording =>
+          recording.folderId === id
+            ? { ...recording, folderId: "default" }
+            : recording
+        )
+      );
 
-    setFolders(prev => prev.filter(folder => folder.id !== id));
+      setNotes(prev =>
+        prev.map(note =>
+          note.folderId === id
+            ? { ...note, folderId: "default" }
+            : note
+        )
+      );
+
+      setGrades(prev => prev.filter(grade => grade.folderId !== id));
+      setFolders(prev => prev.filter(folder => folder.id !== id));
+      toast.success('Carpeta eliminada correctamente');
+    } catch (error) {
+      console.error('Error al eliminar la carpeta:', error);
+      toast.error('Error al eliminar la carpeta');
+    }
   };
 
-  const addNote = (note: Omit<Note, "id" | "createdAt">) => {
-    const newNote: Note = {
-      ...note,
-      id: uuidv4(),
-      createdAt: new Date().toISOString()
-    };
-    setNotes(prev => [...prev, newNote]);
+  const addNote = async (note: Omit<Note, "id" | "createdAt">) => {
+    try {
+      const { data, error } = await supabase
+        .from('notes')
+        .insert({
+          title: note.title,
+          content: note.content,
+          folder_id: note.folderId,
+          image_url: note.imageUrl
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newNote: Note = {
+        id: data.id,
+        title: data.title,
+        content: data.content,
+        folderId: data.folder_id,
+        imageUrl: data.image_url,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      };
+
+      setNotes(prev => [...prev, newNote]);
+      toast.success('Nota creada correctamente');
+    } catch (error) {
+      console.error('Error al crear la nota:', error);
+      toast.error('Error al crear la nota');
+    }
   };
 
-  const updateNote = (id: string, data: Partial<Note>) => {
-    setNotes(prev =>
-      prev.map(note =>
-        note.id === id ? { ...note, ...data } : note
-      )
-    );
+  const updateNote = async (id: string, data: Partial<Note>) => {
+    try {
+      const { error } = await supabase
+        .from('notes')
+        .update({
+          title: data.title,
+          content: data.content,
+          folder_id: data.folderId,
+          image_url: data.imageUrl
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setNotes(prev =>
+        prev.map(note =>
+          note.id === id ? { ...note, ...data } : note
+        )
+      );
+      toast.success('Nota actualizada correctamente');
+    } catch (error) {
+      console.error('Error al actualizar la nota:', error);
+      toast.error('Error al actualizar la nota');
+    }
   };
 
-  const deleteNote = (id: string) => {
-    setNotes(prev => prev.filter(note => note.id !== id));
+  const deleteNote = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('notes')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setNotes(prev => prev.filter(note => note.id !== id));
+      toast.success('Nota eliminada correctamente');
+    } catch (error) {
+      console.error('Error al eliminar la nota:', error);
+      toast.error('Error al eliminar la nota');
+    }
+  };
+
+  const addGrade = async (folderId: string, name: string, score: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('grades')
+        .insert({
+          name,
+          score,
+          folder_id: folderId
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newGrade: Grade = {
+        id: data.id,
+        name: data.name,
+        score: data.score,
+        folderId: data.folder_id,
+        createdAt: data.created_at
+      };
+
+      setGrades(prev => [...prev, newGrade]);
+      toast.success('Calificación agregada correctamente');
+    } catch (error) {
+      console.error('Error al agregar la calificación:', error);
+      toast.error('Error al agregar la calificación');
+    }
+  };
+
+  const deleteGrade = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('grades')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setGrades(prev => prev.filter(grade => grade.id !== id));
+      toast.success('Calificación eliminada correctamente');
+    } catch (error) {
+      console.error('Error al eliminar la calificación:', error);
+      toast.error('Error al eliminar la calificación');
+    }
   };
 
   const getFolderNotes = (folderId: string) => {
     return notes.filter(note => note.folderId === folderId);
-  };
-
-  const addGrade = (folderId: string, name: string, score: number) => {
-    const newGrade: Grade = {
-      id: uuidv4(),
-      name,
-      score,
-      folderId,
-      createdAt: new Date().toISOString()
-    };
-    setGrades(prev => [...prev, newGrade]);
-  };
-
-  const deleteGrade = (id: string) => {
-    setGrades(prev => prev.filter(grade => grade.id !== id));
   };
 
   const getFolderGrades = (folderId: string) => {
