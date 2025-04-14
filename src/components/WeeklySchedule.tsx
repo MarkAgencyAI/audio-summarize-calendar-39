@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, addDays, startOfWeek, setHours, setMinutes, addMinutes, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
@@ -154,11 +155,13 @@ export function WeeklySchedule({
     
     setSelectedDay(dayIndex);
     setSelectedTime(time);
+    
+    // Set only the time parts, not full date
     setNewEvent({
       title: "",
       description: "",
-      date: format(startTime, "yyyy-MM-dd'T'HH:mm"),
-      endDate: format(endTime, "yyyy-MM-dd'T'HH:mm"),
+      date: format(startTime, "HH:mm"),
+      endDate: format(endTime, "HH:mm"),
       folderId: "",
       type: "class", // Default type
       tempId: crypto.randomUUID()
@@ -173,8 +176,8 @@ export function WeeklySchedule({
       return;
     }
     
-    const startTime = newEvent.date ? newEvent.date.split("T")[1] : "";
-    const endTime = newEvent.endDate ? newEvent.endDate.split("T")[1] : "";
+    const startTime = newEvent.date;
+    const endTime = newEvent.endDate;
     
     if (!startTime) {
       toast.error("La hora de inicio no es válida");
@@ -201,7 +204,12 @@ export function WeeklySchedule({
     const updatedEvent = {
       ...newEvent,
       date: format(startDateTime, "yyyy-MM-dd'T'HH:mm"),
-      endDate: format(endDateTime, "yyyy-MM-dd'T'HH:mm")
+      endDate: format(endDateTime, "yyyy-MM-dd'T'HH:mm"),
+      // Set to repeat weekly by default
+      repeat: {
+        frequency: "weekly",
+        interval: 1
+      }
     };
     
     setScheduleEvents(prev => [...prev, updatedEvent]);
@@ -420,14 +428,11 @@ export function WeeklySchedule({
                 <Input 
                   id="startTime" 
                   type="time" 
-                  value={safeFormat(newEvent.date, "HH:mm")} 
+                  value={newEvent.date} 
                   onChange={e => {
-                    const day = weekDays[selectedDay];
-                    const [hours, minutes] = e.target.value.split(":").map(Number);
-                    const newDate = setMinutes(setHours(day, hours), minutes);
                     setNewEvent({
                       ...newEvent,
-                      date: format(newDate, "yyyy-MM-dd'T'HH:mm")
+                      date: e.target.value
                     });
                   }} 
                 />
@@ -438,14 +443,11 @@ export function WeeklySchedule({
                 <Input 
                   id="endTime" 
                   type="time" 
-                  value={safeFormat(newEvent.endDate, "HH:mm")} 
+                  value={newEvent.endDate} 
                   onChange={e => {
-                    const day = weekDays[selectedDay];
-                    const [hours, minutes] = e.target.value.split(":").map(Number);
-                    const newDate = setMinutes(setHours(day, hours), minutes);
                     setNewEvent({
                       ...newEvent,
-                      endDate: format(newDate, "yyyy-MM-dd'T'HH:mm")
+                      endDate: e.target.value
                     });
                   }} 
                 />
