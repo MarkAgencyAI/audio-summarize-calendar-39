@@ -6,13 +6,14 @@ import { useRecordings } from "@/context/RecordingsContext";
 import { RecordingDetails } from "@/components/recording-details";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { ArrowLeft, Check, X, Clock, Loader2, Trash2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Check, X, Clock, Loader2, Trash2, RefreshCw, AlertCircle } from "lucide-react";
 import { loadAudioFromStorage } from "@/lib/storage";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function RecordingDetailsPage() {
   const { recordingId } = useParams<{ recordingId: string }>();
@@ -22,6 +23,7 @@ export default function RecordingDetailsPage() {
   const [isAudioLoaded, setIsAudioLoaded] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [refreshAttempt, setRefreshAttempt] = useState(0);
   const isMobile = useIsMobile();
   
   // Cargar datos frescos cuando se monta el componente o el recordingId cambia
@@ -34,6 +36,7 @@ export default function RecordingDetailsPage() {
       } catch (error) {
         console.error("Error al actualizar datos:", error);
         toast.error("Error al cargar los datos más recientes");
+        setRefreshAttempt(prev => prev + 1);
       }
     };
     
@@ -43,10 +46,28 @@ export default function RecordingDetailsPage() {
   // Find the recording
   const recording = recordings.find(r => r.id === recordingId);
   
-  // If recording not found, redirect to dashboard
+  // If recording not found, retry loading or redirect to dashboard
   useEffect(() => {
     if (!recording && !isLoading) {
-      navigate("/dashboard");
+      if (refreshAttempt < 2) {
+        // Intentar recargar datos otra vez
+        console.log("Grabación no encontrada, intentando recargar datos");
+        const retryLoad = async () => {
+          try {
+            await refreshData();
+            setRefreshAttempt(prev => prev + 1);
+          } catch (error) {
+            console.error("Error al recargar datos:", error);
+            navigate("/dashboard");
+          }
+        };
+        retryLoad();
+      } else {
+        // Después de varios intentos, redirigir al dashboard
+        console.log("Grabación no encontrada después de varios intentos, redirigiendo al dashboard");
+        toast.error("No se pudo encontrar la grabación solicitada");
+        navigate("/dashboard");
+      }
       return;
     }
     
@@ -59,7 +80,7 @@ export default function RecordingDetailsPage() {
     }, 800);
     
     return () => clearTimeout(loadingTimer);
-  }, [recording, navigate, isLoading]);
+  }, [recording, navigate, isLoading, refreshAttempt, refreshData]);
   
   // Handle closing the dialog
   const handleOpenChange = (open: boolean) => {
@@ -140,6 +161,24 @@ export default function RecordingDetailsPage() {
     }
   };
   
+  const handleManualRefresh = async () => {
+    setIsPageLoading(true);
+    try {
+      await refreshData();
+      toast.success("Datos actualizados correctamente");
+    } catch (error) {
+      console.error("Error al actualizar datos:", error);
+      toast.error("Error al actualizar los datos");
+    } finally {
+      setIsPageLoading(false);
+    }
+  };
+  
+  // Verificar si hay transcripción y resumen
+  const hasMissingData = recording && 
+    (!recording.output || recording.output.trim() === "" || 
+     !recording.webhookData);
+  
   if (isPageLoading || isLoading || !recording) {
     return (
       <Layout>
@@ -170,7 +209,7 @@ export default function RecordingDetailsPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => refreshData()}
+              onClick={handleManualRefresh}
               className="flex items-center gap-1"
               disabled={isLoading}
             >
@@ -224,6 +263,16 @@ export default function RecordingDetailsPage() {
             </ToggleGroup>
           </div>
         </div>
+        
+        {hasMissingData && (
+          <Alert variant="warning" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Datos incompletos</AlertTitle>
+            <AlertDescription>
+              Esta grabación puede tener datos incompletos. Si falta la transcripción o el resumen, prueba a actualizar la página.
+            </AlertDescription>
+          </Alert>
+        )}
         
         <RecordingDetails 
           recording={recording} 

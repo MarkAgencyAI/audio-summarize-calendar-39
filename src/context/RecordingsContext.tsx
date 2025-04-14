@@ -52,16 +52,16 @@ export interface Recording {
   chapters?: AudioChapter[];
   speakerMode?: 'single' | 'multiple';
   createdAt?: string;
-  updatedAt?: string; // Add this field to match what's being used in RecordingDetails
-  understood?: boolean; // Field to mark if it was understood
-  events?: Event[]; // Add the events property
+  updatedAt?: string;
+  understood?: boolean;
+  events?: Event[];
 }
 
 export interface Folder {
   id: string;
   name: string;
   color: string;
-  icon?: string; // Added icon property
+  icon?: string;
   createdAt: string;
 }
 
@@ -101,8 +101,12 @@ export interface RecordingsContextType {
   calculateFolderAverage: (folderId: string) => number;
   addGrade: (folderId: string, name: string, score: number) => void;
   deleteGrade: (id: string) => void;
-  refreshData: () => Promise<void>; // Nueva función para recargar datos
-  isLoading: boolean; // Estado para indicar cuando se están cargando datos
+  addEvent: (event: Omit<Event, "id">) => Promise<void>;
+  updateEvent: (id: string, data: Partial<Event>) => Promise<void>;
+  deleteEvent: (id: string) => Promise<void>;
+  getEvents: () => Event[];
+  refreshData: () => Promise<void>;
+  isLoading: boolean;
 }
 
 const RecordingsContext = createContext<RecordingsContextType | undefined>(undefined);
@@ -120,6 +124,7 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [folders, setFolders] = useState<Folder[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
@@ -131,6 +136,7 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setFolders([]);
       setNotes([]);
       setGrades([]);
+      setEvents([]);
       setIsLoading(false);
       return;
     }
@@ -224,6 +230,24 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       
       setGrades(formattedGrades);
 
+      // Cargar eventos
+      const { data: eventsData, error: eventsError } = await supabase
+        .from('events')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (eventsError) throw eventsError;
+      
+      // Convertir el formato de Supabase al formato de la aplicación
+      const formattedEvents: Event[] = (eventsData || []).map(event => ({
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        date: event.date
+      }));
+      
+      setEvents(formattedEvents);
+
       console.log('Todos los datos cargados correctamente');
     } catch (error) {
       console.error('Error cargando datos:', error);
@@ -296,12 +320,25 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       })
       .subscribe();
 
+    // Suscribirse a cambios en la tabla events
+    const eventsChannel = supabase
+      .channel('public:events')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'events'
+      }, () => {
+        loadUserData();
+      })
+      .subscribe();
+
     // Limpiar suscripciones al desmontar
     return () => {
       supabase.removeChannel(recordingsChannel);
       supabase.removeChannel(foldersChannel);
       supabase.removeChannel(notesChannel);
       supabase.removeChannel(gradesChannel);
+      supabase.removeChannel(eventsChannel);
     };
   }, [user]);
 
@@ -320,7 +357,7 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           speaker_mode: recording.speakerMode,
           understood: recording.understood || false,
           output: recording.output,
-          user_id: user?.id // Añadido user_id que faltaba
+          user_id: user?.id
         })
         .select()
         .single();
@@ -346,9 +383,12 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       setRecordings(prev => [...prev, newRecording]);
       toast.success('Grabación guardada correctamente');
+      
+      return data.id;
     } catch (error) {
       console.error('Error al guardar la grabación:', error);
       toast.error('Error al guardar la grabación');
+      return null;
     }
   };
 
@@ -412,7 +452,7 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           name: folder.name,
           color: folder.color,
           icon: folder.icon,
-          user_id: user?.id // Añadido user_id que faltaba
+          user_id: user?.id
         })
         .select()
         .single();
@@ -503,7 +543,7 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           content: note.content,
           folder_id: note.folderId,
           image_url: note.imageUrl,
-          user_id: user?.id // Añadido user_id que faltaba
+          user_id: user?.id
         })
         .select()
         .single();
@@ -522,9 +562,11 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       setNotes(prev => [...prev, newNote]);
       toast.success('Nota creada correctamente');
+      return newNote;
     } catch (error) {
       console.error('Error al crear la nota:', error);
       toast.error('Error al crear la nota');
+      return null;
     }
   };
 
@@ -579,7 +621,7 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           name,
           score,
           folder_id: folderId,
-          user_id: user?.id // Añadido user_id que faltaba
+          user_id: user?.id
         })
         .select()
         .single();
@@ -619,6 +661,84 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
 
+  // NUEVOS MÉTODOS PARA MANEJAR EVENTOS
+  
+  const addEvent = async (event: Omit<Event, "id">) => {
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .insert({
+          title: event.title,
+          description: event.description,
+          date: event.date,
+          user_id: user?.id
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newEvent: Event = {
+        id: data.id,
+        title: data.title,
+        description: data.description,
+        date: data.date
+      };
+
+      setEvents(prev => [...prev, newEvent]);
+      toast.success('Evento creado correctamente');
+    } catch (error) {
+      console.error('Error al crear el evento:', error);
+      toast.error('Error al crear el evento');
+    }
+  };
+
+  const updateEvent = async (id: string, data: Partial<Event>) => {
+    try {
+      const { error } = await supabase
+        .from('events')
+        .update({
+          title: data.title,
+          description: data.description,
+          date: data.date
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setEvents(prev =>
+        prev.map(event =>
+          event.id === id ? { ...event, ...data } : event
+        )
+      );
+      toast.success('Evento actualizado correctamente');
+    } catch (error) {
+      console.error('Error al actualizar el evento:', error);
+      toast.error('Error al actualizar el evento');
+    }
+  };
+
+  const deleteEvent = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setEvents(prev => prev.filter(event => event.id !== id));
+      toast.success('Evento eliminado correctamente');
+    } catch (error) {
+      console.error('Error al eliminar el evento:', error);
+      toast.error('Error al eliminar el evento');
+    }
+  };
+
+  const getEvents = () => {
+    return events;
+  };
+
   const getFolderNotes = (folderId: string) => {
     return notes.filter(note => note.folderId === folderId);
   };
@@ -653,7 +773,11 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     calculateFolderAverage,
     addGrade,
     deleteGrade,
-    refreshData, // Nueva función expuesta en el contexto
+    addEvent,
+    updateEvent,
+    deleteEvent,
+    getEvents,
+    refreshData,
     isLoading
   };
 

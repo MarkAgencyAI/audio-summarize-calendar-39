@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -35,10 +36,11 @@ export function LiveTranscriptionSheet({
   const [userClosed, setUserClosed] = useState(false);
   const [activeTab, setActiveTab] = useState("transcription");
   const [processedWebhookResponse, setProcessedWebhookResponse] = useState<any>(null);
+  const [recordingId, setRecordingId] = useState<string | null>(null);
   const isControlled = open !== undefined && onOpenChange !== undefined;
   const isOpen = isControlled ? open : internalOpen;
   const isMobile = useIsMobile();
-  const { addRecording } = useRecordings();
+  const { addRecording, updateRecording } = useRecordings();
   const { user } = useAuth();
   
   const handleOpenChange = (newOpen: boolean) => {
@@ -65,11 +67,19 @@ export function LiveTranscriptionSheet({
     if (webhookResponse) {
       const extracted = extractWebhookOutput(webhookResponse);
       setProcessedWebhookResponse(extracted);
+      
+      // Si hay un ID de grabación guardado, actualizar con la respuesta del webhook
+      if (recordingId) {
+        console.log("Actualizando grabación con respuesta de webhook:", recordingId);
+        updateRecording(recordingId, {
+          webhookData: extracted
+        });
+      }
     }
-  }, [webhookResponse]);
+  }, [webhookResponse, recordingId, updateRecording]);
   
   useEffect(() => {
-    const handleTranscriptionComplete = (event: CustomEvent) => {
+    const handleTranscriptionComplete = async (event: CustomEvent) => {
       if (event.detail?.data && !userClosed) {
         handleOpenChange(true);
         
@@ -89,13 +99,30 @@ export function LiveTranscriptionSheet({
             understood: false
           };
           
-          addRecording(transcriptionData);
+          try {
+            // Guardar la transcripción y obtener el ID
+            const newRecordingId = await addRecording(transcriptionData);
+            if (newRecordingId) {
+              setRecordingId(newRecordingId);
+              console.log("Grabación guardada con ID:", newRecordingId);
+            }
+          } catch (error) {
+            console.error("Error al guardar la grabación:", error);
+          }
         }
         
         if (event.detail.data.webhookResponse) {
           setActiveTab("webhook");
           const extracted = extractWebhookOutput(event.detail.data.webhookResponse);
           setProcessedWebhookResponse(extracted);
+          
+          // Si tenemos un ID de grabación y respuesta del webhook, actualizar
+          if (recordingId) {
+            console.log("Actualizando grabación con respuesta de webhook:", recordingId);
+            updateRecording(recordingId, {
+              webhookData: extracted
+            });
+          }
         }
       }
     };
@@ -110,7 +137,7 @@ export function LiveTranscriptionSheet({
     return () => {
       window.removeEventListener('audioRecorderMessage', handleEvent);
     };
-  }, [userClosed, addRecording, user]);
+  }, [userClosed, addRecording, updateRecording, user, recordingId]);
   
   const handleClose = () => {
     handleOpenChange(false);
