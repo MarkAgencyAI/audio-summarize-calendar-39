@@ -201,13 +201,13 @@ export function WeeklySchedule({
       return;
     }
     
-    const updatedEvent = {
+    const updatedEvent: WeeklyEventWithTemp = {
       ...newEvent,
       date: format(startDateTime, "yyyy-MM-dd'T'HH:mm"),
       endDate: format(endDateTime, "yyyy-MM-dd'T'HH:mm"),
-      // Set to repeat weekly by default
+      // Set to repeat weekly by default - with proper type specification
       repeat: {
-        frequency: "weekly",
+        frequency: "weekly" as "weekly", // Explicitly type as "weekly"
         interval: 1
       }
     };
