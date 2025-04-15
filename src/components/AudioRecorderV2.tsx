@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import { LiveTranscriptionSheet } from "./LiveTranscriptionSheet";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -11,6 +10,7 @@ import { saveAudioToStorage } from "@/lib/storage";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { TranscriptionService } from "@/lib/transcription/transcription-service";
+import { WEBHOOK, TRANSCRIPTION_CONFIG } from "@/lib/api-config";
 
 interface AudioRecorderProps {
   onTranscriptionComplete?: (data: any) => void;
@@ -58,8 +58,8 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
     if (!transcriptionServiceRef.current) {
       transcriptionServiceRef.current = new TranscriptionService({
         speakerMode: speakerMode,
-        maxChunkDuration: 60,
-        webhookUrl: "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4"
+        maxChunkDuration: TRANSCRIPTION_CONFIG.MAX_CHUNK_DURATION,
+        webhookUrl: WEBHOOK.URL
       });
     }
   }, [isRecording, speakerMode]);
@@ -89,8 +89,8 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
           if (!transcriptionServiceRef.current) {
             transcriptionServiceRef.current = new TranscriptionService({
               speakerMode: speakerMode,
-              maxChunkDuration: 60,
-              webhookUrl: "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4"
+              maxChunkDuration: TRANSCRIPTION_CONFIG.MAX_CHUNK_DURATION,
+              webhookUrl: WEBHOOK.URL
             });
           }
 
@@ -245,8 +245,8 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
         if (!transcriptionServiceRef.current) {
           transcriptionServiceRef.current = new TranscriptionService({
             speakerMode: speakerMode,
-            maxChunkDuration: 60,
-            webhookUrl: "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4"
+            maxChunkDuration: TRANSCRIPTION_CONFIG.MAX_CHUNK_DURATION,
+            webhookUrl: WEBHOOK.URL
           });
         }
         

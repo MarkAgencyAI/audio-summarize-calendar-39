@@ -3,30 +3,32 @@ import { getAudioDuration, splitAudioIntoChunks, compressAudioBlob } from './aud
 import { sendToWebhook } from '../webhook';
 import { transcribeAudio as groqTranscribeAudio } from '../groq';
 import type { TranscriptionOptions, TranscriptionProgress, TranscriptionResult, AudioChunk } from './types';
+import { GROQ_API, WEBHOOK, TRANSCRIPTION_CONFIG } from '../api-config';
 
 /**
  * Servicio de transcripción modularizado
  */
 export class TranscriptionService {
   private options: TranscriptionOptions;
-  private apiUrl = 'https://api.groq.com/openai/v1/audio/transcriptions'; // API real de GROQ
+  private apiUrl = GROQ_API.TRANSCRIPTION_URL;
   private chunks: AudioChunk[] = [];
   private currentOutput = '';
   private totalDuration = 0;
   private isProcessing = false;
   private processingStartTime = 0;
+  private webhookUrl = WEBHOOK.URL;
 
   constructor(options: Partial<TranscriptionOptions> = {}) {
     // Default options
     this.options = {
-      maxChunkDuration: options.maxChunkDuration || 60,
+      maxChunkDuration: options.maxChunkDuration || TRANSCRIPTION_CONFIG.MAX_CHUNK_DURATION,
       speakerMode: options.speakerMode || 'single',
       subject: options.subject,
-      webhookUrl: options.webhookUrl,
+      webhookUrl: options.webhookUrl || this.webhookUrl,
       optimizeForVoice: options.optimizeForVoice !== false,
       compressAudio: options.compressAudio !== false,
       useTimeMarkers: options.useTimeMarkers !== false,
-      retryAttempts: options.retryAttempts || 2
+      retryAttempts: options.retryAttempts || TRANSCRIPTION_CONFIG.RETRY_ATTEMPTS
     };
   }
 
@@ -187,6 +189,9 @@ export async function processAudio(
   options: Partial<TranscriptionOptions> = {},
   onProgress?: (progress: TranscriptionProgress) => void
 ): Promise<TranscriptionResult> {
-  const service = new TranscriptionService(options);
+  const service = new TranscriptionService({
+    ...options,
+    webhookUrl: options.webhookUrl || WEBHOOK.URL
+  });
   return service.processAudio(audioBlob, onProgress);
 }

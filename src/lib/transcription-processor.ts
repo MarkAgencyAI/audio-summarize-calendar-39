@@ -1,6 +1,7 @@
 
 // Este archivo proporciona compatibilidad con código antiguo que use las funciones anteriores
 import { processAudio } from './transcription';
+import { WEBHOOK, TRANSCRIPTION_CONFIG } from './api-config';
 
 export async function processAudioForTranscription(
   audioBlob: Blob,
@@ -8,15 +9,15 @@ export async function processAudioForTranscription(
   onTranscriptionProgress?: (data: any) => void,
   speakerMode: 'single' | 'multiple' = 'single'
 ) {
-  // Utiliza la nueva implementación modularizada
+  // Utiliza la nueva implementación modularizada con configuración centralizada
   return processAudio(
     audioBlob, 
     {
       subject,
       speakerMode,
-      maxChunkDuration: 60, // 1 minuto, más seguro para API
-      webhookUrl: "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4"
+      maxChunkDuration: TRANSCRIPTION_CONFIG.MAX_CHUNK_DURATION,
+      webhookUrl: WEBHOOK.URL
     },
-    onTranscriptionProgress  // Pass the callback directly as the third parameter
+    onTranscriptionProgress
   );
 }

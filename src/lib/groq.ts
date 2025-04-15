@@ -1,11 +1,6 @@
-
 import { sendToWebhook } from "./webhook";
 import { useState, useCallback } from "react";
-
-// Actualizar la clave API de GROQ
-const API_KEY = "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";
-const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
-const LLAMA3_MODEL = "llama3-70b-8192";
+import { GROQ_API, WEBHOOK } from './api-config';
 
 // Interface para la respuesta de transcripción
 interface TranscriptionResult {
@@ -230,7 +225,7 @@ export async function transcribeAudio(
     // Paso 1: Crear formulario de datos para la API de transcripción de audio GROQ
     const formData = new FormData();
     formData.append("file", processedAudio, "audio.wav");
-    formData.append("model", "whisper-large-v3-turbo");
+    formData.append("model", GROQ_API.MODELS.TRANSCRIPTION);
     formData.append("response_format", "verbose_json");
     
     // Crear un prompt basado en el modo de orador
@@ -252,12 +247,12 @@ export async function transcribeAudio(
     // Establecer explícitamente el idioma a español
     formData.append("language", "es");
     
-    // Hacer la solicitud a la API de GROQ Audio para la transcripción - usando clave API hard-coded
+    // Hacer la solicitud a la API de GROQ Audio para la transcripción - usando clave API centralizada
     console.log("Haciendo solicitud a la API de GROQ Audio Transcripción...");
-    const transcriptResponse = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+    const transcriptResponse = await fetch(GROQ_API.TRANSCRIPTION_URL, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${API_KEY}`
+        "Authorization": `Bearer ${GROQ_API.KEY}`
       },
       body: formData
     });
@@ -282,7 +277,7 @@ export async function transcribeAudio(
     
     // Paso 2: Enviar la transcripción al webhook con metadatos del tema y modo de orador
     console.log("Enviando transcripción al webhook para procesamiento adicional...");
-    const webhookResponseData = await sendToWebhook(WEBHOOK_URL, {
+    const webhookResponseData = await sendToWebhook(WEBHOOK.URL, {
       transcript: transcript,
       language: language,
       subject: subject || "No subject specified",
@@ -592,14 +587,14 @@ export function useGroq() {
     setError(null);
     
     try {
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      const response = await fetch(GROQ_API.CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${API_KEY}`
+          "Authorization": `Bearer ${GROQ_API.KEY}`
         },
         body: JSON.stringify({
-          model: LLAMA3_MODEL,
+          model: GROQ_API.MODELS.CHAT,
           messages,
           max_tokens,
           temperature

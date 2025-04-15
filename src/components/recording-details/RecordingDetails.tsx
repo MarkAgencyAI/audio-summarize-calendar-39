@@ -41,6 +41,7 @@ export function RecordingDetails({
   const audioPlayerRef = useRef<AudioPlayerHandle>(null);
   const isMobile = useIsMobile();
   const hasLoadedAudioRef = useRef(false);
+  const isLoadingAudioRef = useRef(false);
 
   const {
     chapters,
@@ -69,43 +70,82 @@ export function RecordingDetails({
   const dialogOpen = propIsOpen !== undefined ? propIsOpen : isOpen;
   const setDialogOpen = onOpenChange || setIsOpenState;
 
-  useEffect(() => {
-    const loadAudio = async () => {
+  // Esta función se encarga de cargar el audio, ya sea desde la caché o descargándolo de la URL
+  const loadAudio = async () => {
+    try {
+      if (hasLoadedAudioRef.current || !recording.id || isLoadingAudioRef.current) return;
+      
+      isLoadingAudioRef.current = true;
+      console.log("Intentando cargar audio para:", recording.id);
+      
       try {
-        if (hasLoadedAudioRef.current || !recording.id) return;
-        
-        console.log("Intentando cargar audio para:", recording.id);
+        // Primero intentamos cargar desde IndexedDB
         const blob = await loadAudioFromStorage(recording.id);
         if (blob) {
           console.log("Audio cargado desde IndexedDB");
           setAudioBlob(blob);
           hasLoadedAudioRef.current = true;
-        } else if (recording.audioUrl) {
-          console.log("Descargando audio desde URL:", recording.audioUrl);
-          try {
-            const response = await fetch(recording.audioUrl);
-            if (response.ok) {
-              const blob = await response.blob();
-              await saveAudioToStorage(recording.id, blob);
-              setAudioBlob(blob);
-              hasLoadedAudioRef.current = true;
-              console.log("Audio descargado y guardado correctamente");
-            } else {
-              console.error("Error al descargar audio:", response.status);
-            }
-          } catch (fetchError) {
-            console.error("Error al descargar audio:", fetchError);
-          }
-        } else {
-          console.warn("No se encontró audio para la grabación");
+          isLoadingAudioRef.current = false;
+          return;
         }
-      } catch (error) {
-        console.error("Error cargando audio:", error);
+      } catch (storageError) {
+        console.warn("Error al cargar desde IndexedDB:", storageError);
+      }
+      
+      // Si no está en IndexedDB y tenemos una URL, lo descargamos
+      if (recording.audioUrl) {
+        console.log("Descargando audio desde URL:", recording.audioUrl);
+        try {
+          const response = await fetch(recording.audioUrl);
+          if (response.ok) {
+            const blob = await response.blob();
+            // Guardamos en IndexedDB para la próxima vez
+            await saveAudioToStorage(recording.id, blob);
+            setAudioBlob(blob);
+            hasLoadedAudioRef.current = true;
+            console.log("Audio descargado y guardado correctamente");
+          } else {
+            console.error("Error al descargar audio:", response.status);
+            toast.error("Error al cargar el audio. Por favor, intenta de nuevo.");
+          }
+        } catch (fetchError) {
+          console.error("Error al descargar audio:", fetchError);
+          toast.error("Error de conexión al cargar el audio.");
+        }
+      } else {
+        console.warn("No se encontró audio para la grabación");
+      }
+    } catch (error) {
+      console.error("Error cargando audio:", error);
+    } finally {
+      isLoadingAudioRef.current = false;
+    }
+  };
+  
+  // Usamos un efecto para cargar el audio cuando el componente se monta o cambia la grabación
+  useEffect(() => {
+    // Reiniciamos los flags cuando cambia la grabación
+    if (recording.id) {
+      hasLoadedAudioRef.current = false;
+      isLoadingAudioRef.current = false;
+      setAudioBlob(null);
+      loadAudio();
+    }
+    
+    return () => {
+      // Limpieza al desmontar
+      if (audioBlob) {
+        URL.revokeObjectURL(URL.createObjectURL(audioBlob));
       }
     };
-    
-    loadAudio();
   }, [recording.id, recording.audioUrl]);
+
+  // Efecto adicional que se asegura de que el audio se cargue cuando se abre el diálogo
+  useEffect(() => {
+    if (dialogOpen && !hasLoadedAudioRef.current && !isLoadingAudioRef.current) {
+      loadAudio();
+    }
+  }, [dialogOpen]);
 
   const handleTimeUpdate = (time: number) => {
     setCurrentAudioTime(time);
