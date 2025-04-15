@@ -1,3 +1,4 @@
+
 import { sendToWebhook } from "./webhook";
 import { useState, useCallback } from "react";
 import { GROQ_API, WEBHOOK } from './api-config';
@@ -354,14 +355,14 @@ async function translateTranscript(text: string, sourceLanguage: string, targetL
       Only return the translated text, no explanations or notes.
     `;
 
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const response = await fetch(GROQ_API.CHAT_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${API_KEY}`
+        "Authorization": `Bearer ${GROQ_API.KEY}`
       },
       body: JSON.stringify({
-        model: LLAMA3_MODEL,
+        model: GROQ_API.MODELS.CHAT,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: text }
@@ -399,14 +400,14 @@ async function detectLanguage(text: string): Promise<string> {
       Do not include any other text or explanation.
     `;
 
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const response = await fetch(GROQ_API.CHAT_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${API_KEY}`
+        "Authorization": `Bearer ${GROQ_API.KEY}`
       },
       body: JSON.stringify({
-        model: LLAMA3_MODEL,
+        model: GROQ_API.MODELS.CHAT,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Detect the language of this text: "${text.substring(0, 500)}..."` }
@@ -495,14 +496,14 @@ async function generateAnalysis(
          }`;
     }
 
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const response = await fetch(GROQ_API.CHAT_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${API_KEY}`
+        "Authorization": `Bearer ${GROQ_API.KEY}`
       },
       body: JSON.stringify({
-        model: LLAMA3_MODEL,
+        model: GROQ_API.MODELS.CHAT,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: transcript }
