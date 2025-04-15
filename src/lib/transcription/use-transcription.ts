@@ -3,6 +3,7 @@ import React from 'react';
 import { toast } from "sonner";
 import { TranscriptionService } from './transcription-service';
 import { TranscriptionOptions, TranscriptionResult } from './types';
+import { TRANSCRIPTION_CONFIG, WEBHOOK } from '../api-config';
 
 /**
  * Hook personalizado para usar el servicio de transcripción en componentes de React
@@ -25,12 +26,18 @@ export function useTranscription(options?: Partial<TranscriptionOptions>) {
       // Asegurar que maxChunkDuration tiene un valor razonable
       maxChunkDuration: options.maxChunkDuration && options.maxChunkDuration <= 300
         ? options.maxChunkDuration
-        : 60,
+        : TRANSCRIPTION_CONFIG.MAX_CHUNK_DURATION,
       // Asegurar que speakerMode es del tipo correcto
       speakerMode: (options.speakerMode === 'single' || options.speakerMode === 'multiple') 
         ? options.speakerMode 
-        : 'single'
-    } : { maxChunkDuration: 60, speakerMode: 'single' as const };
+        : 'single',
+      // Asegurar que se usa la URL del webhook por defecto si no se proporciona
+      webhookUrl: options.webhookUrl || WEBHOOK.URL
+    } : { 
+      maxChunkDuration: TRANSCRIPTION_CONFIG.MAX_CHUNK_DURATION, 
+      speakerMode: 'single' as const,
+      webhookUrl: WEBHOOK.URL
+    };
     
     transcriptionServiceRef.current = new TranscriptionService(safeOptions);
     
@@ -56,7 +63,11 @@ export function useTranscription(options?: Partial<TranscriptionOptions>) {
     }
     
     if (!transcriptionServiceRef.current) {
-      transcriptionServiceRef.current = new TranscriptionService(options);
+      transcriptionServiceRef.current = new TranscriptionService({
+        ...options,
+        maxChunkDuration: TRANSCRIPTION_CONFIG.MAX_CHUNK_DURATION,
+        webhookUrl: WEBHOOK.URL
+      });
     }
     
     setIsTranscribing(true);
