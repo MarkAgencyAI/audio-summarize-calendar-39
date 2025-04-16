@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,23 +6,12 @@ import { Bell, Check, X } from 'lucide-react';
 import { parseISO, format, isWithinInterval, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { RecordingService } from '@/lib/services/recording-service';
+import { RecordingService, CalendarEventData } from '@/lib/services/recording-service';
 import { Badge } from '@/components/ui/badge';
 import { useRecordings } from '@/context/RecordingsContext';
 
 interface Event {
   id: string;
-  title: string;
-  date: string;
-  description?: string;
-  folderId?: string | null;
-  type?: string;
-  endDate?: string;
-}
-
-// Interface for the data returned from the RecordingService
-interface CalendarEventData {
-  id: string;  // Making id required to match the Event interface
   title: string;
   date: string;
   description?: string;
@@ -52,7 +40,7 @@ export function UpcomingEvents({ showHeader = true, limit = 5, folderId }: Upcom
       
       // Filter events to show only upcoming ones (next 14 days)
       const now = new Date();
-      const filteredEvents = allEvents.filter((event: CalendarEventData) => {
+      const filteredEvents = allEvents.filter((event) => {
         try {
           // Filter by folder if specified
           if (folderId !== undefined && folderId !== null) {
@@ -73,12 +61,22 @@ export function UpcomingEvents({ showHeader = true, limit = 5, folderId }: Upcom
       });
       
       // Sort by date
-      filteredEvents.sort((a: CalendarEventData, b: CalendarEventData) => {
+      filteredEvents.sort((a, b) => {
         return new Date(a.date).getTime() - new Date(b.date).getTime();
       });
       
-      // Convert CalendarEventData to Event before setting state
-      setEvents(filteredEvents as Event[]);
+      // Convert service events to our Event interface
+      const mappedEvents: Event[] = filteredEvents.map(event => ({
+        id: event.id || '',  // Provide empty string as fallback
+        title: event.title,
+        date: event.date,
+        description: event.description,
+        folderId: event.folderId,
+        type: event.type,
+        endDate: event.endDate
+      }));
+      
+      setEvents(mappedEvents);
       console.info("Loaded upcoming events:", filteredEvents.length);
     } catch (error) {
       console.error("Error loading events:", error);

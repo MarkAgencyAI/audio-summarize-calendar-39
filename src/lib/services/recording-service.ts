@@ -28,7 +28,7 @@ export interface CalendarEventData {
   description?: string;
   date: string;
   endDate?: string;
-  type: 'exam' | 'assignment' | 'study' | 'class' | 'meeting' | 'other';
+  type?: 'exam' | 'assignment' | 'study' | 'class' | 'meeting' | 'other';
   folderId?: string;
   repeat?: {
     frequency: 'daily' | 'weekly' | 'monthly';
