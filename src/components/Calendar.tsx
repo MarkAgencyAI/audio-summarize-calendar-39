@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -592,17 +593,17 @@ export function Calendar({
             <div className="grid gap-2">
               <Label htmlFor="folder">Materia</Label>
               <Select 
-                value={newEvent.folderId || "_empty"}
+                value={newEvent.folderId || "none"}
                 onValueChange={(value) => setNewEvent({
                   ...newEvent,
-                  folderId: value === "_empty" ? undefined : value
+                  folderId: value === "none" ? undefined : value
                 })}
               >
                 <SelectTrigger id="folder">
                   <SelectValue placeholder="Selecciona una materia" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="_empty">Sin materia</SelectItem>
+                  <SelectItem value="none">Sin materia</SelectItem>
                   {folders.map(folder => (
                     <SelectItem key={folder.id} value={folder.id}>
                       {folder.name}

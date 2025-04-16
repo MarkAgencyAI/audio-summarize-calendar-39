@@ -41,7 +41,7 @@ export function UpcomingEvents({ showHeader = true, limit = 5, folderId }: Upcom
       
       // Filter events to show only upcoming ones (next 14 days)
       const now = new Date();
-      const filteredEvents = allEvents.filter((event: Event) => {
+      const filteredEvents = allEvents.filter((event: any) => {
         try {
           // Filter by folder if specified
           if (folderId !== undefined && folderId !== null) {
@@ -62,7 +62,7 @@ export function UpcomingEvents({ showHeader = true, limit = 5, folderId }: Upcom
       });
       
       // Sort by date
-      filteredEvents.sort((a, b) => {
+      filteredEvents.sort((a: any, b: any) => {
         return new Date(a.date).getTime() - new Date(b.date).getTime();
       });
       

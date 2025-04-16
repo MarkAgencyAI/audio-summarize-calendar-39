@@ -235,14 +235,14 @@ export function RecordingHeader({ recording, onDeleteEvent }: RecordingHeaderPro
             <div className="space-y-2">
               <Label htmlFor="folder-select">Carpeta</Label>
               <Select 
-                defaultValue={recording.folderId || ""}
-                onValueChange={(value) => handleAssignFolder(value === "" ? null : value)}
+                defaultValue={recording.folderId || "none"}
+                onValueChange={(value) => handleAssignFolder(value === "none" ? null : value)}
               >
                 <SelectTrigger id="folder-select">
                   <SelectValue placeholder="Seleccionar carpeta" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sin carpeta</SelectItem>
+                  <SelectItem value="none">Sin carpeta</SelectItem>
                   {folders.map(folder => (
                     <SelectItem key={folder.id} value={folder.id}>
                       <div className="flex items-center gap-2">

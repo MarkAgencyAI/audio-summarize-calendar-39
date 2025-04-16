@@ -92,17 +92,17 @@ export function WeeklyEventDialog({
           <div className="space-y-2">
             <Label htmlFor="folder">Materia</Label>
             <Select
-              value={editedEvent.folderId || "_empty"}
+              value={editedEvent.folderId || "none"}
               onValueChange={(value) => setEditedEvent({
                 ...editedEvent,
-                folderId: value === "_empty" ? "" : value
+                folderId: value === "none" ? "" : value
               })}
             >
               <SelectTrigger id="folder">
                 <SelectValue placeholder="Selecciona una materia" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="_empty">Sin materia</SelectItem>
+                <SelectItem value="none">Sin materia</SelectItem>
                 {folders.map(folder => (
                   <SelectItem key={folder.id} value={folder.id}>
                     {folder.name}
