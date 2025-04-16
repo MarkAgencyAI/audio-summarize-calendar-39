@@ -1,473 +1,186 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useRecordings } from "@/context/RecordingsContext";
 import { Layout } from "@/components/Layout";
-import { RecordingItem } from "@/components/RecordingItem";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { NotesSection } from "@/components/NotesSection";
-import { ArrowLeft, Pencil, Check, X, Folder, FileText, BookOpen, GraduationCap, Plus, Bell, Loader } from "lucide-react";
+import { useRecordings } from "@/context/RecordingsContext";
 import { Button } from "@/components/ui/button";
+import { Folder, Plus, Edit, Trash2, ArrowLeft } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { parseISO, format, isWithinInterval, addDays } from "date-fns";
-import { es } from "date-fns/locale";
-import { loadFromStorage } from "@/lib/storage";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-interface CalendarEvent {
-  id: string;
-  title: string;
-  date: string;
-  description?: string;
-  folderId?: string;
-  type?: string;
-}
-
-function UpcomingEvents({ events, folderName }: { events: CalendarEvent[], folderName: string }) {
-  const navigate = useNavigate();
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Bell className="h-5 w-5 text-orange-500" />
-          Recordatorios de {folderName}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {events.length === 0 ? (
-          <div className="text-center text-muted-foreground py-2">
-            <p>No hay recordatorios para esta materia</p>
-            <p className="text-xs mt-1">Los eventos de esta materia aparecerán aquí</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {events.slice(0, 5).map(event => (
-              <div
-                key={event.id}
-                className="p-2 bg-secondary/50 rounded-lg transition-colors cursor-pointer"
-                onClick={() => navigate("/calendar")}
-              >
-                <div className="font-medium text-sm flex items-center gap-2">
-                  <Bell className="h-4 w-4 text-orange-500" />
-                  {event.title}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {format(parseISO(event.date), "PPPp", { locale: es })}
-                </div>
-                {event.description && (
-                  <div className="text-xs mt-1 line-clamp-2">
-                    {event.description}
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {events.length > 5 && (
-              <Button
-                variant="link"
-                className="w-full text-sm"
-                onClick={() => navigate("/calendar")}
-              >
-                Ver todos los eventos ({events.length})
-              </Button>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
+import { toast } from "sonner";
+import { RecordingItem } from "@/components/RecordingItem";
+import { FolderService } from "@/lib/services/folder-service";
+import { UpcomingEvents } from "@/components/UpcomingEvents";
 
 export default function FolderDetailsPage() {
   const { folderId } = useParams<{ folderId: string }>();
   const navigate = useNavigate();
-  const { 
-    folders, 
-    recordings, 
-    updateFolder, 
-    getFolderGrades, 
-    calculateFolderAverage, 
-    addGrade, 
-    deleteGrade,
-    refreshData,
-    isLoading
-  } = useRecordings();
-  const folder = folders.find(f => f.id === folderId);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [folderName, setFolderName] = useState("");
-  const [activeTab, setActiveTab] = useState("transcriptions");
-  const [showAddGradeDialog, setShowAddGradeDialog] = useState(false);
-  const [newGradeName, setNewGradeName] = useState("");
-  const [newGradeScore, setNewGradeScore] = useState<number>(0);
-  const [folderEvents, setFolderEvents] = useState<CalendarEvent[]>([]);
-  
-  useEffect(() => {
-    console.log("FolderDetailsPage montado - actualizando datos");
-    refreshData().catch(error => {
-      console.error("Error al actualizar datos:", error);
-    });
-  }, []);
+  const { folders, recordings, updateFolder, deleteFolder, refreshData } = useRecordings();
+  const [isEditing, setIsEditing] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   useEffect(() => {
-    if (!folder) {
-      navigate("/folders");
-      return;
-    }
-    
-    setFolderName(folder.name);
-  }, [folder, navigate]);
-  
+    refreshData();
+  }, [refreshData]);
+
+  const folder = folders.find((f) => f.id === folderId);
+
   useEffect(() => {
-    if (!folderId) return;
-    
-    const loadFolderEvents = () => {
-      const allEvents = loadFromStorage<CalendarEvent[]>("calendarEvents") || [];
-      const now = new Date();
-      
-      // Filtrar eventos para este folderId y dentro de los próximos 14 días
-      const filteredEvents = allEvents.filter((event: CalendarEvent) => {
-        try {
-          // Verificar si el evento pertenece a esta carpeta
-          const isForThisFolder = event.folderId === folderId;
-          
-          if (!isForThisFolder) return false;
-          
-          // Verificar si el evento está dentro del rango de fechas (próximos 14 días)
-          const eventDate = parseISO(event.date);
-          return isWithinInterval(eventDate, {
-            start: now,
-            end: addDays(now, 14)
-          });
-        } catch (error) {
-          console.error("Error parsing date for event:", event);
-          return false;
-        }
-      });
-      
-      // Ordenar eventos por fecha (más recientes primero)
-      filteredEvents.sort((a, b) => {
-        return new Date(a.date).getTime() - new Date(b.date).getTime();
-      });
-      
-      setFolderEvents(filteredEvents);
-    };
-    
-    loadFolderEvents();
-    
-    // Actualizar eventos cada minuto
-    const intervalId = setInterval(loadFolderEvents, 60000);
-    return () => clearInterval(intervalId);
-  }, [folderId]);
-  
+    if (folder) {
+      setNameInput(folder.name);
+    }
+  }, [folder]);
+
   if (!folder) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-[50vh]">
-          <Loader className="h-8 w-8 animate-spin text-primary" />
+        <div className="container mx-auto px-4 py-8">
+          <h2 className="text-2xl font-bold mb-4">Carpeta no encontrada</h2>
+          <p>La carpeta que estás buscando no existe.</p>
+          <Button onClick={() => navigate("/dashboard")}>Volver al Dashboard</Button>
         </div>
       </Layout>
     );
   }
-  
-  const folderRecordings = recordings.filter(r => r.folderId === folderId);
-  const folderGrades = getFolderGrades(folderId || "");
-  const averageGrade = calculateFolderAverage(folderId || "");
-  
-  const handleSaveTitle = () => {
-    if (folderName.trim() === "") {
+
+  const handleEditClick = () => {
+    setIsEditing(true);
+  };
+
+  const handleSaveName = async () => {
+    if (nameInput.trim() === "") {
       toast.error("El nombre no puede estar vacío");
       return;
     }
-    
-    updateFolder(folder.id, { name: folderName });
-    setIsEditingTitle(false);
-    toast.success("Nombre actualizado");
-  };
-  
-  const handleCancelEdit = () => {
-    setFolderName(folder.name);
-    setIsEditingTitle(false);
-  };
-  
-  const handleAddToCalendar = (recording: any) => {
-    console.log("Add to calendar:", recording);
-    toast.info("Funcionalidad en desarrollo");
+
+    try {
+      await updateFolder(folderId, { name: nameInput });
+      toast.success("Nombre actualizado");
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error updating folder name:", error);
+      toast.error("Error al actualizar el nombre");
+    }
   };
 
-  const handleAddGrade = () => {
-    if (newGradeName.trim() === "") {
-      toast.error("El nombre de la evaluación no puede estar vacío");
-      return;
-    }
-    
-    if (newGradeScore < 0 || newGradeScore > 10) {
-      toast.error("La calificación debe estar entre 0 y 10");
-      return;
-    }
-    
-    addGrade(folder.id, newGradeName, newGradeScore);
-    setNewGradeName("");
-    setNewGradeScore(0);
-    setShowAddGradeDialog(false);
-    toast.success("Evaluación añadida");
+  const handleCancelEdit = () => {
+    setNameInput(folder.name);
+    setIsEditing(false);
   };
-  
-  const handleDeleteGrade = (gradeId: string) => {
-    deleteGrade(gradeId);
-    toast.success("Evaluación eliminada");
+
+  const handleDeleteFolder = async () => {
+    try {
+      await deleteFolder(folderId);
+      toast.success("Carpeta eliminada");
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Error deleting folder:", error);
+      toast.error("Error al eliminar la carpeta");
+    }
   };
-  
+
+  const folderRecordings = recordings.filter((r) => r.folderId === folderId);
+
   return (
     <Layout>
-      <div className="space-y-6 max-w-full">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => navigate("/folders")}
-              className="h-8 w-8 p-0"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            
-            <div 
-              className="h-8 w-8 rounded flex items-center justify-center" 
-              style={{ backgroundColor: folder.color }}
-            >
-              <Folder className="h-4 w-4 text-white" />
-            </div>
-            
-            {isEditingTitle ? (
+      <div className="container mx-auto px-4 py-6">
+        <div className="mb-6 flex items-center justify-between">
+          <Button
+            variant="outline"
+            onClick={() => navigate("/dashboard")}
+            className="flex items-center gap-2 border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800/70"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Volver</span>
+          </Button>
+          <div>
+            {isEditing ? (
               <div className="flex items-center gap-2">
-                <Input 
-                  value={folderName}
-                  onChange={(e) => setFolderName(e.target.value)}
-                  className="h-9 max-w-[300px]"
-                  autoFocus
-                />
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={handleSaveTitle}
-                  className="h-8 w-8 p-0"
-                >
-                  <Check className="h-4 w-4" />
+                <Input value={nameInput} onChange={(e) => setNameInput(e.target.value)} />
+                <Button onClick={handleSaveName} size="sm">
+                  Guardar
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={handleCancelEdit}
-                  className="h-8 w-8 p-0"
-                >
-                  <X className="h-4 w-4" />
+                <Button variant="ghost" onClick={handleCancelEdit} size="sm">
+                  Cancelar
                 </Button>
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold">{folder.name}</h1>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setIsEditingTitle(true)}
-                  className="h-8 w-8 p-0"
-                >
-                  <Pencil className="h-4 w-4" />
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <Folder className="h-6 w-6" />
+                  {folder.name}
+                </h2>
+                <Button variant="outline" size="icon" onClick={handleEditClick}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" onClick={() => setShowDeleteDialog(true)}>
+                  <Trash2 className="h-4 w-4 text-red-500" />
                 </Button>
               </div>
             )}
           </div>
-          
-          <Button 
-            variant="outline" 
-            onClick={() => refreshData()}
-            className="flex items-center gap-2"
-            disabled={isLoading}
-          >
-            <Loader className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">{isLoading ? 'Actualizando...' : 'Actualizar datos'}</span>
-          </Button>
         </div>
-        
-        {isLoading ? (
-          <div className="flex justify-center py-12">
-            <Loader className="h-12 w-12 animate-spin text-primary" />
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Transcripciones</CardTitle>
+                <CardDescription>Todas las transcripciones en esta carpeta.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {folderRecordings.length === 0 ? (
+                  <p className="text-muted-foreground">No hay transcripciones en esta carpeta.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {folderRecordings.map((recording) => (
+                      <RecordingItem key={recording.id} recording={recording} />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="md:col-span-3">
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full max-w-md grid-cols-3">
-                  <TabsTrigger value="transcriptions" className="flex items-center gap-1">
-                    <FileText className="h-4 w-4" />
-                    <span>Transcripciones</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="notes" className="flex items-center gap-1">
-                    <BookOpen className="h-4 w-4" />
-                    <span>Apuntes</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="grades" className="flex items-center gap-1">
-                    <GraduationCap className="h-4 w-4" />
-                    <span>Evaluaciones</span>
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="transcriptions">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <FileText className="h-5 w-5 text-green-500" />
-                        Transcripciones
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {folderRecordings.length === 0 ? (
-                        <div className="text-center text-muted-foreground py-4">
-                          <p>No hay transcripciones en esta carpeta</p>
-                        </div>
-                      ) : (
-                        <div className="divide-y divide-border">
-                          {folderRecordings.map(recording => (
-                            <div key={recording.id} className="mb-2">
-                              <RecordingItem
-                                recording={recording}
-                                onAddToCalendar={handleAddToCalendar}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="notes">
-                  <NotesSection folderId={folderId} sectionTitle={`Apuntes de ${folder.name}`} />
-                </TabsContent>
-                
-                <TabsContent value="grades">
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <GraduationCap className="h-5 w-5 text-purple-500" />
-                        Evaluaciones
-                        {averageGrade > 0 && (
-                          <span className={`ml-2 text-sm font-medium px-2 py-1 rounded-md ${
-                            averageGrade >= 6 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
-                            : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                          }`}>
-                            Promedio: {averageGrade.toFixed(1)}
-                          </span>
-                        )}
-                      </CardTitle>
-                      <Button 
-                        size="sm" 
-                        onClick={() => setShowAddGradeDialog(true)}
-                        className="flex items-center gap-1"
-                      >
-                        <Plus className="h-4 w-4" />
-                        Nueva evaluación
-                      </Button>
-                    </CardHeader>
-                    <CardContent>
-                      {folderGrades.length === 0 ? (
-                        <div className="text-center text-muted-foreground py-4">
-                          <p>No hay evaluaciones en esta materia</p>
-                          <p className="text-xs mt-1">
-                            Agrega evaluaciones para llevar un seguimiento de tu desempeño
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {folderGrades.map(grade => (
-                            <div 
-                              key={grade.id} 
-                              className="flex items-center justify-between p-3 rounded-lg border border-border"
-                            >
-                              <div>
-                                <p className="font-medium">{grade.name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {new Date(grade.createdAt).toLocaleDateString()}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <span className={`text-lg font-bold ${
-                                  grade.score >= 6 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                                }`}>
-                                  {grade.score.toFixed(1)}
-                                </span>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  className="text-red-500 h-8 w-8 p-0"
-                                  onClick={() => handleDeleteGrade(grade.id)}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
-            </div>
-            
-            <div className="md:col-span-1">
-              <UpcomingEvents events={folderEvents} folderName={folder.name} />
-            </div>
+
+          <div>
+            <UpcomingEvents folderId={folderId} showHeader={true} limit={5} />
           </div>
-        )}
+        </div>
+
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Eliminar carpeta</AlertDialogTitle>
+              <AlertDialogDescription>
+                ¿Estás seguro de que quieres eliminar esta carpeta? Todas las transcripciones dentro de esta carpeta se moverán a la carpeta general.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteFolder} className="bg-red-500 hover:bg-red-600">
+                Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-      
-      <Dialog open={showAddGradeDialog} onOpenChange={setShowAddGradeDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Nueva evaluación</DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4 my-2">
-            <div className="space-y-2">
-              <Label htmlFor="grade-name">Nombre de la evaluación</Label>
-              <Input
-                id="grade-name"
-                value={newGradeName}
-                onChange={(e) => setNewGradeName(e.target.value)}
-                placeholder="Ej: Examen parcial, Trabajo práctico, etc."
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="grade-score">Calificación (0-10)</Label>
-              <Input
-                id="grade-score"
-                type="number"
-                min="0"
-                max="10"
-                step="0.1"
-                value={newGradeScore}
-                onChange={(e) => setNewGradeScore(parseFloat(e.target.value))}
-              />
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddGradeDialog(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleAddGrade}>
-              Guardar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Layout>
   );
 }
