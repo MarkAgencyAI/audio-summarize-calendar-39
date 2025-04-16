@@ -13,6 +13,7 @@ import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { RecordingService } from "@/lib/services/recording-service";
 
 export default function RecordingDetailsPage() {
   const { recordingId } = useParams<{ recordingId: string }>();
@@ -108,7 +109,7 @@ export default function RecordingDetailsPage() {
   
   const handleUnderstoodChange = (understood: boolean) => {
     if (recording) {
-      updateRecording(recording.id, { understood });
+      RecordingService.updateRecording(recording.id, { understood });
       toast.success(understood ? "Marcada como entendida" : "Marcada como no entendida");
     }
   };
@@ -126,7 +127,7 @@ export default function RecordingDetailsPage() {
       const currentEvents = (recording.events as any[] || []);
       const updatedEvents = currentEvents.filter(event => event.id !== eventId);
       
-      updateRecording(recording.id, { 
+      RecordingService.updateRecording(recording.id, { 
         events: updatedEvents 
       } as any);
       

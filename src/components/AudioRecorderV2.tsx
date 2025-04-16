@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import { LiveTranscriptionSheet } from "./LiveTranscriptionSheet";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -12,6 +11,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { TranscriptionService } from "@/lib/transcription/transcription-service";
 import { WEBHOOK, TRANSCRIPTION_CONFIG } from "@/lib/api-config";
+import { RecordingService } from "@/lib/services/recording-service";
+import { v4 as uuidv4 } from "uuid";
 
 interface AudioRecorderProps {
   onTranscriptionComplete?: (data: any) => void;
@@ -32,9 +33,9 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
   const { addRecording } = useRecordings();
   const { user } = useAuth();
   const [speakerMode, setSpeakerMode] = useState<"single" | "multiple">("single");
-  const isProcessingRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const transcriptionServiceRef = useRef<TranscriptionService | null>(null);
+  const temporaryIdRef = useRef<string>(uuidv4());
 
   useEffect(() => {
     recordingNameRef.current = recordingName;
@@ -48,14 +49,14 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
       setIsTranscribing(false);
       setFinalDuration(0);
       setWebhookResponse(null);
-      setRecordingId(null); // Reset recording ID to prevent duplicate saves
+      temporaryIdRef.current = uuidv4();
+      setRecordingId(null);
     };
     
     if (!isRecording) {
       resetRecording();
     }
 
-    // Initialize transcription service when needed
     if (!transcriptionServiceRef.current) {
       transcriptionServiceRef.current = new TranscriptionService({
         speakerMode: speakerMode,
@@ -85,7 +86,6 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
         setFinalDuration(duration);
         setIsTranscribing(true);
         
-        // Process audio and get transcription
         try {
           if (!transcriptionServiceRef.current) {
             transcriptionServiceRef.current = new TranscriptionService({
@@ -95,7 +95,6 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
             });
           }
 
-          // Process the audio using transcription service
           const result = await transcriptionServiceRef.current.processAudio(
             audioBlob,
             (progressData) => {
@@ -107,17 +106,15 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
           setTranscriptionOutput(result.transcript);
           setWebhookResponse(result.webhookResponse);
           
-          // Notify parent component about transcription completion
           if (onTranscriptionComplete) {
             onTranscriptionComplete({
               output: result.transcript,
               duration: duration,
               webhookResponse: result.webhookResponse,
-              id: recordingId
+              id: temporaryIdRef.current
             });
           }
 
-          // Dispatch event for LiveTranscriptionSheet
           const event = new CustomEvent('audioRecorderMessage', {
             detail: {
               type: 'transcriptionComplete',
@@ -125,13 +122,12 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
                 output: result.transcript,
                 duration: duration,
                 webhookResponse: result.webhookResponse,
-                id: recordingId
+                id: temporaryIdRef.current
               }
             }
           });
           window.dispatchEvent(event);
           
-          // Save recording if user is authenticated
           handleRecordingComplete(audioBlob);
           
         } catch (error) {
@@ -158,54 +154,47 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
   };
 
   const handleRecordingComplete = async (audioBlob: Blob) => {
-    // Prevent duplicate saves
-    if (isProcessingRef.current || recordingId) {
-      console.log("Skipping save - already processed or has ID:", recordingId);
-      return;
-    }
-
     if (!user) {
       toast.error("Debes iniciar sesión para guardar grabaciones");
       return;
     }
 
     try {
-      // Mark as processing to prevent duplicate saves
-      isProcessingRef.current = true;
+      const tempId = temporaryIdRef.current;
+      
+      if (RecordingService.isProcessing(tempId)) {
+        console.log("Skipping save - already being processed:", tempId);
+        return;
+      }
       
       const recordingData = {
+        id: tempId,
         name: recordingNameRef.current || `Transcripción ${new Date().toLocaleString()}`,
         date: new Date().toISOString(),
         duration: finalDuration,
-        folderId: null,
+        audioBlob: audioBlob,
         output: transcriptionOutput || "",
+        folderId: null,
         language: "es",
         subject: "",
         webhookData: webhookResponse,
         speakerMode: speakerMode,
-        understood: false,
-        audioData: ""
+        understood: false
       };
 
-      const newRecordingId = await addRecording(recordingData);
+      const savedId = await RecordingService.saveRecording(recordingData);
 
-      if (typeof newRecordingId === 'string') {
-        setRecordingId(newRecordingId);
-
-        // Save audio to IndexedDB
-        await saveAudioToStorage(newRecordingId, audioBlob);
-        console.log("Audio saved to storage with ID:", newRecordingId);
-
+      if (savedId) {
+        setRecordingId(savedId);
+        console.log("Recording saved with ID:", savedId);
         toast.success("Grabación guardada correctamente");
       } else {
-        console.error("Error: No valid ID received when saving recording");
+        console.error("Error: Failed to save recording");
         toast.error("Error al guardar la grabación");
-        isProcessingRef.current = false;
       }
     } catch (error) {
       console.error("Error saving recording:", error);
       toast.error("Error al guardar la grabación");
-      isProcessingRef.current = false;
     }
   };
 
@@ -213,7 +202,6 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Check if the file is an audio file
     if (!file.type.startsWith('audio/')) {
       toast.error("Por favor, sube solo archivos de audio");
       if (fileInputRef.current) {
@@ -223,11 +211,9 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
     }
 
     if (!recordingNameRef.current) {
-      // Set file name without extension as recording name
       setRecordingName(file.name.replace(/\.[^/.]+$/, ""));
     }
 
-    // Get audio duration
     const audio = new Audio();
     audio.src = URL.createObjectURL(file);
     
@@ -235,13 +221,10 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
       const durationInSeconds = Math.floor(audio.duration);
       setFinalDuration(durationInSeconds);
       
-      // Start transcription process
       setIsTranscribing(true);
       
       try {
-        // Reset recording ID to prevent duplicate saves
-        setRecordingId(null);
-        isProcessingRef.current = false;
+        temporaryIdRef.current = uuidv4();
         
         if (!transcriptionServiceRef.current) {
           transcriptionServiceRef.current = new TranscriptionService({
@@ -251,7 +234,6 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
           });
         }
         
-        // Process the audio file
         const result = await transcriptionServiceRef.current.processAudio(
           file,
           (progressData) => {
@@ -263,20 +245,19 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
         setTranscriptionOutput(result.transcript);
         setWebhookResponse(result.webhookResponse);
         
-        // Dispatch event for LiveTranscriptionSheet
         const event = new CustomEvent('audioRecorderMessage', {
           detail: {
             type: 'transcriptionComplete',
             data: {
               output: result.transcript,
               duration: durationInSeconds,
-              webhookResponse: result.webhookResponse
+              webhookResponse: result.webhookResponse,
+              id: temporaryIdRef.current
             }
           }
         });
         window.dispatchEvent(event);
         
-        // Save recording
         handleRecordingComplete(file);
         
       } catch (error) {
@@ -284,7 +265,6 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
         toast.error("Error al procesar el archivo de audio.");
       } finally {
         setIsTranscribing(false);
-        // Release the object URL
         URL.revokeObjectURL(audio.src);
       }
     };

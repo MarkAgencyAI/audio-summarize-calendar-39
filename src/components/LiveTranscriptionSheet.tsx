@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import { useRecordings } from "@/context/RecordingsContext";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { loadAudioFromStorage } from "@/lib/storage";
+import { RecordingService } from "@/lib/services/recording-service";
 
 interface LiveTranscriptionSheetProps {
   isTranscribing: boolean;
@@ -40,11 +40,9 @@ export function LiveTranscriptionSheet({
   const [processedWebhookResponse, setProcessedWebhookResponse] = useState<any>(null);
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [loadedAudio, setLoadedAudio] = useState<Blob | null>(null);
-  const saveProcessedRef = useRef(false);
   const isControlled = open !== undefined && onOpenChange !== undefined;
   const isOpen = isControlled ? open : internalOpen;
   const isMobile = useIsMobile();
-  const { addRecording, updateRecording } = useRecordings();
   const { user } = useAuth();
   
   const handleOpenChange = (newOpen: boolean) => {
@@ -73,11 +71,13 @@ export function LiveTranscriptionSheet({
       setProcessedWebhookResponse(extracted);
       
       console.log("Actualizando grabación con respuesta de webhook:", recordingId);
-      updateRecording(recordingId, {
+      
+      // Use the RecordingService to update the recording
+      RecordingService.updateRecording(recordingId, {
         webhookData: extracted
       });
     }
-  }, [webhookResponse, recordingId, updateRecording]);
+  }, [webhookResponse, recordingId]);
   
   useEffect(() => {
     const loadAudio = async () => {
@@ -101,24 +101,25 @@ export function LiveTranscriptionSheet({
   
   useEffect(() => {
     const handleTranscriptionComplete = async (event: CustomEvent) => {
-      if (!event.detail?.data || userClosed || saveProcessedRef.current) {
+      if (!event.detail?.data || userClosed) {
         return;
       }
       
       handleOpenChange(true);
       
-      // Check if this recording was already saved
+      // Check if this recording was already saved and has an ID
       if (event.detail.data.id) {
-        console.log("This recording was already saved with ID:", event.detail.data.id);
+        console.log("Recording has ID:", event.detail.data.id);
         setRecordingId(event.detail.data.id);
         
+        // If we have webhook response data, process and show it
         if (event.detail.data.webhookResponse) {
           setActiveTab("webhook");
           const extracted = extractWebhookOutput(event.detail.data.webhookResponse);
           setProcessedWebhookResponse(extracted);
           
-          // Update the recording with webhook data if it doesn't have it yet
-          updateRecording(event.detail.data.id, {
+          // Update the recording with webhook data
+          await RecordingService.updateRecording(event.detail.data.id, {
             webhookData: extracted
           });
         }
@@ -126,17 +127,21 @@ export function LiveTranscriptionSheet({
         return;
       }
       
-      // Save the recording only if it hasn't been saved already and user is authenticated
-      if (event.detail.data.output && user && !saveProcessedRef.current) {
-        console.log("Saving new transcription to database");
-        saveProcessedRef.current = true;
+      // If we have transcription data and the user is authenticated, save it
+      if (event.detail.data.output && user) {
+        console.log("Saving new transcription");
+        
+        // Get the audio blob if available
+        let audioBlob = null;
+        if (event.detail.data.audioBlob) {
+          audioBlob = event.detail.data.audioBlob;
+        }
         
         const transcriptionData = {
           name: `Transcripción ${new Date().toLocaleString()}`,
           date: new Date().toISOString(),
           duration: event.detail.data.duration || 0,
-          audioData: "",
-          folderId: null,
+          audioBlob,
           output: event.detail.data.output,
           language: "es",
           subject: "",
@@ -146,32 +151,31 @@ export function LiveTranscriptionSheet({
         };
         
         try {
-          const newRecordingId = await addRecording(transcriptionData);
+          // Use the RecordingService to save the recording
+          const newRecordingId = await RecordingService.saveRecording(transcriptionData);
           
-          if (typeof newRecordingId === 'string') {
+          if (newRecordingId) {
             setRecordingId(newRecordingId);
             console.log("Recording saved with ID:", newRecordingId);
             toast.success("Grabación guardada correctamente");
             
-            // If we have webhook response, update the recording
+            // If we have webhook response, update the recording and UI
             if (event.detail.data.webhookResponse) {
               setActiveTab("webhook");
               const extracted = extractWebhookOutput(event.detail.data.webhookResponse);
               setProcessedWebhookResponse(extracted);
               
-              updateRecording(newRecordingId, {
+              await RecordingService.updateRecording(newRecordingId, {
                 webhookData: extracted
               });
             }
           } else {
-            console.error("Error: No valid ID received when saving recording");
+            console.error("Error: Failed to save recording");
             toast.error("Error al guardar la grabación");
-            saveProcessedRef.current = false;
           }
         } catch (error) {
           console.error("Error saving recording:", error);
           toast.error("Error al guardar la grabación");
-          saveProcessedRef.current = false;
         }
       }
     };
@@ -186,23 +190,7 @@ export function LiveTranscriptionSheet({
     return () => {
       window.removeEventListener('audioRecorderMessage', handleEvent);
     };
-  }, [userClosed, addRecording, updateRecording, user]);
-  
-  // Reset the processed flag when transcribing starts
-  useEffect(() => {
-    if (isTranscribing) {
-      saveProcessedRef.current = false;
-    }
-    
-    return () => {
-      if (!isTranscribing) {
-        // Wait a bit before allowing a new save
-        setTimeout(() => {
-          saveProcessedRef.current = false;
-        }, 2000);
-      }
-    };
-  }, [isTranscribing]);
+  }, [userClosed, user]);
   
   const handleClose = () => {
     handleOpenChange(false);
