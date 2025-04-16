@@ -23,10 +23,7 @@ export function UpcomingEvents({ folderId, limit = 5, showHeader = true }: Upcom
   useEffect(() => {
     const loadEvents = async () => {
       try {
-        // Refresh data to ensure we have the latest events
-        await refreshData();
-        
-        // Get all events
+        // Get all events without refreshing data to avoid infinite loops
         const allEvents = getEvents();
         
         // Filter events that are within the next 14 days
@@ -46,7 +43,6 @@ export function UpcomingEvents({ folderId, limit = 5, showHeader = true }: Upcom
         // If folderId is provided, filter events for that folder
         if (folderId) {
           filteredEvents = filteredEvents.filter(event => 
-            // Check if event has folderId property before comparing
             'folderId' in event && event.folderId === folderId
           );
         }
@@ -68,7 +64,7 @@ export function UpcomingEvents({ folderId, limit = 5, showHeader = true }: Upcom
     };
     
     loadEvents();
-  }, [getEvents, refreshData, folderId, limit]);
+  }, [getEvents, folderId, limit]);
   
   const navigateToCalendar = () => {
     navigate('/calendar');
