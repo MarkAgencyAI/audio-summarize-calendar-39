@@ -289,27 +289,31 @@ export class RecordingService {
         const calendarEvent: CalendarEventData = {
           id: event.id,
           title: event.title,
-          description: event.description,
+          description: event.description || '',
           date: event.date,
-          type: (event.type as any) || 'other' // Default to 'other' if type is missing
+          type: ((event as any).type as 'exam' | 'assignment' | 'study' | 'class' | 'meeting' | 'other') || 'other'
         };
         
         // Add optional fields if they exist in the database response
         if ('end_date' in event) {
-          calendarEvent.endDate = event.end_date;
+          calendarEvent.endDate = (event as any).end_date as string;
         }
         
         if ('folder_id' in event) {
-          calendarEvent.folderId = event.folder_id;
+          calendarEvent.folderId = (event as any).folder_id as string;
         }
         
         // Handle repeat data if it exists
-        if ('repeat_data' in event && event.repeat_data) {
+        if ('repeat_data' in event && (event as any).repeat_data) {
           try {
-            calendarEvent.repeat = {
-              frequency: event.repeat_data.frequency,
-              interval: event.repeat_data.interval
-            };
+            const repeatData = (event as any).repeat_data;
+            if (repeatData && typeof repeatData === 'object' && 
+                'frequency' in repeatData && 'interval' in repeatData) {
+              calendarEvent.repeat = {
+                frequency: repeatData.frequency as 'daily' | 'weekly' | 'monthly',
+                interval: Number(repeatData.interval)
+              };
+            }
           } catch (e) {
             console.error("Error parsing repeat data:", e);
           }
