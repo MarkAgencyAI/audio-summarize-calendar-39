@@ -46,7 +46,8 @@ export function UpcomingEvents({ folderId, limit = 5, showHeader = true }: Upcom
         // If folderId is provided, filter events for that folder
         if (folderId) {
           filteredEvents = filteredEvents.filter(event => 
-            event.folderId === folderId
+            // Check if event has folderId property before comparing
+            'folderId' in event && event.folderId === folderId
           );
         }
         
@@ -143,8 +144,8 @@ export function UpcomingEvents({ folderId, limit = 5, showHeader = true }: Upcom
                 <div 
                   className="h-8 w-8 rounded-full flex items-center justify-center"
                   style={{
-                    backgroundColor: event.folderId ? `${getFolderColor(event.folderId)}30` : '#e5e7eb',
-                    color: event.folderId ? getFolderColor(event.folderId) : '#6b7280'
+                    backgroundColor: 'folderId' in event && event.folderId ? `${getFolderColor(event.folderId)}30` : '#e5e7eb',
+                    color: 'folderId' in event && event.folderId ? getFolderColor(event.folderId) : '#6b7280'
                   }}
                 >
                   <CalendarDays className="h-4 w-4" />
@@ -160,7 +161,7 @@ export function UpcomingEvents({ folderId, limit = 5, showHeader = true }: Upcom
                     <Clock className="h-3 w-3 mr-1" />
                     {event.date && formatRelativeTime(event.date)}
                   </div>
-                  {event.folderId && (
+                  {'folderId' in event && event.folderId && (
                     <div className="text-xs px-1.5 py-0.5 rounded-full" style={{
                       backgroundColor: `${getFolderColor(event.folderId)}20`,
                       color: getFolderColor(event.folderId)
