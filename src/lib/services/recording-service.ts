@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { saveAudioToStorage } from "../storage";
 import { supabase } from "@/integrations/supabase/client";
 import { extractWebhookOutput } from "../transcription-service";
+import { useAuth } from "@/context/AuthContext";
 
 // Interface to represent recording data
 export interface RecordingData {
@@ -55,6 +56,13 @@ export class RecordingService {
         processedWebhookData = extractWebhookOutput(processedWebhookData);
       }
       
+      // Get current user information
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error("No authenticated user found");
+      }
+      
       // Save recording metadata to database
       const { data, error } = await supabase
         .from('recordings')
@@ -69,7 +77,8 @@ export class RecordingService {
           webhook_data: processedWebhookData,
           speaker_mode: recordingData.speakerMode || 'single',
           understood: recordingData.understood || false,
-          output: recordingData.output || ''
+          output: recordingData.output || '',
+          user_id: user.id // Include the user_id field which is required by the database
         })
         .select()
         .single();
