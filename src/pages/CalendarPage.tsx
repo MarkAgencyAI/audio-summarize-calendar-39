@@ -13,19 +13,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { loadFromStorage, saveToStorage } from "@/lib/storage";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRecordings } from "@/context/RecordingsContext";
+import { CalendarEventData, RecordingService } from "@/lib/services/recording-service";
+
 export default function CalendarPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const {
-    user
-  } = useAuth();
-  const {
-    folders
-  } = useRecordings();
+  const { user } = useAuth();
+  const { folders } = useRecordings();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [showAddEventDialog, setShowAddEventDialog] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
@@ -41,19 +38,45 @@ export default function CalendarPage() {
     type: "other" as "exam" | "assignment" | "study" | "class" | "meeting" | "other",
     repeat: "none" as "none" | "daily" | "weekly" | "monthly"
   });
+  const [isLoading, setIsLoading] = useState(true);
   const isMobile = useIsMobile();
+
   useEffect(() => {
     if (!user) {
       navigate("/login");
     }
   }, [user, navigate]);
+
   useEffect(() => {
-    const loadedEvents = loadFromStorage<CalendarEvent[]>("calendarEvents") || [];
-    setEvents(loadedEvents);
-  }, []);
-  useEffect(() => {
-    saveToStorage("calendarEvents", events);
-  }, [events]);
+    const loadEvents = async () => {
+      if (!user) return;
+      
+      setIsLoading(true);
+      try {
+        const dbEvents = await RecordingService.loadCalendarEvents();
+        const formattedEvents: CalendarEvent[] = dbEvents.map(event => ({
+          id: event.id!,
+          title: event.title,
+          description: event.description,
+          date: event.date,
+          endDate: event.endDate,
+          type: event.type,
+          folderId: event.folderId,
+          repeat: event.repeat
+        }));
+        
+        setEvents(formattedEvents);
+        console.log('Loaded events from database:', formattedEvents);
+      } catch (error) {
+        console.error('Error loading events:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadEvents();
+  }, [user]);
+
   useEffect(() => {
     if (location.state?.recording) {
       const recording = location.state.recording;
@@ -138,61 +161,100 @@ export default function CalendarPage() {
       });
     }
   }, [location.state, navigate]);
-  const handleAddEvent = (event: Omit<CalendarEvent, "id">) => {
-    const newEvent: CalendarEvent = {
-      ...event,
-      id: crypto.randomUUID()
-    };
-    setEvents(prev => {
-      const updatedEvents = [...prev, newEvent];
-      saveToStorage("calendarEvents", updatedEvents);
-      return updatedEvents;
-    });
+
+  const handleAddEvent = async (event: Omit<CalendarEvent, "id">) => {
+    try {
+      const eventData: CalendarEventData = {
+        title: event.title,
+        description: event.description,
+        date: event.date,
+        endDate: event.endDate,
+        type: event.type,
+        folderId: event.folderId,
+        repeat: event.repeat
+      };
+      
+      const eventId = await RecordingService.saveCalendarEvent(eventData);
+      
+      if (eventId) {
+        const newEvent: CalendarEvent = {
+          ...event,
+          id: eventId
+        };
+        
+        setEvents(prev => [...prev, newEvent]);
+        toast.success("Evento guardado correctamente");
+      }
+    } catch (error) {
+      console.error('Error saving event:', error);
+      toast.error("Error al guardar el evento");
+    }
   };
-  const handleDeleteEvent = (id: string) => {
+
+  const handleDeleteEvent = async (id: string) => {
     const eventToDelete = events.find(event => event.id === id);
     if (eventToDelete && eventToDelete.repeat && typeof eventToDelete.repeat === 'object' && eventToDelete.repeat.frequency) {
       setEventToDelete(eventToDelete);
       setShowDeleteConfirmDialog(true);
     } else {
-      setEvents(prev => {
-        const updatedEvents = prev.filter(event => event.id !== id);
-        saveToStorage("calendarEvents", updatedEvents);
-        return updatedEvents;
-      });
-      toast.success("Evento eliminado");
+      await deleteEvent(id);
     }
   };
-  const confirmDeleteEvent = () => {
+
+  const confirmDeleteEvent = async () => {
     if (!eventToDelete) return;
+    
     if (deleteAllRecurring) {
-      setEvents(prev => {
-        const updatedEvents = prev.filter(event => !(event.title === eventToDelete.title && event.type === eventToDelete.type && event.repeat && typeof event.repeat === 'object' && event.repeat.frequency === eventToDelete.repeat?.frequency));
-        saveToStorage("calendarEvents", updatedEvents);
-        return updatedEvents;
-      });
+      const eventsToDelete = events.filter(event => 
+        event.title === eventToDelete.title && 
+        event.type === eventToDelete.type && 
+        event.repeat && 
+        typeof event.repeat === 'object' && 
+        event.repeat.frequency === eventToDelete.repeat?.frequency
+      );
+      
+      for (const event of eventsToDelete) {
+        await RecordingService.deleteCalendarEvent(event.id);
+      }
+      
+      setEvents(prev => prev.filter(event => !(
+        event.title === eventToDelete.title && 
+        event.type === eventToDelete.type && 
+        event.repeat && 
+        typeof event.repeat === 'object' && 
+        event.repeat.frequency === eventToDelete.repeat?.frequency
+      )));
+      
       toast.success("Se eliminaron todos los eventos recurrentes");
     } else {
-      setEvents(prev => {
-        const updatedEvents = prev.filter(event => event.id !== eventToDelete.id);
-        saveToStorage("calendarEvents", updatedEvents);
-        return updatedEvents;
-      });
-      toast.success("Evento eliminado");
+      await deleteEvent(eventToDelete.id);
     }
+    
     setShowDeleteConfirmDialog(false);
     setEventToDelete(null);
     setDeleteAllRecurring(false);
   };
+
+  const deleteEvent = async (eventId: string) => {
+    const success = await RecordingService.deleteCalendarEvent(eventId);
+    
+    if (success) {
+      setEvents(prev => prev.filter(e => e.id !== eventId));
+      toast.success("Evento eliminado");
+    }
+  };
+
   const handleQuickAddEvent = () => {
     if (!newEvent.title.trim()) {
       toast.error("El título es obligatorio");
       return;
     }
+    
     if (newEvent.endDate && new Date(newEvent.endDate) <= new Date(newEvent.date)) {
       toast.error("La hora de finalización debe ser posterior a la hora de inicio");
       return;
     }
+    
     if (newEvent.repeat === "none") {
       handleAddEvent({
         title: newEvent.title,
@@ -203,10 +265,10 @@ export default function CalendarPage() {
         type: newEvent.type,
         repeat: undefined
       });
-      toast.success("Evento agregado");
     } else {
       createRepeatingEvents();
     }
+    
     setNewEvent({
       title: "",
       description: "",
@@ -216,13 +278,16 @@ export default function CalendarPage() {
       type: "other",
       repeat: "none"
     });
+    
     setShowAddEventDialog(false);
   };
-  const createRepeatingEvents = () => {
+
+  const createRepeatingEvents = async () => {
     const repeat = newEvent.repeat !== "none" ? {
       frequency: newEvent.repeat as "daily" | "weekly" | "monthly",
       interval: 1
     } : undefined;
+    
     const baseEvent = {
       title: newEvent.title,
       description: newEvent.description,
@@ -230,16 +295,20 @@ export default function CalendarPage() {
       type: newEvent.type,
       repeat
     };
-    handleAddEvent({
+    
+    await handleAddEvent({
       ...baseEvent,
       date: newEvent.date,
       endDate: newEvent.endDate || undefined
     });
+    
     const startDate = new Date(newEvent.date);
     const endDate = newEvent.endDate ? new Date(newEvent.endDate) : undefined;
     const duration = endDate ? endDate.getTime() - startDate.getTime() : 3600000;
+    
     for (let i = 1; i <= 10; i++) {
       let nextDate = new Date(startDate);
+      
       if (newEvent.repeat === "daily") {
         nextDate.setDate(nextDate.getDate() + i);
       } else if (newEvent.repeat === "weekly") {
@@ -247,15 +316,19 @@ export default function CalendarPage() {
       } else if (newEvent.repeat === "monthly") {
         nextDate.setMonth(nextDate.getMonth() + i);
       }
+      
       const nextEndDate = endDate ? new Date(nextDate.getTime() + duration) : undefined;
-      handleAddEvent({
+      
+      await handleAddEvent({
         ...baseEvent,
         date: nextDate.toISOString(),
         endDate: nextEndDate?.toISOString()
       });
     }
+    
     toast.success(`Se han creado eventos repetitivos (${newEvent.repeat})`);
   };
+
   const handleFilterChange = (filter: string) => {
     setActiveFilter(filter);
     if (filter === "all") {
@@ -266,6 +339,7 @@ export default function CalendarPage() {
       toast.info(`Mostrando eventos de tipo: ${filter}`);
     }
   };
+
   const openAddEventDialog = () => {
     setShowAddEventDialog(true);
     setNewEvent({
@@ -278,6 +352,7 @@ export default function CalendarPage() {
       repeat: "none"
     });
   };
+
   return <Layout>
       <div className="space-y-4 sm:space-y-6 w-full">
         <h1 className="text-2xl md:text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">
@@ -286,18 +361,41 @@ export default function CalendarPage() {
         
         <div className="glassmorphism rounded-xl p-3 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40 w-full overflow-hidden">
           <div className="w-full overflow-x-auto">
-            {isMobile ? <MobileCalendar events={events} onAddEvent={openAddEventDialog} onEventClick={event => {
-            setNewEvent({
-              title: event.title,
-              description: event.description || "",
-              date: event.date,
-              endDate: event.endDate || format(addHours(new Date(event.date), 1), "yyyy-MM-dd'T'HH:mm"),
-              folderId: event.folderId || "",
-              type: event.type,
-              repeat: "none"
-            });
-            setShowAddEventDialog(true);
-          }} onEditEvent={event => handleAddEvent(event)} onDeleteEvent={handleDeleteEvent} activeFilter={activeFilter} onFilterChange={handleFilterChange} /> : <Calendar events={events} onAddEvent={openAddEventDialog} onEditEvent={event => handleAddEvent(event)} onDeleteEvent={handleDeleteEvent} activeFilter={activeFilter} onFilterChange={handleFilterChange} />}
+            {isLoading ? (
+              <div className="flex items-center justify-center p-8">
+                <p>Cargando eventos...</p>
+              </div>
+            ) : isMobile ? (
+              <MobileCalendar 
+                events={events} 
+                onAddEvent={openAddEventDialog} 
+                onEventClick={event => {
+                  setNewEvent({
+                    title: event.title,
+                    description: event.description || "",
+                    date: event.date,
+                    endDate: event.endDate || format(addHours(new Date(event.date), 1), "yyyy-MM-dd'T'HH:mm"),
+                    folderId: event.folderId || "",
+                    type: event.type,
+                    repeat: "none"
+                  });
+                  setShowAddEventDialog(true);
+                }} 
+                onEditEvent={event => handleAddEvent(event)} 
+                onDeleteEvent={handleDeleteEvent} 
+                activeFilter={activeFilter} 
+                onFilterChange={handleFilterChange} 
+              />
+            ) : (
+              <Calendar 
+                events={events} 
+                onAddEvent={openAddEventDialog} 
+                onEditEvent={event => handleAddEvent(event)} 
+                onDeleteEvent={handleDeleteEvent} 
+                activeFilter={activeFilter} 
+                onFilterChange={handleFilterChange} 
+              />
+            )}
           </div>
         </div>
       </div>

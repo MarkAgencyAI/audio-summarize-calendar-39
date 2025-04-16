@@ -21,6 +21,21 @@ export interface RecordingData {
   understood?: boolean;
 }
 
+// Interface for calendar events
+export interface CalendarEventData {
+  id?: string;
+  title: string;
+  description?: string;
+  date: string;
+  endDate?: string;
+  type: 'exam' | 'assignment' | 'study' | 'class' | 'meeting' | 'other';
+  folderId?: string;
+  repeat?: {
+    frequency: 'daily' | 'weekly' | 'monthly';
+    interval: number;
+  };
+}
+
 /**
  * Service for managing recordings with optimized saving logic
  */
@@ -161,6 +176,135 @@ export class RecordingService {
       console.error("Error in updateRecording:", error);
       toast.error("Error al actualizar la grabación");
       return false;
+    }
+  }
+  
+  /**
+   * Save a calendar event to the database
+   * @param eventData The event data to save
+   * @returns The ID of the saved event or null if an error occurred
+   */
+  public static async saveCalendarEvent(eventData: CalendarEventData): Promise<string | null> {
+    try {
+      // Generate a unique ID for the event if it doesn't already have one
+      const eventId = eventData.id || uuidv4();
+      
+      console.log(`Saving calendar event ${eventId} to database...`, eventData);
+      
+      // Get current user information
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error("No authenticated user found");
+      }
+      
+      // Convert the repeat object to JSON for storage
+      const repeatData = eventData.repeat ? {
+        frequency: eventData.repeat.frequency,
+        interval: eventData.repeat.interval
+      } : null;
+      
+      // Save event to database
+      const { data, error } = await supabase
+        .from('events')
+        .upsert({
+          id: eventId,
+          title: eventData.title,
+          description: eventData.description || '',
+          date: eventData.date,
+          end_date: eventData.endDate || null,
+          type: eventData.type,
+          folder_id: eventData.folderId || null,
+          repeat_data: repeatData,
+          user_id: user.id
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error saving event to database:", error);
+        throw error;
+      }
+      
+      console.log(`Event ${eventId} saved successfully.`, data);
+      return eventId;
+      
+    } catch (error) {
+      console.error("Error in saveCalendarEvent:", error);
+      toast.error("Error al guardar el evento");
+      return null;
+    }
+  }
+  
+  /**
+   * Delete a calendar event from the database
+   * @param eventId The ID of the event to delete
+   * @returns Success status
+   */
+  public static async deleteCalendarEvent(eventId: string): Promise<boolean> {
+    try {
+      console.log(`Deleting calendar event ${eventId}...`);
+      
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', eventId);
+        
+      if (error) {
+        console.error("Error deleting event from database:", error);
+        throw error;
+      }
+      
+      console.log(`Event ${eventId} deleted successfully.`);
+      return true;
+      
+    } catch (error) {
+      console.error("Error in deleteCalendarEvent:", error);
+      toast.error("Error al eliminar el evento");
+      return false;
+    }
+  }
+  
+  /**
+   * Load all calendar events from the database for the current user
+   * @returns Array of calendar events or empty array if an error occurred
+   */
+  public static async loadCalendarEvents(): Promise<CalendarEventData[]> {
+    try {
+      console.log("Loading calendar events from database...");
+      
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .order('date', { ascending: false });
+        
+      if (error) {
+        console.error("Error loading events from database:", error);
+        throw error;
+      }
+      
+      // Map the database response to CalendarEventData objects
+      const events = data.map(event => ({
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        date: event.date,
+        endDate: event.end_date,
+        type: event.type,
+        folderId: event.folder_id,
+        repeat: event.repeat_data ? {
+          frequency: event.repeat_data.frequency,
+          interval: event.repeat_data.interval
+        } : undefined
+      } as CalendarEventData));
+      
+      console.log(`Loaded ${events.length} events successfully.`);
+      return events;
+      
+    } catch (error) {
+      console.error("Error in loadCalendarEvents:", error);
+      toast.error("Error al cargar los eventos");
+      return [];
     }
   }
   
