@@ -266,6 +266,49 @@ export class RecordingService {
   }
   
   /**
+   * Delete a recording from the database
+   * @param recordingId The ID of the recording to delete
+   * @returns Success status
+   */
+  public static async deleteRecording(recordingId: string): Promise<boolean> {
+    try {
+      console.log(`Deleting recording ${recordingId}...`);
+      
+      if (!recordingId) {
+        console.error("Cannot delete recording: Invalid ID");
+        return false;
+      }
+      
+      // Get current user information to ensure we're deleting our own recordings
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.error("Cannot delete recording: No authenticated user found");
+        return false;
+      }
+      
+      const { error } = await supabase
+        .from('recordings')
+        .delete()
+        .eq('id', recordingId)
+        .eq('user_id', user.id);
+        
+      if (error) {
+        console.error("Error deleting recording from database:", error);
+        throw error;
+      }
+      
+      console.log(`Recording ${recordingId} deleted successfully.`);
+      return true;
+      
+    } catch (error) {
+      console.error("Error in deleteRecording:", error);
+      toast.error("Error al eliminar la grabación");
+      return false;
+    }
+  }
+  
+  /**
    * Load all calendar events from the database for the current user
    * @returns Array of calendar events or empty array if an error occurred
    */

@@ -86,12 +86,18 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
 
   const handleConfirmDelete = async () => {
     try {
-      await deleteRecording(recording.id);
-      toast.success('Grabación eliminada');
+      const success = await RecordingService.deleteRecording(recording.id);
+      if (success) {
+        await deleteRecording(recording.id);
+        toast.success('Grabación eliminada');
+      } else {
+        toast.error('Error al eliminar la grabación');
+      }
       setIsDeleting(false);
     } catch (error) {
       console.error('Error deleting recording:', error);
       toast.error('Error al eliminar la grabación');
+      setIsDeleting(false);
     }
   };
 
@@ -159,7 +165,8 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
               ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400' 
               : 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400'} 
               flex items-center gap-1 px-2 py-1 cursor-pointer ring-offset-background transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2
-              ${recording.understood ? 'focus:ring-green-500' : 'focus:ring-amber-500'}`}
+              ${recording.understood ? 'focus:ring-green-500' : 'focus:ring-amber-500'}
+              hover:scale-105 transform transition-transform active:scale-95`}
             onClick={(e) => {
               e.stopPropagation();
               handleUnderstoodToggle(!recording.understood);
