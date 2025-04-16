@@ -283,20 +283,40 @@ export class RecordingService {
         throw error;
       }
       
-      // Map the database response to CalendarEventData objects
-      const events = data.map(event => ({
-        id: event.id,
-        title: event.title,
-        description: event.description,
-        date: event.date,
-        endDate: event.end_date,
-        type: event.type,
-        folderId: event.folder_id,
-        repeat: event.repeat_data ? {
-          frequency: event.repeat_data.frequency,
-          interval: event.repeat_data.interval
-        } : undefined
-      } as CalendarEventData));
+      // Map the database response to CalendarEventData objects, handling missing columns
+      const events = data.map(event => {
+        // Create a base event with required fields
+        const calendarEvent: CalendarEventData = {
+          id: event.id,
+          title: event.title,
+          description: event.description,
+          date: event.date,
+          type: (event.type as any) || 'other' // Default to 'other' if type is missing
+        };
+        
+        // Add optional fields if they exist in the database response
+        if ('end_date' in event) {
+          calendarEvent.endDate = event.end_date;
+        }
+        
+        if ('folder_id' in event) {
+          calendarEvent.folderId = event.folder_id;
+        }
+        
+        // Handle repeat data if it exists
+        if ('repeat_data' in event && event.repeat_data) {
+          try {
+            calendarEvent.repeat = {
+              frequency: event.repeat_data.frequency,
+              interval: event.repeat_data.interval
+            };
+          } catch (e) {
+            console.error("Error parsing repeat data:", e);
+          }
+        }
+        
+        return calendarEvent;
+      });
       
       console.log(`Loaded ${events.length} events successfully.`);
       return events;

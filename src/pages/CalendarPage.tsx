@@ -17,6 +17,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRecordings } from "@/context/RecordingsContext";
 import { CalendarEventData, RecordingService } from "@/lib/services/recording-service";
+import { saveToStorage, loadFromStorage } from "@/lib/storage";
 
 export default function CalendarPage() {
   const navigate = useNavigate();
