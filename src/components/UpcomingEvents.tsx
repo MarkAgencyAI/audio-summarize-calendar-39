@@ -21,6 +21,17 @@ interface Event {
   endDate?: string;
 }
 
+// Interface for the data returned from the RecordingService
+interface CalendarEventData {
+  id: string;  // Making id required to match the Event interface
+  title: string;
+  date: string;
+  description?: string;
+  folderId?: string | null;
+  type?: string;
+  endDate?: string;
+}
+
 interface UpcomingEventsProps {
   showHeader?: boolean;
   limit?: number;
@@ -41,7 +52,7 @@ export function UpcomingEvents({ showHeader = true, limit = 5, folderId }: Upcom
       
       // Filter events to show only upcoming ones (next 14 days)
       const now = new Date();
-      const filteredEvents = allEvents.filter((event: any) => {
+      const filteredEvents = allEvents.filter((event: CalendarEventData) => {
         try {
           // Filter by folder if specified
           if (folderId !== undefined && folderId !== null) {
@@ -62,11 +73,12 @@ export function UpcomingEvents({ showHeader = true, limit = 5, folderId }: Upcom
       });
       
       // Sort by date
-      filteredEvents.sort((a: any, b: any) => {
+      filteredEvents.sort((a: CalendarEventData, b: CalendarEventData) => {
         return new Date(a.date).getTime() - new Date(b.date).getTime();
       });
       
-      setEvents(filteredEvents);
+      // Convert CalendarEventData to Event before setting state
+      setEvents(filteredEvents as Event[]);
       console.info("Loaded upcoming events:", filteredEvents.length);
     } catch (error) {
       console.error("Error loading events:", error);
