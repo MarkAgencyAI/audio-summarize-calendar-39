@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -151,17 +152,17 @@ export function UpcomingEvents({ showHeader = true, limit = 5, folderId }: Upcom
             <p className="text-xs mt-1">Tus eventos aparecerán aquí</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {events.slice(0, limit).map(event => (
               <div 
                 key={event.id} 
-                className="p-2 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors cursor-pointer" 
+                className="p-3 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors cursor-pointer" 
                 onClick={() => navigate("/calendar")}
               >
-                <div className="font-medium text-sm flex items-center justify-between">
+                <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-2">
                     <Bell className="h-4 w-4 text-orange-500" />
-                    {event.title}
+                    <span className="font-medium text-sm">{event.title}</span>
                   </div>
                   
                   {event.type && (
@@ -171,19 +172,19 @@ export function UpcomingEvents({ showHeader = true, limit = 5, folderId }: Upcom
                   )}
                 </div>
                 
-                <div className="text-xs text-muted-foreground mt-1">
+                <div className="text-xs text-muted-foreground mt-2">
                   {format(parseISO(event.date), "PPPp", { locale: es })}
                 </div>
                 
                 {event.description && (
-                  <div className="text-xs mt-1 truncate">
+                  <div className="text-xs mt-2 text-slate-600 dark:text-slate-400">
                     {event.description}
                   </div>
                 )}
                 
                 {event.folderId && (
                   <div 
-                    className="text-xs mt-1 flex items-center gap-1"
+                    className="text-xs mt-2 flex items-center gap-1 pt-2 border-t border-slate-100 dark:border-slate-800"
                     style={{ color: getFolderColor(event.folderId) }}
                   >
                     <span>Carpeta: {getFolderName(event.folderId)}</span>
