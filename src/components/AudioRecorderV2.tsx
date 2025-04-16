@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import { LiveTranscriptionSheet } from "./LiveTranscriptionSheet";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -22,8 +23,8 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingName, setRecordingName] = useState("");
-  const recordingNameRef = useRef(recordingName);
+  const [recordingSubject, setRecordingSubject] = useState("");
+  const recordingSubjectRef = useRef(recordingSubject);
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [transcriptionOutput, setTranscriptionOutput] = useState<string | null>(null);
   const [transcriptionProgress, setTranscriptionProgress] = useState(0);
@@ -38,8 +39,8 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
   const temporaryIdRef = useRef<string>(uuidv4());
 
   useEffect(() => {
-    recordingNameRef.current = recordingName;
-  }, [recordingName]);
+    recordingSubjectRef.current = recordingSubject;
+  }, [recordingSubject]);
   
   useEffect(() => {
     const resetRecording = () => {
@@ -103,6 +104,7 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
             }
           );
           
+          // Make sure we're setting the full transcript output
           setTranscriptionOutput(result.transcript);
           setWebhookResponse(result.webhookResponse);
           
@@ -128,7 +130,7 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
           });
           window.dispatchEvent(event);
           
-          handleRecordingComplete(audioBlob);
+          handleRecordingComplete(audioBlob, result.transcript);
           
         } catch (error) {
           console.error("Error during transcription:", error);
@@ -153,7 +155,7 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
     }
   };
 
-  const handleRecordingComplete = async (audioBlob: Blob) => {
+  const handleRecordingComplete = async (audioBlob: Blob, transcript: string) => {
     if (!user) {
       toast.error("Debes iniciar sesión para guardar grabaciones");
       return;
@@ -167,21 +169,28 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
         return;
       }
       
+      // Generate a name based on subject and timestamp if subject is provided
+      const recordingName = recordingSubjectRef.current 
+        ? `${recordingSubjectRef.current} - ${new Date().toLocaleString()}`
+        : `Transcripción ${new Date().toLocaleString()}`;
+      
       const recordingData = {
         id: tempId,
-        name: recordingNameRef.current || `Transcripción ${new Date().toLocaleString()}`,
+        name: recordingName,
         date: new Date().toISOString(),
         duration: finalDuration,
         audioBlob: audioBlob,
-        output: transcriptionOutput || "",
+        output: transcript, // Ensure the transcript is saved here
         folderId: null,
         language: "es",
-        subject: "",
+        subject: recordingSubjectRef.current || "",
         webhookData: webhookResponse,
         speakerMode: speakerMode,
         understood: false
       };
 
+      console.log("Saving recording with transcript:", transcript ? transcript.substring(0, 100) + "..." : "No transcript");
+      
       const savedId = await RecordingService.saveRecording(recordingData);
 
       if (savedId) {
@@ -210,9 +219,7 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
       return;
     }
 
-    if (!recordingNameRef.current) {
-      setRecordingName(file.name.replace(/\.[^/.]+$/, ""));
-    }
+    const fileName = file.name.replace(/\.[^/.]+$/, "");
 
     const audio = new Audio();
     audio.src = URL.createObjectURL(file);
@@ -242,6 +249,7 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
           }
         );
         
+        // Make sure we're setting the full transcript
         setTranscriptionOutput(result.transcript);
         setWebhookResponse(result.webhookResponse);
         
@@ -258,7 +266,7 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
         });
         window.dispatchEvent(event);
         
-        handleRecordingComplete(file);
+        handleRecordingComplete(file, result.transcript);
         
       } catch (error) {
         console.error("Error processing uploaded audio:", error);
@@ -301,9 +309,9 @@ export function AudioRecorderV2({ onTranscriptionComplete }: AudioRecorderProps 
       <div className="space-y-4">
         <Input
           type="text"
-          placeholder="Nombre de la grabación"
-          value={recordingName}
-          onChange={(e) => setRecordingName(e.target.value)}
+          placeholder="Materia (ej. Matemáticas, Historia, Física...)"
+          value={recordingSubject}
+          onChange={(e) => setRecordingSubject(e.target.value)}
           className="w-full"
         />
 

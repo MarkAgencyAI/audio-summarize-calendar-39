@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { saveAudioToStorage } from "../storage";
 import { supabase } from "@/integrations/supabase/client";
 import { extractWebhookOutput } from "../transcription-service";
-import { useAuth } from "@/context/AuthContext";
 
 // Interface to represent recording data
 export interface RecordingData {
@@ -48,7 +47,7 @@ export class RecordingService {
       // Mark this recording as being processed
       this.processingIds.add(recordingId);
       
-      console.log(`Saving recording ${recordingId} to database...`);
+      console.log(`Saving recording ${recordingId} to database...`, recordingData);
       
       // Process webhook data if available
       let processedWebhookData = recordingData.webhookData;
@@ -117,7 +116,7 @@ export class RecordingService {
    */
   public static async updateRecording(id: string, updateData: Partial<RecordingData>): Promise<boolean> {
     try {
-      console.log(`Updating recording ${id}...`);
+      console.log(`Updating recording ${id}...`, updateData);
       
       // Process webhook data if available
       let processedWebhookData = updateData.webhookData;

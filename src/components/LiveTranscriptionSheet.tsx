@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -129,7 +130,7 @@ export function LiveTranscriptionSheet({
       
       // If we have transcription data and the user is authenticated, save it
       if (event.detail.data.output && user) {
-        console.log("Saving new transcription");
+        console.log("Saving new transcription:", event.detail.data.output ? event.detail.data.output.substring(0, 100) + "..." : "No output");
         
         // Get the audio blob if available
         let audioBlob = null;
@@ -142,7 +143,7 @@ export function LiveTranscriptionSheet({
           date: new Date().toISOString(),
           duration: event.detail.data.duration || 0,
           audioBlob,
-          output: event.detail.data.output,
+          output: event.detail.data.output, // Make sure we're saving the full transcript
           language: "es",
           subject: "",
           webhookData: event.detail.data.webhookResponse || null,
