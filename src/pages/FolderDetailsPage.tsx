@@ -13,75 +13,8 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { parseISO, format, isWithinInterval, addDays } from "date-fns";
-import { es } from "date-fns/locale";
-import { loadFromStorage } from "@/lib/storage";
+import { UpcomingEvents } from "@/components/UpcomingEvents";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-interface CalendarEvent {
-  id: string;
-  title: string;
-  date: string;
-  description?: string;
-  folderId?: string;
-  type?: string;
-}
-
-function UpcomingEvents({ events, folderName }: { events: CalendarEvent[], folderName: string }) {
-  const navigate = useNavigate();
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Bell className="h-5 w-5 text-orange-500" />
-          Recordatorios de {folderName}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {events.length === 0 ? (
-          <div className="text-center text-muted-foreground py-2">
-            <p>No hay recordatorios para esta materia</p>
-            <p className="text-xs mt-1">Los eventos de esta materia aparecerán aquí</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {events.slice(0, 5).map(event => (
-              <div
-                key={event.id}
-                className="p-2 bg-secondary/50 rounded-lg transition-colors cursor-pointer"
-                onClick={() => navigate("/calendar")}
-              >
-                <div className="font-medium text-sm flex items-center gap-2">
-                  <Bell className="h-4 w-4 text-orange-500" />
-                  {event.title}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {format(parseISO(event.date), "PPPp", { locale: es })}
-                </div>
-                {event.description && (
-                  <div className="text-xs mt-1 line-clamp-2">
-                    {event.description}
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {events.length > 5 && (
-              <Button
-                variant="link"
-                className="w-full text-sm"
-                onClick={() => navigate("/calendar")}
-              >
-                Ver todos los eventos ({events.length})
-              </Button>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
 
 export default function FolderDetailsPage() {
   const { folderId } = useParams<{ folderId: string }>();
@@ -104,7 +37,6 @@ export default function FolderDetailsPage() {
   const [showAddGradeDialog, setShowAddGradeDialog] = useState(false);
   const [newGradeName, setNewGradeName] = useState("");
   const [newGradeScore, setNewGradeScore] = useState<number>(0);
-  const [folderEvents, setFolderEvents] = useState<CalendarEvent[]>([]);
   
   useEffect(() => {
     console.log("FolderDetailsPage montado - actualizando datos");
@@ -121,48 +53,6 @@ export default function FolderDetailsPage() {
     
     setFolderName(folder.name);
   }, [folder, navigate]);
-  
-  useEffect(() => {
-    if (!folderId) return;
-    
-    const loadFolderEvents = () => {
-      const allEvents = loadFromStorage<CalendarEvent[]>("calendarEvents") || [];
-      const now = new Date();
-      
-      // Filtrar eventos para este folderId y dentro de los próximos 14 días
-      const filteredEvents = allEvents.filter((event: CalendarEvent) => {
-        try {
-          // Verificar si el evento pertenece a esta carpeta
-          const isForThisFolder = event.folderId === folderId;
-          
-          if (!isForThisFolder) return false;
-          
-          // Verificar si el evento está dentro del rango de fechas (próximos 14 días)
-          const eventDate = parseISO(event.date);
-          return isWithinInterval(eventDate, {
-            start: now,
-            end: addDays(now, 14)
-          });
-        } catch (error) {
-          console.error("Error parsing date for event:", event);
-          return false;
-        }
-      });
-      
-      // Ordenar eventos por fecha (más recientes primero)
-      filteredEvents.sort((a, b) => {
-        return new Date(a.date).getTime() - new Date(b.date).getTime();
-      });
-      
-      setFolderEvents(filteredEvents);
-    };
-    
-    loadFolderEvents();
-    
-    // Actualizar eventos cada minuto
-    const intervalId = setInterval(loadFolderEvents, 60000);
-    return () => clearInterval(intervalId);
-  }, [folderId]);
   
   if (!folder) {
     return (
@@ -421,7 +311,7 @@ export default function FolderDetailsPage() {
             </div>
             
             <div className="md:col-span-1">
-              <UpcomingEvents events={folderEvents} folderName={folder.name} />
+              <UpcomingEvents folderId={folderId} showHeader={true} limit={5} />
             </div>
           </div>
         )}

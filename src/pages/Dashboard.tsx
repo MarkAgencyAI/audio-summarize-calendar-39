@@ -20,6 +20,7 @@ import { LiveTranscriptionSheet } from "@/components/LiveTranscriptionSheet";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { AudioRecorderV2 } from "@/components/AudioRecorderV2";
+import { UpcomingEvents } from "@/components/UpcomingEvents";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -27,59 +28,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-
-interface CalendarEvent {
-  id: string;
-  title: string;
-  date: string;
-  description?: string;
-  folderId?: string;
-  type?: string;
-}
-
-function UpcomingEvents({
-  events
-}: {
-  events: CalendarEvent[];
-}) {
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  return <Card className={isMobile ? "mb-6" : ""}>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Bell className="h-5 w-5 text-orange-500" />
-          Próximos Recordatorios
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {events.length === 0 ? <div className="text-center text-muted-foreground py-2">
-            <p>No hay recordatorios próximos</p>
-            <p className="text-xs mt-1">Tus eventos aparecerán aquí</p>
-          </div> : <div className="space-y-2">
-            {events.slice(0, 5).map(event => <div key={event.id} className="p-2 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors cursor-pointer" onClick={() => navigate("/calendar")}>
-                <div className="font-medium text-sm flex items-center gap-2">
-                  <Bell className="h-4 w-4 text-orange-500" />
-                  {event.title}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {format(parseISO(event.date), "PPPp", {
-              locale: es
-            })}
-                </div>
-                {event.description && (
-                  <div className="text-xs mt-1 truncate">
-                    {event.description}
-                  </div>
-                )}
-              </div>)}
-
-            {events.length > 5 && <Button variant="link" className="w-full text-sm" onClick={() => navigate("/calendar")}>
-                Ver todos los eventos ({events.length})
-              </Button>}
-          </div>}
-      </CardContent>
-    </Card>;
-}
 
 function Transcriptions() {
   const {
@@ -259,7 +207,6 @@ export default function Dashboard() {
     isLoading,
     folders
   } = useRecordings();
-  const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("transcriptions");
@@ -274,35 +221,6 @@ export default function Dashboard() {
     console.log("Add to calendar:", recording);
     toast.info("Funcionalidad en desarrollo");
   };
-  
-  useEffect(() => {
-    const loadEvents = () => {
-      const storedEvents = loadFromStorage<CalendarEvent[]>("calendarEvents") || [];
-      const now = new Date();
-      const filteredEvents = storedEvents.filter((event: CalendarEvent) => {
-        try {
-          const eventDate = parseISO(event.date);
-          return isWithinInterval(eventDate, {
-            start: now,
-            end: addDays(now, 14)
-          });
-        } catch (error) {
-          console.error("Error parsing date for event:", event);
-          return false;
-        }
-      });
-      
-      filteredEvents.sort((a, b) => {
-        return new Date(a.date).getTime() - new Date(b.date).getTime();
-      });
-      
-      setUpcomingEvents(filteredEvents);
-    };
-    
-    loadEvents();
-    const intervalId = setInterval(loadEvents, 60000);
-    return () => clearInterval(intervalId);
-  }, []);
   
   useEffect(() => {
     const handleWebhookResponse = (event: Event) => {
@@ -382,7 +300,7 @@ export default function Dashboard() {
         </div>
 
         {isMobile && <div className="grid grid-cols-1 gap-4">
-            <UpcomingEvents events={upcomingEvents} />
+            <UpcomingEvents />
             
             <ToolsCarousel 
               showTranscriptionOptions={isTranscribing || !!transcriptionOutput}
@@ -423,7 +341,7 @@ export default function Dashboard() {
                 setTranscriptionOpen={setTranscriptionOpen}
                 transcriptionProgress={transcriptionProgress}
               />
-              <UpcomingEvents events={upcomingEvents} />
+              <UpcomingEvents />
               <NotesSection />
             </div>
             <div className="md:col-span-2">
