@@ -72,21 +72,26 @@ export function TranscriptionPanel({
           
           {onUnderstoodChange && (
             <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground mr-1">¿Has entendido esta grabación?</span>
               <ToggleGroup type="single" value={understood ? "understood" : "not-understood"} onValueChange={(value) => {
                 if (value) { // Only update if a value is selected (prevents deselection)
                   onUnderstoodChange(value === "understood");
                 }
-              }}>
+              }}
+              aria-label="¿Has entendido esta grabación?"
+              >
                 <ToggleGroupItem value="understood" aria-label="Entendida" 
                   className={`${understood ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50' : ''} 
-                    flex items-center gap-1 px-3 py-1 rounded-l-md data-[state=on]:border-green-500`}
+                    flex items-center gap-1 px-3 py-1 rounded-l-md data-[state=on]:border-green-500 cursor-pointer`}
+                  title="Marcar como entendida"
                 >
                   <Check className="h-4 w-4" />
                   <span className="text-sm">Entendida</span>
                 </ToggleGroupItem>
                 <ToggleGroupItem value="not-understood" aria-label="No entendida" 
                   className={`${!understood ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50' : ''} 
-                    flex items-center gap-1 px-3 py-1 rounded-r-md data-[state=on]:border-amber-500`}
+                    flex items-center gap-1 px-3 py-1 rounded-r-md data-[state=on]:border-amber-500 cursor-pointer`}
+                  title="Marcar como no entendida"
                 >
                   <X className="h-4 w-4" />
                   <span className="text-sm">No entendida</span>

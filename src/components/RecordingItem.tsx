@@ -158,11 +158,13 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
             className={`${recording.understood 
               ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400' 
               : 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400'} 
-              flex items-center gap-1 px-2 py-1`}
+              flex items-center gap-1 px-2 py-1 cursor-pointer ring-offset-background transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2
+              ${recording.understood ? 'focus:ring-green-500' : 'focus:ring-amber-500'}`}
             onClick={(e) => {
               e.stopPropagation();
               handleUnderstoodToggle(!recording.understood);
             }}
+            title={recording.understood ? "Haz clic para marcar como no entendida" : "Haz clic para marcar como entendida"}
           >
             {recording.understood ? (
               <>

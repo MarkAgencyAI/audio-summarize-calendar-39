@@ -29,7 +29,7 @@ export interface CalendarEventData {
   date: string;
   endDate?: string;
   type?: 'exam' | 'assignment' | 'study' | 'class' | 'meeting' | 'other';
-  folderId?: string;
+  folderId?: string | null;
   repeat?: {
     frequency: 'daily' | 'weekly' | 'monthly';
     interval: number;
@@ -276,7 +276,7 @@ export class RecordingService {
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .order('date', { ascending: false });
+        .order('date', { ascending: true });
         
       if (error) {
         console.error("Error loading events from database:", error);

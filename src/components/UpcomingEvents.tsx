@@ -1,15 +1,15 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Bell, Check, X } from 'lucide-react';
+import { Bell, Check, X, Calendar, Loader } from 'lucide-react';
 import { parseISO, format, isWithinInterval, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { RecordingService, CalendarEventData } from '@/lib/services/recording-service';
 import { Badge } from '@/components/ui/badge';
 import { useRecordings } from '@/context/RecordingsContext';
+import { v4 as uuidv4 } from 'uuid';
 
 interface Event {
   id: string;
@@ -36,14 +36,11 @@ export function UpcomingEvents({ showHeader = true, limit = 5, folderId }: Upcom
   const loadEvents = async () => {
     setIsLoading(true);
     try {
-      // Fetch events from the database using RecordingService
       const allEvents = await RecordingService.loadCalendarEvents();
       
-      // Filter events to show only upcoming ones (next 14 days)
       const now = new Date();
       const filteredEvents = allEvents.filter((event) => {
         try {
-          // Filter by folder if specified
           if (folderId !== undefined && folderId !== null) {
             if (event.folderId !== folderId) {
               return false;
@@ -61,14 +58,12 @@ export function UpcomingEvents({ showHeader = true, limit = 5, folderId }: Upcom
         }
       });
       
-      // Sort by date
       filteredEvents.sort((a, b) => {
         return new Date(a.date).getTime() - new Date(b.date).getTime();
       });
       
-      // Convert service events to our Event interface
       const mappedEvents: Event[] = filteredEvents.map(event => ({
-        id: event.id || '',  // Provide empty string as fallback
+        id: event.id || uuidv4(),
         title: event.title,
         date: event.date,
         description: event.description,
@@ -90,7 +85,6 @@ export function UpcomingEvents({ showHeader = true, limit = 5, folderId }: Upcom
   useEffect(() => {
     loadEvents();
     
-    // Set up interval to refresh events every minute
     const intervalId = setInterval(loadEvents, 60000);
     return () => clearInterval(intervalId);
   }, [folderId]);
@@ -135,21 +129,45 @@ export function UpcomingEvents({ showHeader = true, limit = 5, folderId }: Upcom
     <Card>
       {showHeader && (
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Bell className="h-5 w-5 text-orange-500" />
-            Próximos Recordatorios
+          <CardTitle className="text-lg flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-orange-500" />
+              Próximos Recordatorios
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-1" 
+              onClick={(e) => {
+                e.stopPropagation();
+                loadEvents();
+              }} 
+              title="Actualizar recordatorios"
+            >
+              <Loader className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </Button>
           </CardTitle>
         </CardHeader>
       )}
       <CardContent>
         {isLoading ? (
-          <div className="text-center text-muted-foreground py-2">
+          <div className="text-center text-muted-foreground py-2 flex flex-col items-center gap-2">
+            <Loader className="h-5 w-5 animate-spin text-primary" />
             <p>Cargando recordatorios...</p>
           </div>
         ) : events.length === 0 ? (
-          <div className="text-center text-muted-foreground py-2">
+          <div className="text-center text-muted-foreground py-3">
             <p>No hay recordatorios próximos</p>
-            <p className="text-xs mt-1">Tus eventos aparecerán aquí</p>
+            <p className="text-xs mt-1">Puedes crear eventos en el calendario</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-3 gap-1.5"
+              onClick={() => navigate("/calendar")}
+            >
+              <Calendar className="h-4 w-4" />
+              <span>Ir al calendario</span>
+            </Button>
           </div>
         ) : (
           <div className="space-y-3">
