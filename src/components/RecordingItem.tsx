@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronRight, GraduationCap, Pencil, Trash2, X, Folder, Clock, CalendarIcon } from 'lucide-react';
+import { Check, ChevronRight, Pencil, Trash2, X, Clock, CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
@@ -21,13 +21,6 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { useRecordings } from '@/context/RecordingsContext';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface RecordingItemProps {
   recording: any;
@@ -39,7 +32,6 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [nameInput, setNameInput] = useState(recording.name);
-  const [showAssignFolderDialog, setShowAssignFolderDialog] = useState(false);
   const { deleteRecording, folders, refreshData } = useRecordings();
 
   const handleViewDetails = () => {
@@ -110,21 +102,6 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
     }
   };
 
-  const handleAssignFolder = async (folderId: string | null) => {
-    try {
-      await RecordingService.updateRecording(recording.id, { folderId });
-      await refreshData();
-      const folderName = folderId 
-        ? folders.find(f => f.id === folderId)?.name || 'la carpeta' 
-        : 'Sin carpeta';
-      toast.success(`Transcripción asignada a ${folderName}`);
-      setShowAssignFolderDialog(false);
-    } catch (error) {
-      console.error('Error asignando carpeta:', error);
-      toast.error('Error al asignar la carpeta');
-    }
-  };
-
   const getFolderName = () => {
     if (!recording.folderId) return null;
     const folder = folders.find(f => f.id === recording.folderId);
@@ -135,6 +112,17 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
     if (!recording.folderId) return null;
     const folder = folders.find(f => f.id === recording.folderId);
     return folder ? folder.color : null;
+  };
+
+  const handleUnderstoodToggle = async (understood: boolean) => {
+    try {
+      await RecordingService.updateRecording(recording.id, { understood });
+      toast.success(understood ? 'Marcado como entendido' : 'Marcado como no entendido');
+      refreshData();
+    } catch (error) {
+      console.error('Error updating understood status:', error);
+      toast.error('Error al actualizar el estado');
+    }
   };
 
   return (
@@ -178,28 +166,48 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
                     {recording.name}
                   </div>
                   
-                  <div className="flex items-center gap-1.5">
-                    {recording.folderId && (
-                      <div 
-                        className="flex items-center gap-1 px-2 py-0.5 text-xs rounded-full"
-                        style={{ 
-                          backgroundColor: `${getFolderColor()}20`,
-                          color: getFolderColor()
-                        }}
-                      >
-                        <Folder className="h-3 w-3" />
-                        <span className="max-w-[100px] truncate">{getFolderName()}</span>
-                      </div>
-                    )}
-                    
-                    {recording.understood !== undefined && (
-                      <Badge variant={recording.understood ? 'success' : 'warning'} className="text-xs">
-                        {recording.understood ? 'Entendida' : 'No entendida'}
-                      </Badge>
-                    )}
-                  </div>
+                  {recording.folderId && (
+                    <div 
+                      className="flex items-center gap-1 px-2 py-0.5 text-xs rounded-full"
+                      style={{ 
+                        backgroundColor: `${getFolderColor()}20`,
+                        color: getFolderColor()
+                      }}
+                    >
+                      <span className="max-w-[100px] truncate">{getFolderName()}</span>
+                    </div>
+                  )}
                 </div>
               )}
+
+              <ToggleGroup 
+                type="single" 
+                value={recording.understood ? "understood" : "not-understood"}
+                onValueChange={(value) => {
+                  if (value) {
+                    handleUnderstoodToggle(value === "understood");
+                  }
+                }}
+                className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-sm h-8"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ToggleGroupItem 
+                  value="understood" 
+                  aria-label="Entendida" 
+                  className={`${recording.understood ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50' : ''} 
+                    flex items-center gap-1 px-2 py-1 h-8 rounded-l-md data-[state=on]:border-green-500`}
+                >
+                  <Check className="h-3.5 w-3.5" />
+                </ToggleGroupItem>
+                <ToggleGroupItem 
+                  value="not-understood" 
+                  aria-label="No entendida" 
+                  className={`${!recording.understood ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50' : ''} 
+                    flex items-center gap-1 px-2 py-1 h-8 rounded-r-md data-[state=on]:border-amber-500`}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </ToggleGroupItem>
+              </ToggleGroup>
             </div>
             
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -231,10 +239,6 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditClick(e as any); }}>
                   <Pencil className="h-4 w-4 mr-2" />
                   Renombrar
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowAssignFolderDialog(true); }}>
-                  <Folder className="h-4 w-4 mr-2" />
-                  Asignar a carpeta
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleAddToCalendarClick(e as any); }}>
@@ -271,51 +275,6 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleting(false)}>Cancelar</Button>
             <Button variant="destructive" onClick={handleConfirmDelete}>Eliminar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={showAssignFolderDialog} onOpenChange={setShowAssignFolderDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Asignar a carpeta</DialogTitle>
-            <DialogDescription>
-              Selecciona la carpeta donde deseas guardar esta transcripción
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="folder-select">Carpeta</Label>
-              <Select 
-                defaultValue={recording.folderId || ""}
-                onValueChange={(value) => handleAssignFolder(value === "" ? null : value)}
-              >
-                <SelectTrigger id="folder-select">
-                  <SelectValue placeholder="Seleccionar carpeta" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Sin carpeta</SelectItem>
-                  {folders.map(folder => (
-                    <SelectItem key={folder.id} value={folder.id}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="h-3 w-3 rounded-full"
-                          style={{ backgroundColor: folder.color }}
-                        ></div>
-                        {folder.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAssignFolderDialog(false)}>
-              Cancelar
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
