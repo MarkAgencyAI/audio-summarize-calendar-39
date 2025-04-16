@@ -52,9 +52,13 @@ export type Database = {
           created_at: string
           date: string | null
           description: string | null
+          end_date: string | null
+          folder_id: string | null
           id: string
           recording_id: string | null
+          repeat_data: Json | null
           title: string
+          type: string | null
           updated_at: string
           user_id: string
         }
@@ -62,9 +66,13 @@ export type Database = {
           created_at?: string
           date?: string | null
           description?: string | null
+          end_date?: string | null
+          folder_id?: string | null
           id?: string
           recording_id?: string | null
+          repeat_data?: Json | null
           title: string
+          type?: string | null
           updated_at?: string
           user_id: string
         }
@@ -72,9 +80,13 @@ export type Database = {
           created_at?: string
           date?: string | null
           description?: string | null
+          end_date?: string | null
+          folder_id?: string | null
           id?: string
           recording_id?: string | null
+          repeat_data?: Json | null
           title?: string
+          type?: string | null
           updated_at?: string
           user_id?: string
         }
