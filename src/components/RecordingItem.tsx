@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronRight, Pencil, Trash2, X, Clock, CalendarIcon } from 'lucide-react';
+import { Check, ChevronRight, GraduationCap, Pencil, Trash2, X, Folder, Clock, CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
@@ -17,8 +17,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { useRecordings } from '@/context/RecordingsContext';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface RecordingItemProps {
   recording: any;
@@ -30,6 +39,7 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [nameInput, setNameInput] = useState(recording.name);
+  const [showAssignFolderDialog, setShowAssignFolderDialog] = useState(false);
   const { deleteRecording, folders, refreshData } = useRecordings();
 
   const handleViewDetails = () => {
@@ -100,6 +110,21 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
     }
   };
 
+  const handleAssignFolder = async (folderId: string | null) => {
+    try {
+      await RecordingService.updateRecording(recording.id, { folderId });
+      await refreshData();
+      const folderName = folderId 
+        ? folders.find(f => f.id === folderId)?.name || 'la carpeta' 
+        : 'Sin carpeta';
+      toast.success(`Transcripción asignada a ${folderName}`);
+      setShowAssignFolderDialog(false);
+    } catch (error) {
+      console.error('Error asignando carpeta:', error);
+      toast.error('Error al asignar la carpeta');
+    }
+  };
+
   const getFolderName = () => {
     if (!recording.folderId) return null;
     const folder = folders.find(f => f.id === recording.folderId);
@@ -123,12 +148,12 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
             <div className="flex items-center justify-between">
               {isEditing ? (
                 <div className="flex items-center gap-2 w-full">
-                  <input 
+                  <Input 
                     value={nameInput} 
                     onChange={handleNameChange} 
                     autoFocus 
                     onClick={(e) => e.stopPropagation()}
-                    className="border border-gray-300 rounded px-2 py-1 w-full"
+                    className="h-8"
                   />
                   <Button 
                     variant="ghost" 
@@ -154,6 +179,19 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
                   </div>
                   
                   <div className="flex items-center gap-1.5">
+                    {recording.folderId && (
+                      <div 
+                        className="flex items-center gap-1 px-2 py-0.5 text-xs rounded-full"
+                        style={{ 
+                          backgroundColor: `${getFolderColor()}20`,
+                          color: getFolderColor()
+                        }}
+                      >
+                        <Folder className="h-3 w-3" />
+                        <span className="max-w-[100px] truncate">{getFolderName()}</span>
+                      </div>
+                    )}
+                    
                     {recording.understood !== undefined && (
                       <Badge variant={recording.understood ? 'success' : 'warning'} className="text-xs">
                         {recording.understood ? 'Entendida' : 'No entendida'}
@@ -194,6 +232,10 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
                   <Pencil className="h-4 w-4 mr-2" />
                   Renombrar
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowAssignFolderDialog(true); }}>
+                  <Folder className="h-4 w-4 mr-2" />
+                  Asignar a carpeta
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleAddToCalendarClick(e as any); }}>
                   <CalendarIcon className="h-4 w-4 mr-2" />
@@ -229,6 +271,51 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleting(false)}>Cancelar</Button>
             <Button variant="destructive" onClick={handleConfirmDelete}>Eliminar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={showAssignFolderDialog} onOpenChange={setShowAssignFolderDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Asignar a carpeta</DialogTitle>
+            <DialogDescription>
+              Selecciona la carpeta donde deseas guardar esta transcripción
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="folder-select">Carpeta</Label>
+              <Select 
+                defaultValue={recording.folderId || ""}
+                onValueChange={(value) => handleAssignFolder(value === "" ? null : value)}
+              >
+                <SelectTrigger id="folder-select">
+                  <SelectValue placeholder="Seleccionar carpeta" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Sin carpeta</SelectItem>
+                  {folders.map(folder => (
+                    <SelectItem key={folder.id} value={folder.id}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="h-3 w-3 rounded-full"
+                          style={{ backgroundColor: folder.color }}
+                        ></div>
+                        {folder.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAssignFolderDialog(false)}>
+              Cancelar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
