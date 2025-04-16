@@ -32,7 +32,6 @@ export interface Event {
   title: string;
   description?: string;
   date?: string;
-  folderId?: string;
 }
 
 export interface Recording {
@@ -231,8 +230,7 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         id: event.id,
         title: event.title,
         description: event.description,
-        date: event.date,
-        folderId: event.folder_id
+        date: event.date
       }));
       
       setEvents(formattedEvents);
@@ -698,7 +696,6 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           title: event.title,
           description: event.description,
           date: event.date,
-          folder_id: event.folderId,
           user_id: user?.id
         })
         .select()
@@ -710,8 +707,7 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         id: data.id,
         title: data.title,
         description: data.description,
-        date: data.date,
-        folderId: data.folder_id
+        date: data.date
       };
 
       setEvents(prev => [...prev, newEvent]);
@@ -729,8 +725,7 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         .update({
           title: data.title,
           description: data.description,
-          date: data.date,
-          folder_id: data.folderId
+          date: data.date
         })
         .eq('id', id);
 
