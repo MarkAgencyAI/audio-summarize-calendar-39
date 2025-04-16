@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -12,9 +13,10 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { loadFromStorage } from "@/lib/storage";
 import { parseISO, format, isWithinInterval, addDays } from "date-fns";
 import { es } from "date-fns/locale";
+import { loadFromStorage } from "@/lib/storage";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface CalendarEvent {
   id: string;
@@ -22,6 +24,7 @@ interface CalendarEvent {
   date: string;
   description?: string;
   folderId?: string;
+  type?: string;
 }
 
 function UpcomingEvents({ events, folderName }: { events: CalendarEvent[], folderName: string }) {
@@ -126,12 +129,15 @@ export default function FolderDetailsPage() {
       const allEvents = loadFromStorage<CalendarEvent[]>("calendarEvents") || [];
       const now = new Date();
       
+      // Filtrar eventos para este folderId y dentro de los próximos 14 días
       const filteredEvents = allEvents.filter((event: CalendarEvent) => {
         try {
+          // Verificar si el evento pertenece a esta carpeta
           const isForThisFolder = event.folderId === folderId;
           
           if (!isForThisFolder) return false;
           
+          // Verificar si el evento está dentro del rango de fechas (próximos 14 días)
           const eventDate = parseISO(event.date);
           return isWithinInterval(eventDate, {
             start: now,
@@ -143,6 +149,7 @@ export default function FolderDetailsPage() {
         }
       });
       
+      // Ordenar eventos por fecha (más recientes primero)
       filteredEvents.sort((a, b) => {
         return new Date(a.date).getTime() - new Date(b.date).getTime();
       });
@@ -152,6 +159,7 @@ export default function FolderDetailsPage() {
     
     loadFolderEvents();
     
+    // Actualizar eventos cada minuto
     const intervalId = setInterval(loadFolderEvents, 60000);
     return () => clearInterval(intervalId);
   }, [folderId]);

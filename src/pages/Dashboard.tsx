@@ -33,6 +33,8 @@ interface CalendarEvent {
   title: string;
   date: string;
   description?: string;
+  folderId?: string;
+  type?: string;
 }
 
 function UpcomingEvents({
@@ -64,6 +66,11 @@ function UpcomingEvents({
               locale: es
             })}
                 </div>
+                {event.description && (
+                  <div className="text-xs mt-1 truncate">
+                    {event.description}
+                  </div>
+                )}
               </div>)}
 
             {events.length > 5 && <Button variant="link" className="w-full text-sm" onClick={() => navigate("/calendar")}>
@@ -249,7 +256,8 @@ export default function Dashboard() {
     recordings,
     addRecording,
     refreshData,
-    isLoading
+    isLoading,
+    folders
   } = useRecordings();
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const navigate = useNavigate();
@@ -283,11 +291,14 @@ export default function Dashboard() {
           return false;
         }
       });
+      
       filteredEvents.sort((a, b) => {
         return new Date(a.date).getTime() - new Date(b.date).getTime();
       });
+      
       setUpcomingEvents(filteredEvents);
     };
+    
     loadEvents();
     const intervalId = setInterval(loadEvents, 60000);
     return () => clearInterval(intervalId);
