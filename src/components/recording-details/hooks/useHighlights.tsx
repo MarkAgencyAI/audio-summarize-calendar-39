@@ -1,8 +1,8 @@
-
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { Recording, TextHighlight } from "@/context/RecordingsContext";
 import { HighlightMenuPosition, SelectionRange } from "../types";
+import { supabase } from "@/integrations/supabase/client";
 
 export function useHighlights(
   recording: Recording, 
@@ -72,7 +72,33 @@ export function useHighlights(
     }
   };
 
-  const applyHighlight = (color: string) => {
+  useEffect(() => {
+    const loadHighlights = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('text_highlights')
+          .select('*')
+          .eq('recording_id', recording.id);
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          setHighlights(data);
+        }
+      } catch (error) {
+        console.error('Error loading highlights:', error);
+        toast.error('Error al cargar los resaltados');
+      }
+    };
+
+    if (recording.id) {
+      loadHighlights();
+    }
+  }, [recording.id]);
+
+  const applyHighlight = async (color: string) => {
     if (!selectionRange || !selectedText) return;
     
     const overlappingHighlights = getOverlappingHighlights(selectionRange.start, selectionRange.end);
@@ -82,6 +108,17 @@ export function useHighlights(
       updatedHighlights = updatedHighlights.filter(
         highlight => !overlappingHighlights.some(oh => oh.id === highlight.id)
       );
+      
+      for (const highlight of overlappingHighlights) {
+        try {
+          await supabase
+            .from('text_highlights')
+            .delete()
+            .eq('id', highlight.id);
+        } catch (error) {
+          console.error('Error removing highlight:', error);
+        }
+      }
     }
     
     const newHighlight: TextHighlight = {
@@ -89,33 +126,50 @@ export function useHighlights(
       text: selectedText,
       color,
       startPosition: selectionRange.start,
-      endPosition: selectionRange.end
+      endPosition: selectionRange.end,
+      recording_id: recording.id
     };
     
-    updatedHighlights.push(newHighlight);
-    setHighlights(updatedHighlights);
-    
-    updateRecording(recording.id, {
-      highlights: updatedHighlights
-    });
-    
-    setSelectedText("");
-    setSelectionRange(null);
-    setShowHighlightMenu(false);
-    window.getSelection()?.removeAllRanges();
-    
-    toast.success("Texto resaltado guardado");
+    try {
+      const { error } = await supabase
+        .from('text_highlights')
+        .insert(newHighlight);
+      
+      if (error) throw error;
+      
+      updatedHighlights.push(newHighlight);
+      setHighlights(updatedHighlights);
+      
+      setSelectedText("");
+      setSelectionRange(null);
+      setShowHighlightMenu(false);
+      window.getSelection()?.removeAllRanges();
+      
+      toast.success("Texto resaltado guardado");
+      
+    } catch (error) {
+      console.error('Error saving highlight:', error);
+      toast.error('Error al guardar el resaltado');
+    }
   };
   
-  const removeHighlight = (highlightId: string) => {
-    const updatedHighlights = highlights.filter(h => h.id !== highlightId);
-    setHighlights(updatedHighlights);
-    
-    updateRecording(recording.id, {
-      highlights: updatedHighlights
-    });
-    
-    toast.success("Resaltado eliminado");
+  const removeHighlight = async (highlightId: string) => {
+    try {
+      const { error } = await supabase
+        .from('text_highlights')
+        .delete()
+        .eq('id', highlightId);
+      
+      if (error) throw error;
+      
+      const updatedHighlights = highlights.filter(h => h.id !== highlightId);
+      setHighlights(updatedHighlights);
+      
+      toast.success("Resaltado eliminado");
+    } catch (error) {
+      console.error('Error removing highlight:', error);
+      toast.error('Error al eliminar el resaltado');
+    }
   };
   
   const removeHighlightAtSelection = () => {

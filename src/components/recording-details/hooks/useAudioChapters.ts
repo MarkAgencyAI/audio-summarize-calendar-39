@@ -1,9 +1,9 @@
-
 import { useState, useEffect, RefObject } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
 import { AudioChapter, Recording } from "@/context/RecordingsContext";
 import { AudioPlayerHandle, chapterColors } from "../types";
+import { supabase } from "@/integrations/supabase/client";
 
 export function useAudioChapters(
   recording: Recording,
@@ -26,15 +26,45 @@ export function useAudioChapters(
     }
   }, [recording.id, recording.chapters]);
   
+  // Load chapters from database
+  useEffect(() => {
+    const loadChapters = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('audio_chapters')
+          .select('*')
+          .eq('recording_id', recording.id)
+          .order('start_time', { ascending: true });
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          setChapters(data);
+          console.log("Loaded chapters from database:", data);
+        }
+      } catch (error) {
+        console.error('Error loading chapters:', error);
+        toast.error('Error al cargar los capítulos');
+      }
+    };
+
+    if (recording.id) {
+      loadChapters();
+    }
+  }, [recording.id]);
+  
   const handleAddChapter = (startTime: number, endTime?: number) => {
     setNewChapterTitle(`Capítulo ${chapters.length + 1}`);
     setNewChapterColor(chapterColors[chapters.length % chapterColors.length]);
     setCurrentChapter({
       id: uuidv4(),
       title: `Capítulo ${chapters.length + 1}`,
-      startTime: startTime,
-      endTime: endTime,
-      color: chapterColors[chapters.length % chapterColors.length]
+      start_time: startTime,
+      end_time: endTime,
+      color: chapterColors[chapters.length % chapterColors.length],
+      recording_id: recording.id
     });
     setShowChapterDialog(true);
   };
@@ -46,18 +76,26 @@ export function useAudioChapters(
     setShowChapterDialog(true);
   };
 
-  const handleDeleteChapter = (id: string) => {
-    const updatedChapters = chapters.filter(chapter => chapter.id !== id);
-    setChapters(updatedChapters);
-    
-    updateRecording(recording.id, {
-      chapters: updatedChapters
-    });
-    
-    toast.success("Capítulo eliminado");
+  const handleDeleteChapter = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('audio_chapters')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      const updatedChapters = chapters.filter(chapter => chapter.id !== id);
+      setChapters(updatedChapters);
+      
+      toast.success("Capítulo eliminado");
+    } catch (error) {
+      console.error('Error deleting chapter:', error);
+      toast.error('Error al eliminar el capítulo');
+    }
   };
 
-  const handleSaveChapter = () => {
+  const handleSaveChapter = async () => {
     if (!newChapterTitle.trim()) {
       toast.error("El título no puede estar vacío");
       return;
@@ -68,57 +106,104 @@ export function useAudioChapters(
     if (currentChapter) {
       if (chapters.some(ch => ch.id === currentChapter.id)) {
         // Editing existing chapter
-        updatedChapters = chapters.map(chapter => 
-          chapter.id === currentChapter.id 
-            ? { 
-                ...chapter, 
-                title: newChapterTitle, 
-                color: newChapterColor,
-                startTime: currentChapter.startTime,
-                endTime: currentChapter.endTime
-              }
-            : chapter
-        );
+        try {
+          const { error } = await supabase
+            .from('audio_chapters')
+            .update({
+              title: newChapterTitle,
+              color: newChapterColor,
+              start_time: currentChapter.start_time,
+              end_time: currentChapter.end_time
+            })
+            .eq('id', currentChapter.id);
+          
+          if (error) throw error;
+          
+          updatedChapters = chapters.map(chapter => 
+            chapter.id === currentChapter.id 
+              ? { 
+                  ...chapter, 
+                  title: newChapterTitle, 
+                  color: newChapterColor,
+                  start_time: currentChapter.start_time,
+                  end_time: currentChapter.end_time
+                }
+              : chapter
+          );
+        } catch (error) {
+          console.error('Error updating chapter:', error);
+          toast.error('Error al actualizar el capítulo');
+          return;
+        }
       } else {
-        // Adding new chapter with predefined start and end times
-        updatedChapters = [...chapters, {
+        // Adding new chapter
+        const newChapter: AudioChapter = {
           ...currentChapter,
           title: newChapterTitle,
           color: newChapterColor
-        }];
+        };
+        
+        try {
+          const { error } = await supabase
+            .from('audio_chapters')
+            .insert(newChapter);
+          
+          if (error) throw error;
+          
+          updatedChapters = [...chapters, newChapter];
+        } catch (error) {
+          console.error('Error creating chapter:', error);
+          toast.error('Error al crear el capítulo');
+          return;
+        }
       }
     } else {
       // Legacy handling for button click (not fragment selection)
       const newChapter: AudioChapter = {
         id: uuidv4(),
         title: newChapterTitle,
-        startTime: 0, // This will be updated by the component that calls handleSaveChapter
-        color: newChapterColor
+        start_time: 0,
+        color: newChapterColor,
+        recording_id: recording.id
       };
       
-      if (chapters.length > 0) {
-        updatedChapters = [...chapters];
-        const lastChapterIndex = chapters.length - 1;
-        updatedChapters[lastChapterIndex] = {
-          ...updatedChapters[lastChapterIndex],
-          endTime: 0 // This will be updated by the component that calls handleSaveChapter
-        };
-        updatedChapters.push(newChapter);
-      } else {
-        updatedChapters = [newChapter];
+      try {
+        const { error } = await supabase
+          .from('audio_chapters')
+          .insert(newChapter);
+        
+        if (error) throw error;
+        
+        if (chapters.length > 0) {
+          const lastChapter = chapters[chapters.length - 1];
+          
+          // Update end time of previous chapter
+          await supabase
+            .from('audio_chapters')
+            .update({ end_time: 0 })
+            .eq('id', lastChapter.id);
+            
+          updatedChapters = [...chapters];
+          updatedChapters[chapters.length - 1] = {
+            ...lastChapter,
+            end_time: 0
+          };
+          updatedChapters.push(newChapter);
+        } else {
+          updatedChapters = [newChapter];
+        }
+      } catch (error) {
+        console.error('Error creating chapter:', error);
+        toast.error('Error al crear el capítulo');
+        return;
       }
     }
     
     // Sort chapters by start time
-    updatedChapters.sort((a, b) => a.startTime - b.startTime);
-    
+    updatedChapters.sort((a, b) => a.start_time - b.start_time);
     setChapters(updatedChapters);
-    
-    updateRecording(recording.id, {
-      chapters: updatedChapters
-    });
-    
     setShowChapterDialog(false);
+    
     toast.success(currentChapter && chapters.some(ch => ch.id === currentChapter.id) 
       ? "Capítulo actualizado" 
       : "Capítulo creado");
@@ -127,7 +212,7 @@ export function useAudioChapters(
   const handleChapterClick = (chapter: AudioChapter) => {
     if (audioPlayerRef.current) {
       // Seek to the start of the chapter
-      audioPlayerRef.current.seek(chapter.startTime);
+      audioPlayerRef.current.seek(chapter.start_time);
       setActiveChapterId(chapter.id);
       
       // Start playback
