@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { format, addDays, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { v4 as uuidv4 } from "uuid";
@@ -12,6 +11,7 @@ import { useRecordings } from "@/context/RecordingsContext";
 import { toast } from "sonner";
 import { loadFromStorage, saveToStorage } from "@/lib/storage";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Updated type definition to include day property
 export interface WeeklyEventWithTemp extends Omit<CalendarEvent, "id"> {
@@ -39,6 +39,8 @@ export function WeeklyScheduleGrid({
   const [showDialog, setShowDialog] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string>("lunes");
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
+  const touchStartX = useRef<number>(0);
+  const touchEndX = useRef<number>(0);
   
   // Generate hours from 7am to 9pm
   const hours = Array.from({ length: 15 }, (_, i) => i + 7);
@@ -52,6 +54,34 @@ export function WeeklyScheduleGrid({
     { value: "sábado", label: "Sábado" },
     { value: "domingo", label: "Domingo" }
   ];
+
+  const handleDayChange = (value: string) => {
+    setSelectedDay(value);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    const swipeThreshold = 50;
+    const swipeDistance = touchEndX.current - touchStartX.current;
+    
+    if (Math.abs(swipeDistance) > swipeThreshold) {
+      const currentIndex = days.findIndex(d => d.value === selectedDay);
+      if (swipeDistance > 0 && currentIndex > 0) {
+        // Swipe right - previous day
+        setSelectedDay(days[currentIndex - 1].value);
+      } else if (swipeDistance < 0 && currentIndex < days.length - 1) {
+        // Swipe left - next day
+        setSelectedDay(days[currentIndex + 1].value);
+      }
+    }
+  };
 
   useEffect(() => {
     const savedEvents = loadFromStorage<WeeklyEventWithTemp[]>("weeklyScheduleEvents");
@@ -144,28 +174,32 @@ export function WeeklyScheduleGrid({
 
   return (
     <div className="space-y-4 w-full max-w-[100vw] px-2">
-      <Card className="overflow-hidden border border-border w-full max-w-4xl mx-auto">
+      <Card 
+        className="overflow-hidden border border-border w-full max-w-4xl mx-auto"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <CardHeader className="p-3">
           <div className="flex items-center justify-between">
             <Button variant="outline" size="sm" onClick={onCancel}>
               <ChevronLeft className="h-4 w-4 mr-1" />
               Volver
             </Button>
-            <div className="flex items-center gap-2">
-              <div className="flex overflow-x-auto py-2 px-1 -mx-1">
-                {days.map(day => (
-                  <Button
-                    key={day.value}
-                    variant={selectedDay === day.value ? "default" : "outline"}
-                    size="sm"
-                    className="mx-1 whitespace-nowrap"
-                    onClick={() => setSelectedDay(day.value)}
-                  >
+            
+            <Select value={selectedDay} onValueChange={handleDayChange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Seleccionar día" />
+              </SelectTrigger>
+              <SelectContent>
+                {days.map((day) => (
+                  <SelectItem key={day.value} value={day.value}>
                     {day.label}
-                  </Button>
+                  </SelectItem>
                 ))}
-              </div>
-            </div>
+              </SelectContent>
+            </Select>
+
             <Button onClick={handleSaveSchedule} size="sm">
               <Save className="h-4 w-4 mr-2" />
               Guardar
