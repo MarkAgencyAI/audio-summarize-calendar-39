@@ -1,8 +1,40 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { Recording, TextHighlight } from "@/context/RecordingsContext";
 import { HighlightMenuPosition, SelectionRange } from "../types";
 import { supabase } from "@/integrations/supabase/client";
+
+// Type for database response with snake_case
+interface TextHighlightDB {
+  id: string;
+  text: string;
+  color: string;
+  start_position: number;
+  end_position: number;
+  recording_id: string;
+  created_at?: string;
+}
+
+// Convert from DB format (snake_case) to app format (camelCase)
+const mapDBToTextHighlight = (highlight: TextHighlightDB): TextHighlight => ({
+  id: highlight.id,
+  text: highlight.text,
+  color: highlight.color,
+  startPosition: highlight.start_position,
+  endPosition: highlight.end_position,
+  recording_id: highlight.recording_id
+});
+
+// Convert from app format (camelCase) to DB format (snake_case)
+const mapTextHighlightToDB = (highlight: TextHighlight): TextHighlightDB => ({
+  id: highlight.id,
+  text: highlight.text,
+  color: highlight.color,
+  start_position: highlight.startPosition,
+  end_position: highlight.endPosition,
+  recording_id: highlight.recording_id
+});
 
 export function useHighlights(
   recording: Recording, 
@@ -85,7 +117,9 @@ export function useHighlights(
         }
         
         if (data) {
-          setHighlights(data);
+          // Convert from DB snake_case to app camelCase
+          const mappedHighlights = data.map(mapDBToTextHighlight);
+          setHighlights(mappedHighlights);
         }
       } catch (error) {
         console.error('Error loading highlights:', error);
@@ -131,9 +165,12 @@ export function useHighlights(
     };
     
     try {
+      // Convert to DB format for insert
+      const dbHighlight = mapTextHighlightToDB(newHighlight);
+      
       const { error } = await supabase
         .from('text_highlights')
-        .insert(newHighlight);
+        .insert(dbHighlight);
       
       if (error) throw error;
       
@@ -196,10 +233,10 @@ export function useHighlights(
     window.getSelection()?.removeAllRanges();
   };
   
-  const renderHighlightedText = (): React.ReactNode => {
-    if (!recording.output) return null;
+  const renderHighlightedText = (text?: string): React.ReactNode => {
+    if (!text && !recording.output) return null;
     
-    const text = recording.output;
+    const content = text || recording.output || "";
     const sortedHighlights = [...highlights].sort((a, b) => a.startPosition - b.startPosition);
     
     const nonOverlappingHighlights = sortedHighlights.reduce((acc: TextHighlight[], highlight, index) => {
@@ -220,7 +257,7 @@ export function useHighlights(
       if (highlight.startPosition > currentPosition) {
         segments.push(
           <React.Fragment key={`text-${currentPosition}`}>
-            {text.substring(currentPosition, highlight.startPosition)}
+            {content.substring(currentPosition, highlight.startPosition)}
           </React.Fragment>
         );
       }
@@ -232,17 +269,17 @@ export function useHighlights(
           onDoubleClick={() => removeHighlight(highlight.id)}
           title="Doble clic para eliminar el resaltado"
         >
-          {text.substring(highlight.startPosition, highlight.endPosition)}
+          {content.substring(highlight.startPosition, highlight.endPosition)}
         </mark>
       );
       
       currentPosition = highlight.endPosition;
     }
     
-    if (currentPosition < text.length) {
+    if (currentPosition < content.length) {
       segments.push(
         <React.Fragment key="text-end">
-          {text.substring(currentPosition)}
+          {content.substring(currentPosition)}
         </React.Fragment>
       );
     }

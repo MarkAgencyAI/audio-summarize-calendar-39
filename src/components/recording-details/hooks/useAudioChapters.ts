@@ -1,9 +1,41 @@
+
 import { useState, useEffect, RefObject } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
 import { AudioChapter, Recording } from "@/context/RecordingsContext";
 import { AudioPlayerHandle, chapterColors } from "../types";
 import { supabase } from "@/integrations/supabase/client";
+
+// Type for database response with snake_case
+interface AudioChapterDB {
+  id: string;
+  title: string;
+  start_time: number;
+  end_time?: number;
+  color: string;
+  recording_id: string;
+  created_at?: string;
+}
+
+// Convert from DB format (snake_case) to app format (camelCase)
+const mapDBToAudioChapter = (chapter: AudioChapterDB): AudioChapter => ({
+  id: chapter.id,
+  title: chapter.title,
+  startTime: chapter.start_time,
+  endTime: chapter.end_time,
+  color: chapter.color,
+  recording_id: chapter.recording_id
+});
+
+// Convert from app format (camelCase) to DB format (snake_case)
+const mapAudioChapterToDB = (chapter: AudioChapter): AudioChapterDB => ({
+  id: chapter.id,
+  title: chapter.title,
+  start_time: chapter.startTime,
+  end_time: chapter.endTime,
+  color: chapter.color,
+  recording_id: chapter.recording_id
+});
 
 export function useAudioChapters(
   recording: Recording,
@@ -41,8 +73,10 @@ export function useAudioChapters(
         }
         
         if (data) {
-          setChapters(data);
-          console.log("Loaded chapters from database:", data);
+          // Convert from DB snake_case to app camelCase
+          const mappedChapters = data.map(mapDBToAudioChapter);
+          setChapters(mappedChapters);
+          console.log("Loaded chapters from database:", mappedChapters);
         }
       } catch (error) {
         console.error('Error loading chapters:', error);
@@ -61,8 +95,8 @@ export function useAudioChapters(
     setCurrentChapter({
       id: uuidv4(),
       title: `Capítulo ${chapters.length + 1}`,
-      start_time: startTime,
-      end_time: endTime,
+      startTime: startTime,
+      endTime: endTime,
       color: chapterColors[chapters.length % chapterColors.length],
       recording_id: recording.id
     });
@@ -107,14 +141,17 @@ export function useAudioChapters(
       if (chapters.some(ch => ch.id === currentChapter.id)) {
         // Editing existing chapter
         try {
+          // Convert to DB format for update
+          const dbChapter = {
+            title: newChapterTitle,
+            color: newChapterColor,
+            start_time: currentChapter.startTime,
+            end_time: currentChapter.endTime
+          };
+          
           const { error } = await supabase
             .from('audio_chapters')
-            .update({
-              title: newChapterTitle,
-              color: newChapterColor,
-              start_time: currentChapter.start_time,
-              end_time: currentChapter.end_time
-            })
+            .update(dbChapter)
             .eq('id', currentChapter.id);
           
           if (error) throw error;
@@ -125,8 +162,8 @@ export function useAudioChapters(
                   ...chapter, 
                   title: newChapterTitle, 
                   color: newChapterColor,
-                  start_time: currentChapter.start_time,
-                  end_time: currentChapter.end_time
+                  startTime: currentChapter.startTime,
+                  endTime: currentChapter.endTime
                 }
               : chapter
           );
@@ -144,9 +181,12 @@ export function useAudioChapters(
         };
         
         try {
+          // Convert to DB format for insert
+          const dbChapter = mapAudioChapterToDB(newChapter);
+          
           const { error } = await supabase
             .from('audio_chapters')
-            .insert(newChapter);
+            .insert(dbChapter);
           
           if (error) throw error;
           
@@ -162,15 +202,18 @@ export function useAudioChapters(
       const newChapter: AudioChapter = {
         id: uuidv4(),
         title: newChapterTitle,
-        start_time: 0,
+        startTime: 0,
         color: newChapterColor,
         recording_id: recording.id
       };
       
       try {
+        // Convert to DB format for insert
+        const dbChapter = mapAudioChapterToDB(newChapter);
+        
         const { error } = await supabase
           .from('audio_chapters')
-          .insert(newChapter);
+          .insert(dbChapter);
         
         if (error) throw error;
         
@@ -186,7 +229,7 @@ export function useAudioChapters(
           updatedChapters = [...chapters];
           updatedChapters[chapters.length - 1] = {
             ...lastChapter,
-            end_time: 0
+            endTime: 0
           };
           updatedChapters.push(newChapter);
         } else {
@@ -200,7 +243,7 @@ export function useAudioChapters(
     }
     
     // Sort chapters by start time
-    updatedChapters.sort((a, b) => a.start_time - b.start_time);
+    updatedChapters.sort((a, b) => a.startTime - b.startTime);
     setChapters(updatedChapters);
     setShowChapterDialog(false);
     
@@ -212,7 +255,7 @@ export function useAudioChapters(
   const handleChapterClick = (chapter: AudioChapter) => {
     if (audioPlayerRef.current) {
       // Seek to the start of the chapter
-      audioPlayerRef.current.seek(chapter.start_time);
+      audioPlayerRef.current.seek(chapter.startTime);
       setActiveChapterId(chapter.id);
       
       // Start playback

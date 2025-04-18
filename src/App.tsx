@@ -11,6 +11,7 @@ import CalendarPage from "./pages/CalendarPage";
 import WeeklySchedulePage from "./pages/WeeklySchedulePage";
 import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
+import RecordingDetailsPage from "./pages/RecordingDetailsPage";
 
 const router = createBrowserRouter([
   {
@@ -40,6 +41,10 @@ const router = createBrowserRouter([
   {
     path: "/profile",
     element: <ProfilePage />
+  },
+  {
+    path: "/recordings/:recordingId",
+    element: <RecordingDetailsPage />
   },
   {
     path: "*",
