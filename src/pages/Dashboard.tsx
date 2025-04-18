@@ -23,6 +23,7 @@ import { AudioRecorderV2 } from "@/components/AudioRecorderV2";
 import { UpcomingEvents } from "@/components/UpcomingEvents";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { ArrowUpDown } from "lucide-react";
+
 function Transcriptions() {
   const {
     recordings,
@@ -72,9 +73,15 @@ function Transcriptions() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="sm:flex-row items-start sm:items-center gap-3 mb-3">
-          <div className="flex items-center flex-1 w-full">
-            <Search className="h-4 w-4 text-muted-foreground mr-2" />
-            <Input type="search" placeholder="Buscar transcripciones..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+          <div className="flex-1 w-full relative">
+            <Input 
+              type="search" 
+              placeholder="Buscar transcripciones..." 
+              value={searchQuery} 
+              onChange={e => setSearchQuery(e.target.value)} 
+              className="pl-9 w-full"
+            />
+            <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none" />
           </div>
           
           <div className="flex items-center gap-2 mt-3">
@@ -158,6 +165,7 @@ function Transcriptions() {
       </CardContent>
     </Card>;
 }
+
 function AudioTranscriptionTool() {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -205,6 +213,7 @@ function AudioTranscriptionTool() {
       <LiveTranscriptionSheet isTranscribing={isTranscribing} output={transcriptionOutput} progress={transcriptionProgress} open={transcriptionOpen} onOpenChange={setTranscriptionOpen} />
     </div>;
 }
+
 export default function Dashboard() {
   const {
     user
