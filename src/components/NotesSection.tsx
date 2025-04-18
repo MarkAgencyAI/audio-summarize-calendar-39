@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -86,7 +85,7 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
         });
       }
       
-      const result = await addNote({
+      await addNote({
         title: noteTitle,
         content: noteContent,
         folderId: selectedFolderId,
@@ -94,11 +93,9 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
         updatedAt: new Date().toISOString()
       });
       
-      if (result) {
-        resetForm();
-        setShowNoteDialog(false);
-        toast.success("Apunte creado correctamente");
-      }
+      resetForm();
+      setShowNoteDialog(false);
+      toast.success("Apunte creado correctamente");
     } catch (error) {
       console.error("Error al crear el apunte:", error);
       toast.error("Error al crear el apunte");
