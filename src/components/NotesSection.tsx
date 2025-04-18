@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { FileText, Plus, BookOpen, PenLine, Image, Upload, Loader } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { FileText, Plus, BookOpen, PenLine, Image, Upload, Loader, Filter } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
 import { NoteItem } from "@/components/NoteItem";
 import { toast } from "sonner";
@@ -33,6 +34,7 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
   const [noteImagePreview, setNoteImagePreview] = useState<string | null>(null);
   const [editingNote, setEditingNote] = useState<any>(null);
   const [selectedFolderId, setSelectedFolderId] = useState(folderId || "");
+  const [filterByFolderId, setFilterByFolderId] = useState<string>("all");
   const [isSaving, setIsSaving] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -184,7 +186,9 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
   };
   
   const renderNotes = () => {
-    const folderNotes = getFolderNotes(selectedFolderId);
+    let folderNotes = filterByFolderId === "all" 
+      ? folders.flatMap(folder => getFolderNotes(folder.id))
+      : getFolderNotes(filterByFolderId);
     
     if (isLoading) {
       return (
@@ -200,7 +204,9 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
           <BookOpen className="h-12 w-12 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
           <h4 className="text-lg font-medium mb-2 text-slate-700 dark:text-slate-300">No hay apuntes todavía</h4>
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-            Crea tu primer apunte para esta grabación
+            {filterByFolderId === "all" 
+              ? "No hay apuntes en ninguna carpeta"
+              : "No hay apuntes en esta carpeta"}
           </p>
           <Button onClick={() => setShowNoteDialog(true)} variant="default">
             <PenLine className="h-4 w-4 mr-2" />
@@ -239,10 +245,33 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
           </div>
           <h2 className="text-lg font-medium text-slate-800 dark:text-slate-200">{sectionTitle}</h2>
         </div>
-        <Button onClick={() => setShowNoteDialog(true)} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Nuevo apunte
-        </Button>
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Filter className="h-4 w-4 mr-2" />
+                Filtrar por carpeta
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={() => setFilterByFolderId("all")}>
+                Todas las carpetas
+              </DropdownMenuItem>
+              {folders.map((folder) => (
+                <DropdownMenuItem 
+                  key={folder.id} 
+                  onClick={() => setFilterByFolderId(folder.id)}
+                >
+                  {folder.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button onClick={() => setShowNoteDialog(true)} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Nuevo apunte
+          </Button>
+        </div>
       </div>
       
       {renderNotes()}
