@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -24,7 +25,7 @@ export default function RecordingDetailsPage() {
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [refreshAttempt, setRefreshAttempt] = useState(0);
-  const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [loadingTimeout, setLoadingTimeout] = useState<number | null>(null);
   const isMobile = useIsMobile();
   
   useEffect(() => {
