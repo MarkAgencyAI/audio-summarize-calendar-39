@@ -21,15 +21,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { AudioRecorderV2 } from "@/components/AudioRecorderV2";
 import { UpcomingEvents } from "@/components/UpcomingEvents";
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { ArrowUpDown } from "lucide-react";
-
 function Transcriptions() {
   const {
     recordings,
@@ -41,11 +34,9 @@ function Transcriptions() {
   const [understandingFilter, setUnderstandingFilter] = useState<"all" | "understood" | "not-understood">("all");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "alphabetical">("newest");
   const navigate = useNavigate();
-  
   useEffect(() => {
     refreshData();
   }, []);
-  
   const filteredRecordings = recordings.filter(recording => {
     const matchesSearch = (recording.name || "").toLowerCase().includes(searchQuery.toLowerCase());
     if (understandingFilter === "all") {
@@ -64,31 +55,23 @@ function Transcriptions() {
       return (a.name || "").localeCompare(b.name || "");
     }
   });
-  
   const handleAddToCalendar = (recording: any) => {
     console.log("Add to calendar:", recording);
     toast.info("Funcionalidad en desarrollo");
   };
-  
   return <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
           <FileText className="h-5 w-5 text-green-500" />
           Transcripciones
-          <Button 
-            size="sm" 
-            variant="ghost" 
-            className="ml-auto h-8 w-8 p-1" 
-            onClick={() => refreshData()}
-            title="Actualizar datos"
-          >
+          <Button size="sm" variant="ghost" className="ml-auto h-8 w-8 p-1" onClick={() => refreshData()} title="Actualizar datos">
             <span className="sr-only">Actualizar</span>
             <Loader className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-3">
+        <div className="sm:flex-row items-start sm:items-center gap-3 mb-3">
           <div className="flex items-center flex-1 w-full">
             <Search className="h-4 w-4 text-muted-foreground mr-2" />
             <Input type="search" placeholder="Buscar transcripciones..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
@@ -101,31 +84,24 @@ function Transcriptions() {
                   <ArrowUpDown className="h-4 w-4" />
                   <span className="hidden sm:inline">Ordenar</span>
                   <Badge className="ml-1 h-5 px-1 bg-primary/20 text-primary" variant="outline">
-                    {sortBy === "newest" ? "Más reciente" : 
-                     sortBy === "oldest" ? "Más antigua" : "Alfabético"}
+                    {sortBy === "newest" ? "Más reciente" : sortBy === "oldest" ? "Más antigua" : "Alfabético"}
                   </Badge>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuItem 
-                  className="flex items-center gap-2 cursor-pointer" 
-                  onClick={() => setSortBy("newest")}>
+                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer" onClick={() => setSortBy("newest")}>
                   <div className="w-4 h-4 flex items-center justify-center">
                     {sortBy === "newest" && <Check className="h-4 w-4" />}
                   </div>
                   <span>Más reciente</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="flex items-center gap-2 cursor-pointer" 
-                  onClick={() => setSortBy("oldest")}>
+                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer" onClick={() => setSortBy("oldest")}>
                   <div className="w-4 h-4 flex items-center justify-center">
                     {sortBy === "oldest" && <Check className="h-4 w-4" />}
                   </div>
                   <span>Más antigua</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="flex items-center gap-2 cursor-pointer" 
-                  onClick={() => setSortBy("alphabetical")}>
+                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer" onClick={() => setSortBy("alphabetical")}>
                   <div className="w-4 h-4 flex items-center justify-center">
                     {sortBy === "alphabetical" && <Check className="h-4 w-4" />}
                   </div>
@@ -139,35 +115,27 @@ function Transcriptions() {
                 <Button variant="outline" size="sm" className="h-9 gap-1 px-3">
                   <Filter className="h-4 w-4" />
                   <span className="hidden sm:inline">Filtrar</span>
-                  {understandingFilter !== "all" && (
-                    <Badge className="ml-1 h-5 px-1 bg-primary/20 text-primary" variant="outline">
+                  {understandingFilter !== "all" && <Badge className="ml-1 h-5 px-1 bg-primary/20 text-primary" variant="outline">
                       {understandingFilter === "understood" ? "Entendidas" : "No entendidas"}
-                    </Badge>
-                  )}
+                    </Badge>}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuItem 
-                  className="flex items-center gap-2 cursor-pointer" 
-                  onClick={() => setUnderstandingFilter("all")}>
+                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer" onClick={() => setUnderstandingFilter("all")}>
                   <div className="w-4 h-4 flex items-center justify-center">
                     {understandingFilter === "all" && <Check className="h-4 w-4" />}
                   </div>
                   <span>Todas</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  className="flex items-center gap-2 cursor-pointer" 
-                  onClick={() => setUnderstandingFilter("understood")}>
+                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer" onClick={() => setUnderstandingFilter("understood")}>
                   <div className="w-4 h-4 flex items-center justify-center text-green-600">
                     {understandingFilter === "understood" ? <Check className="h-4 w-4" /> : <Check className="h-4 w-4 opacity-0" />}
                   </div>
                   <span>Entendidas</span>
                   <Check className="h-3 w-3 ml-auto text-green-600" />
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="flex items-center gap-2 cursor-pointer" 
-                  onClick={() => setUnderstandingFilter("not-understood")}>
+                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer" onClick={() => setUnderstandingFilter("not-understood")}>
                   <div className="w-4 h-4 flex items-center justify-center text-amber-600">
                     {understandingFilter === "not-understood" ? <Check className="h-4 w-4" /> : <Check className="h-4 w-4 opacity-0" />}
                   </div>
@@ -179,29 +147,23 @@ function Transcriptions() {
           </div>
         </div>
         
-        {isLoading ? (
-          <div className="flex justify-center py-8">
+        {isLoading ? <div className="flex justify-center py-8">
             <Loader className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : (
-          <div className="divide-y divide-border">
+          </div> : <div className="divide-y divide-border">
             {filteredRecordings.map(recording => <RecordingItem key={recording.id} recording={recording} onAddToCalendar={handleAddToCalendar} />)}
             {filteredRecordings.length === 0 && <div className="text-center text-muted-foreground py-4">
                 <p>No se encontraron transcripciones</p>
               </div>}
-          </div>
-        )}
+          </div>}
       </CardContent>
     </Card>;
 }
-
 function AudioTranscriptionTool() {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcriptionOutput, setTranscriptionOutput] = useState("");
   const [transcriptionProgress, setTranscriptionProgress] = useState(0);
   const [transcriptionOpen, setTranscriptionOpen] = useState(false);
-  
   useEffect(() => {
     const handleAudioRecorderMessage = (event: Event) => {
       const customEvent = event as CustomEvent;
@@ -233,7 +195,6 @@ function AudioTranscriptionTool() {
       window.removeEventListener('audioRecorderMessage', handleAudioRecorderMessage);
     };
   }, []);
-  
   return <div className="space-y-4">
       <AudioRecorderV2 />
       
@@ -244,7 +205,6 @@ function AudioTranscriptionTool() {
       <LiveTranscriptionSheet isTranscribing={isTranscribing} output={transcriptionOutput} progress={transcriptionProgress} open={transcriptionOpen} onOpenChange={setTranscriptionOpen} />
     </div>;
 }
-
 export default function Dashboard() {
   const {
     user
@@ -259,18 +219,15 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("transcriptions");
-  
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcriptionOutput, setTranscriptionOutput] = useState("");
   const [transcriptionProgress, setTranscriptionProgress] = useState(0);
   const [transcriptionOpen, setTranscriptionOpen] = useState(false);
-  
   const handleAddToCalendar = (recording: any) => {
     console.log("Add to calendar:", recording);
     toast.info("Funcionalidad en desarrollo");
   };
-  
   useEffect(() => {
     const handleWebhookResponse = (event: Event) => {
       const customEvent = event as CustomEvent;
@@ -285,7 +242,6 @@ export default function Dashboard() {
       window.removeEventListener('webhookResponse', handleWebhookResponse);
     };
   }, []);
-  
   useEffect(() => {
     const handleAudioRecorderMessage = (event: Event) => {
       const customEvent = event as CustomEvent;
@@ -317,14 +273,12 @@ export default function Dashboard() {
       window.removeEventListener('audioRecorderMessage', handleAudioRecorderMessage);
     };
   }, []);
-  
   useEffect(() => {
     console.log("Dashboard montado - actualizando datos");
     refreshData().catch(error => {
       console.error("Error al actualizar datos:", error);
     });
   }, []);
-  
   return <Layout>
       <div className="space-y-6 max-w-full">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -337,12 +291,7 @@ export default function Dashboard() {
             </p>
           </div>
           
-          <Button 
-            variant="outline" 
-            onClick={() => refreshData()}
-            className="flex items-center gap-2"
-            disabled={isLoading}
-          >
+          <Button variant="outline" onClick={() => refreshData()} className="flex items-center gap-2" disabled={isLoading}>
             <Loader className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             <span>{isLoading ? 'Actualizando...' : 'Actualizar datos'}</span>
           </Button>
@@ -351,14 +300,7 @@ export default function Dashboard() {
         {isMobile && <div className="grid grid-cols-1 gap-4">
             <UpcomingEvents />
             
-            <ToolsCarousel 
-              showTranscriptionOptions={isTranscribing || !!transcriptionOutput}
-              isTranscribing={isTranscribing}
-              transcriptionOutput={transcriptionOutput}
-              transcriptionOpen={transcriptionOpen}
-              setTranscriptionOpen={setTranscriptionOpen}
-              transcriptionProgress={transcriptionProgress}
-            />
+            <ToolsCarousel showTranscriptionOptions={isTranscribing || !!transcriptionOutput} isTranscribing={isTranscribing} transcriptionOutput={transcriptionOutput} transcriptionOpen={transcriptionOpen} setTranscriptionOpen={setTranscriptionOpen} transcriptionProgress={transcriptionProgress} />
             
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-2">
@@ -382,14 +324,7 @@ export default function Dashboard() {
 
         {!isMobile && <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
             <div className="md:col-span-4 space-y-6">
-              <ToolsCarousel 
-                showTranscriptionOptions={isTranscribing || !!transcriptionOutput}
-                isTranscribing={isTranscribing}
-                transcriptionOutput={transcriptionOutput}
-                transcriptionOpen={transcriptionOpen}
-                setTranscriptionOpen={setTranscriptionOpen}
-                transcriptionProgress={transcriptionProgress}
-              />
+              <ToolsCarousel showTranscriptionOptions={isTranscribing || !!transcriptionOutput} isTranscribing={isTranscribing} transcriptionOutput={transcriptionOutput} transcriptionOpen={transcriptionOpen} setTranscriptionOpen={setTranscriptionOpen} transcriptionProgress={transcriptionProgress} />
               <UpcomingEvents />
               <NotesSection />
             </div>
