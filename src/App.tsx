@@ -9,6 +9,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import CalendarPage from "./pages/CalendarPage";
 import WeeklySchedulePage from "./pages/WeeklySchedulePage";
+import ProfilePage from "./pages/ProfilePage";
+import NotFound from "./pages/NotFound";
 
 const router = createBrowserRouter([
   {
@@ -35,6 +37,14 @@ const router = createBrowserRouter([
     path: "/weekly-schedule",
     element: <WeeklySchedulePage />
   },
+  {
+    path: "/profile",
+    element: <ProfilePage />
+  },
+  {
+    path: "*",
+    element: <NotFound />
+  }
 ]);
 
 function App() {
