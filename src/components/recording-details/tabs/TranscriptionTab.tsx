@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { TranscriptionTabProps } from "../types";
 import { FileText, Search, Copy, Highlighter, Settings2, X } from "lucide-react";
@@ -53,7 +52,8 @@ export function TranscriptionTab({
   } = useHighlighting({
     highlights: data.highlights || [],
     onSaveHighlight: handleSaveHighlight,
-    onRemoveHighlight: handleRemoveHighlight
+    onRemoveHighlight: handleRemoveHighlight,
+    recordingId: data.recording.id
   });
   
   // Function to render transcription content
@@ -208,7 +208,51 @@ export function TranscriptionTab({
           onMouseUp={handleTextSelection}
           className="text-sm leading-relaxed text-slate-700 dark:text-slate-300"
         >
-          {renderTranscriptionContent()}
+          {(() => {
+            const transcription = data.recording.output || "";
+            
+            // If no transcription available
+            if (!transcription || transcription.trim() === "") {
+              return (
+                <div className="text-center p-6">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <FileText className="h-8 w-8 text-blue-500 dark:text-blue-400" />
+                  </div>
+                  <h4 className="text-lg font-medium text-slate-800 dark:text-slate-200 mb-2">No hay transcripción</h4>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+                    La transcripción se generará automáticamente cuando proceses audio.
+                  </p>
+                </div>
+              );
+            }
+            
+            // If active search, highlight results
+            if (searchTerm.trim()) {
+              const regex = new RegExp(`(${searchTerm})`, 'gi');
+              const parts = transcription.split(regex);
+              
+              return (
+                <div className="whitespace-pre-wrap" style={{ fontSize: `${fontSize}px` }}>
+                  {parts.map((part, i) => 
+                    part.toLowerCase() === searchTerm.toLowerCase() ? (
+                      <mark key={i} className="bg-yellow-200 dark:bg-yellow-900/50 px-0.5 rounded">
+                        {part}
+                      </mark>
+                    ) : (
+                      <React.Fragment key={i}>{part}</React.Fragment>
+                    )
+                  )}
+                </div>
+              );
+            }
+            
+            // Render with highlights
+            return (
+              <div style={{ fontSize: `${fontSize}px` }}>
+                {renderHighlightedText(transcription)}
+              </div>
+            );
+          })()}
         </div>
       </div>
       
@@ -235,4 +279,5 @@ interface TextHighlight {
   color: string;
   startPosition: number;
   endPosition: number;
+  recording_id: string;
 }

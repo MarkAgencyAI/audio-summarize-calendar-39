@@ -1,4 +1,3 @@
-
 import { useState, useRef, useCallback } from "react";
 import { TextHighlight } from "@/context/RecordingsContext";
 import { toast } from "sonner";
@@ -9,12 +8,14 @@ interface UseHighlightingProps {
   highlights: TextHighlight[];
   onSaveHighlight: (highlight: Omit<TextHighlight, "id">) => void;
   onRemoveHighlight: (highlightId: string) => void;
+  recordingId: string;
 }
 
 export function useHighlighting({
   highlights,
   onSaveHighlight,
-  onRemoveHighlight
+  onRemoveHighlight,
+  recordingId
 }: UseHighlightingProps) {
   const [selectedText, setSelectedText] = useState("");
   const [selectionRange, setSelectionRange] = useState<{ start: number; end: number } | null>(null);
@@ -22,7 +23,6 @@ export function useHighlighting({
   const [isHighlightMenuOpen, setIsHighlightMenuOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   
-  // Function to handle text selection
   const handleTextSelection = useCallback(() => {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0 || selection.toString().trim() === "") {
@@ -39,14 +39,12 @@ export function useHighlighting({
       return;
     }
     
-    // Calculate position to show the menu
     const rect = range.getBoundingClientRect();
     setHighlightMenuPosition({
       x: rect.left + rect.width / 2,
       y: rect.top
     });
     
-    // Calculate start and end position in the full text
     const textContent = contentRef.current.textContent || "";
     const preSelectionRange = document.createRange();
     preSelectionRange.selectNodeContents(contentRef.current);
@@ -61,45 +59,40 @@ export function useHighlighting({
     setIsHighlightMenuOpen(true);
   }, []);
   
-  // Close the highlight menu
   const closeHighlightMenu = useCallback(() => {
     setIsHighlightMenuOpen(false);
     setSelectedText("");
     setSelectionRange(null);
   }, []);
   
-  // Apply a new highlight
   const applyHighlight = useCallback((color: string) => {
     if (!selectionRange || !selectedText) {
       return;
     }
     
-    // Check if a highlight already exists in this range
     const existingHighlight = highlights.find(h => 
       (selectionRange.start >= h.startPosition && selectionRange.start <= h.endPosition) ||
       (selectionRange.end >= h.startPosition && selectionRange.end <= h.endPosition) ||
       (selectionRange.start <= h.startPosition && selectionRange.end >= h.endPosition)
     );
     
-    // If it exists, remove the previous highlight
     if (existingHighlight) {
       onRemoveHighlight(existingHighlight.id);
     }
     
-    // Create and save the new highlight
     onSaveHighlight({
       text: selectedText,
       color,
       startPosition: selectionRange.start,
-      endPosition: selectionRange.end
+      endPosition: selectionRange.end,
+      recording_id: recordingId
     });
     
     closeHighlightMenu();
     window.getSelection()?.removeAllRanges();
     toast.success("Texto resaltado");
-  }, [selectionRange, selectedText, highlights, onRemoveHighlight, onSaveHighlight, closeHighlightMenu]);
+  }, [selectionRange, selectedText, highlights, onRemoveHighlight, onSaveHighlight, closeHighlightMenu, recordingId]);
   
-  // Copy the selected text
   const copySelectedText = useCallback(() => {
     if (selectedText) {
       navigator.clipboard.writeText(selectedText);
@@ -108,13 +101,11 @@ export function useHighlighting({
     }
   }, [selectedText, closeHighlightMenu]);
   
-  // Remove an existing highlight
   const removeHighlightAtSelection = useCallback(() => {
     if (!selectionRange) {
       return;
     }
     
-    // Find all highlights that overlap with the current selection
     const overlappingHighlights = highlights.filter(h => 
       (selectionRange.start >= h.startPosition && selectionRange.start <= h.endPosition) ||
       (selectionRange.end >= h.startPosition && selectionRange.end <= h.endPosition) ||
@@ -122,7 +113,6 @@ export function useHighlighting({
     );
     
     if (overlappingHighlights.length > 0) {
-      // Remove all overlapping highlights
       overlappingHighlights.forEach(h => {
         onRemoveHighlight(h.id);
       });
@@ -134,7 +124,6 @@ export function useHighlighting({
     window.getSelection()?.removeAllRanges();
   }, [selectionRange, highlights, onRemoveHighlight, closeHighlightMenu]);
   
-  // Render text with highlights
   const renderHighlightedText = useCallback((text: string) => {
     if (!text) {
       return null;
@@ -144,10 +133,8 @@ export function useHighlighting({
       return <p className="whitespace-pre-wrap">{text}</p>;
     }
     
-    // Sort highlights by position
     const sortedHighlights = [...highlights].sort((a, b) => a.startPosition - b.startPosition);
     
-    // Check and resolve overlaps
     const nonOverlappingHighlights: TextHighlight[] = [];
     for (const highlight of sortedHighlights) {
       const overlaps = nonOverlappingHighlights.some(h => 
@@ -159,7 +146,6 @@ export function useHighlighting({
       }
     }
     
-    // Build text with highlights
     const segments: React.ReactNode[] = [];
     let lastIndex = 0;
     
