@@ -6,7 +6,7 @@ import { MobileCalendar } from "@/components/MobileCalendar";
 import { useAuth } from "@/context/AuthContext";
 import { format, addHours } from "date-fns";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -366,7 +366,7 @@ export default function CalendarPage() {
             onClick={() => navigate("/weekly-schedule")}
             className="flex items-center gap-1"
           >
-            <Calendar className="h-4 w-4" />
+            <CalendarIcon className="h-4 w-4" />
             <span className="hidden sm:inline">Cronograma Semanal</span>
             <span className="sm:hidden">Cronograma</span>
           </Button>
