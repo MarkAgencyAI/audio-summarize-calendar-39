@@ -1,21 +1,17 @@
 
 import React, { useState, useEffect } from "react";
-import { format, addDays, startOfWeek, parseISO, isValid } from "date-fns";
+import { format, addDays, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { v4 as uuidv4 } from "uuid";
 import { Button } from "@/components/ui/button";
 import { WeeklyEventDialog } from "./WeeklyEventDialog";
 import { CalendarEvent } from "@/components/Calendar";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, Save, X, PlusCircle, Calendar as CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, X, PlusCircle } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
 import { toast } from "sonner";
 import { loadFromStorage, saveToStorage } from "@/lib/storage";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MobileTimeSlot } from "./MobileTimeSlot";
-import { DesktopTimeSlot } from "./DesktopTimeSlot";
-import { DailyView } from "./DailyView";
 
 export interface WeeklyEventWithTemp extends Omit<CalendarEvent, "id"> {
   tempId: string;
@@ -37,95 +33,50 @@ export function WeeklyScheduleGrid({
   existingEvents
 }: WeeklyScheduleGridProps) {
   const { folders } = useRecordings();
-  const isMobile = useIsMobile();
-  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const [selectedHour, setSelectedHour] = useState<number | null>(null);
   const [events, setEvents] = useState<WeeklyEventWithTemp[]>([]);
-  const [weekStart, setWeekStart] = useState<Date>(startOfWeek(date, { weekStartsOn: 1 }));
   const [showDialog, setShowDialog] = useState(false);
-  const [viewMode, setViewMode] = useState<'week' | 'day'>('week');
-  const [dayIndex, setDayIndex] = useState<number>(0);
-
-  // Generate week days from weekStart (Monday to Sunday)
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const [selectedDay, setSelectedDay] = useState<string>("lunes");
+  const [selectedHour, setSelectedHour] = useState<number | null>(null);
   
-  // Generate hours from 7am to 8pm
-  const hours = Array.from({ length: 14 }, (_, i) => i + 7);
+  // Generate hours from 7am to 9pm
+  const hours = Array.from({ length: 15 }, (_, i) => i + 7);
+  
+  const days = [
+    { value: "lunes", label: "Lunes" },
+    { value: "martes", label: "Martes" },
+    { value: "miércoles", label: "Miércoles" },
+    { value: "jueves", label: "Jueves" },
+    { value: "viernes", label: "Viernes" },
+    { value: "sábado", label: "Sábado" },
+    { value: "domingo", label: "Domingo" }
+  ];
 
   useEffect(() => {
     const savedEvents = loadFromStorage<WeeklyEventWithTemp[]>("weeklyScheduleEvents");
-    
     if (savedEvents && savedEvents.length > 0) {
       setEvents(savedEvents);
-    } else {
-      const existingWeeklyEvents: WeeklyEventWithTemp[] = existingEvents
-        .filter(event => {
-          try {
-            const eventDate = parseISO(event.date);
-            const eventHour = eventDate.getHours();
-            
-            return isValid(eventDate) && 
-                   eventHour >= 7 && 
-                   eventHour <= 20 && 
-                   event.repeat?.frequency === "weekly";
-          } catch (e) {
-            return false;
-          }
-        })
-        .map(event => ({
-          ...event,
-          tempId: uuidv4()
-        }));
-
-      setEvents(existingWeeklyEvents);
     }
-  }, [existingEvents]);
+  }, []);
 
-  useEffect(() => {
-    if (events.length > 0) {
-      saveToStorage("weeklyScheduleEvents", events);
-    }
-  }, [events]);
-
-  const handlePrevWeek = () => {
-    setWeekStart(prev => addDays(prev, -7));
-  };
-
-  const handleNextWeek = () => {
-    setWeekStart(prev => addDays(prev, 7));
-  };
-
-  const handleAddEvent = (day: Date, hour: number) => {
-    setSelectedDay(day);
+  const handleAddEvent = (hour: number) => {
     setSelectedHour(hour);
-    
-    const eventDate = new Date(day);
-    eventDate.setHours(hour, 0, 0, 0);
-    
-    const endDate = new Date(eventDate);
-    endDate.setHours(hour + 1, 0, 0, 0);
     
     const formattedStartTime = `${hour.toString().padStart(2, '0')}:00`;
     const formattedEndTime = `${(hour + 1).toString().padStart(2, '0')}:00`;
     
-    setNewEvent({
+    const newEvent = {
       title: "",
       description: "",
       date: formattedStartTime,
       endDate: formattedEndTime,
-      day: format(day, "EEEE", { locale: es }).toLowerCase(),
+      day: selectedDay,
       type: "class",
       folderId: "",
       tempId: uuidv4()
-    });
+    };
     
+    setNewEvent(newEvent);
     setShowDialog(true);
-  };
-
-  const handleDeleteEvent = (tempId: string) => {
-    setEvents(prev => prev.filter(event => event.tempId !== tempId));
-    saveToStorage("weeklyScheduleEvents", events.filter(event => event.tempId !== tempId));
-    toast.success("Evento eliminado del cronograma");
   };
 
   const [newEvent, setNewEvent] = useState<WeeklyEventWithTemp & { day: string }>({
@@ -133,51 +84,33 @@ export function WeeklyScheduleGrid({
     description: "",
     date: "",
     endDate: "",
-    day: "",
+    day: selectedDay,
     type: "class",
     folderId: "",
     tempId: uuidv4()
   });
 
   const handleSaveEvent = (event: WeeklyEventWithTemp & { day: string }) => {
-    const { day, ...eventWithoutDay } = event;
-    
-    const dayDate = weekDays.find(d => 
-      format(d, "EEEE", { locale: es }).toLowerCase() === day
-    );
-    
-    if (!dayDate) return;
-    
-    const [hours, minutes] = event.date.split(":").map(Number);
-    const [endHours, endMinutes] = event.endDate.split(":").map(Number);
-    
-    const startDate = new Date(dayDate);
-    startDate.setHours(hours, minutes, 0, 0);
-    
-    const endDate = new Date(dayDate);
-    endDate.setHours(endHours, endMinutes, 0, 0);
-    
-    const newEventWithDates: WeeklyEventWithTemp = {
-      ...eventWithoutDay,
-      date: format(startDate, "yyyy-MM-dd'T'HH:mm"),
-      endDate: format(endDate, "yyyy-MM-dd'T'HH:mm"),
+    const updatedEvents = [...events, {
+      ...event,
+      tempId: uuidv4(),
       repeat: {
         frequency: "weekly",
         interval: 1
       }
-    };
+    }];
     
-    const updatedEvents = [...events, newEventWithDates];
     setEvents(updatedEvents);
     saveToStorage("weeklyScheduleEvents", updatedEvents);
     setShowDialog(false);
     toast.success("Evento agregado al cronograma");
   };
 
-  const handleAddEventFromDailyView = (newEvent: WeeklyEventWithTemp) => {
-    const updatedEvents = [...events, newEvent];
+  const handleDeleteEvent = (tempId: string) => {
+    const updatedEvents = events.filter(event => event.tempId !== tempId);
     setEvents(updatedEvents);
     saveToStorage("weeklyScheduleEvents", updatedEvents);
+    toast.success("Evento eliminado del cronograma");
   };
 
   const handleSaveSchedule = () => {
@@ -186,144 +119,122 @@ export function WeeklyScheduleGrid({
       return;
     }
     
-    onSave(events);
-    toast.success("Cronograma guardado correctamente");
+    const calendarEvents = events.map(({ tempId, ...event }) => ({
+      ...event,
+      type: event.type || "class"
+    }));
+    
+    onSave(calendarEvents);
   };
 
-  const getFolderName = (folderId: string): string => {
+  const getFolderName = (folderId: string) => {
     const folder = folders.find(f => f.id === folderId);
     return folder ? folder.name : "Sin materia";
   };
 
-  const getEventForTimeSlot = (day: Date, hour: number) => {
-    const dayName = format(day, "EEEE", { locale: es }).toLowerCase();
-    
-    return events.find(event => {
-      try {
-        const eventDate = parseISO(event.date);
-        if (!isValid(eventDate)) return false;
-        
-        const eventHour = eventDate.getHours();
-        const eventDay = format(eventDate, "EEEE", { locale: es }).toLowerCase();
-        
-        return eventDay === dayName && eventHour === hour;
-      } catch (e) {
-        return false;
-      }
-    });
+  const getEventsForDay = (day: string) => {
+    return events.filter(event => event.day === day);
   };
-
-  const handleSwitchToDayView = (dayIndex: number) => {
-    setDayIndex(dayIndex);
-    setViewMode('day');
-  };
-
-  const handleBackToWeekView = () => {
-    setViewMode('week');
-  };
-
-  if (viewMode === 'day') {
-    return (
-      <DailyView 
-        initialDate={weekStart}
-        events={events}
-        onAddEvent={handleAddEventFromDailyView}
-        onDeleteEvent={handleDeleteEvent}
-        folders={folders}
-        onBack={handleBackToWeekView}
-      />
-    );
-  }
 
   return (
     <div className="space-y-4 w-full max-w-[100vw] px-2">
-      <Card className="overflow-hidden border border-border w-full">
-        <CardHeader className="p-2">
+      <Card className="overflow-hidden border border-border w-full max-w-4xl mx-auto">
+        <CardHeader className="p-3">
           <div className="flex items-center justify-between">
-            <Button variant="outline" size="sm" onClick={handlePrevWeek} className="h-7 w-7 p-0">
-              <ChevronLeft className="h-4 w-4" />
+            <Button variant="outline" size="sm" onClick={onCancel}>
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Volver
             </Button>
-            <CardTitle className="text-sm font-medium">
-              Cronograma semanal
-            </CardTitle>
-            <Button variant="outline" size="sm" onClick={handleNextWeek} className="h-7 w-7 p-0">
-              <ChevronRight className="h-4 w-4" />
+            <div className="flex items-center gap-2">
+              <div className="flex overflow-x-auto py-2 px-1 -mx-1">
+                {days.map(day => (
+                  <Button
+                    key={day.value}
+                    variant={selectedDay === day.value ? "default" : "outline"}
+                    size="sm"
+                    className="mx-1 whitespace-nowrap"
+                    onClick={() => setSelectedDay(day.value)}
+                  >
+                    {day.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <Button onClick={handleSaveSchedule} size="sm">
+              <Save className="h-4 w-4 mr-2" />
+              Guardar
             </Button>
           </div>
         </CardHeader>
         
         <CardContent className="p-0">
-          <div className="flex flex-col">
-            <div className="grid grid-cols-[50px_repeat(7,1fr)] sticky top-0 z-10 bg-background border-b text-xs">
-              <div className="h-10 flex items-center justify-center text-center font-medium text-muted-foreground">
-                Hora
-              </div>
-              {weekDays.map((day, index) => (
-                <div 
-                  key={day.toString()} 
-                  className="h-10 flex flex-col items-center justify-center text-xs border-l border-border min-w-[40px] cursor-pointer hover:bg-accent/10"
-                  onClick={() => handleSwitchToDayView(index)}
-                >
-                  <span className="font-medium capitalize">
-                    {format(day, "E", { locale: es })}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {format(day, "d")}
-                  </span>
-                </div>
-              ))}
-            </div>
-            
-            <ScrollArea className="h-[calc(100vh-250px)]">
-              <div className="min-w-full">
-                {hours.map(hour => (
-                  <div key={hour} className="grid grid-cols-[50px_repeat(7,1fr)]">
-                    <div className="h-14 flex items-center justify-center text-xs text-muted-foreground border-b border-border">
+          <ScrollArea className="h-[calc(100vh-200px)]">
+            <div className="w-full">
+              {hours.map(hour => {
+                const events = getEventsForDay(selectedDay).filter(event => {
+                  const [eventHour] = event.date.split(":").map(Number);
+                  return eventHour === hour;
+                });
+
+                return (
+                  <div 
+                    key={hour}
+                    className="grid grid-cols-[80px_1fr] border-t border-border"
+                  >
+                    <div className="p-2 text-sm text-muted-foreground text-center">
                       {hour}:00
                     </div>
-                    {weekDays.map(day => (
-                      <MobileTimeSlot
-                        key={`${day.toString()}-${hour}`}
-                        event={getEventForTimeSlot(day, hour)}
-                        onClick={() => handleAddEvent(day, hour)}
-                        onDelete={handleDeleteEvent}
-                        getFolderName={getFolderName}
-                      />
-                    ))}
+                    <div 
+                      className="border-l border-border p-2 min-h-[64px] hover:bg-accent/10 transition-colors cursor-pointer relative"
+                      onClick={() => events.length === 0 && handleAddEvent(hour)}
+                    >
+                      {events.map(event => (
+                        <div
+                          key={event.tempId}
+                          className="absolute inset-1 rounded-sm p-2"
+                          style={{
+                            backgroundColor: `${event.type === "class" ? "#4CAF50" : "#2196F3"}15`,
+                            borderLeft: `3px solid ${event.type === "class" ? "#4CAF50" : "#2196F3"}`
+                          }}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium text-sm">{event.title}</p>
+                              {event.folderId && (
+                                <p className="text-xs opacity-80">{getFolderName(event.folderId)}</p>
+                              )}
+                              <p className="text-xs text-muted-foreground">
+                                {event.date} - {event.endDate}
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteEvent(event.tempId);
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      {events.length === 0 && (
+                        <div className="flex items-center justify-center h-full opacity-30 group-hover:opacity-100">
+                          <PlusCircle className="h-5 w-5" />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
         </CardContent>
-        
-        <CardFooter className="flex justify-between p-2 border-t">
-          <Button variant="outline" onClick={onCancel} size="sm" className="h-8">
-            <X className="h-4 w-4 mr-2" />
-            Cancelar
-          </Button>
-          <Button onClick={handleSaveSchedule} size="sm" className="h-8">
-            <Save className="h-4 w-4 mr-2" />
-            Guardar
-          </Button>
-        </CardFooter>
       </Card>
-      
-      <div className="fixed bottom-6 right-6">
-        <Button 
-          onClick={() => {
-            const now = new Date();
-            const currentHour = now.getHours();
-            const currentDay = weekDays.find(d => format(d, "EEEE", { locale: es }) === format(now, "EEEE", { locale: es })) || weekDays[0];
-            handleAddEvent(currentDay, currentHour >= 7 && currentHour <= 20 ? currentHour : 8);
-          }} 
-          size="icon" 
-          className="rounded-full h-12 w-12 shadow-lg"
-        >
-          <PlusCircle className="h-6 w-6" />
-        </Button>
-      </div>
-      
+
       <WeeklyEventDialog
         open={showDialog}
         onOpenChange={setShowDialog}
