@@ -184,7 +184,7 @@ export function WeeklyScheduleGrid({
   return <div className="space-y-4 w-full max-w-[100vw] px-2">
       <Card className="overflow-hidden border border-border w-full max-w-4xl mx-auto" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
         <CardHeader className="p-3">
-          <div className="flex-row items-center justify-between max-w-72 gap-2">
+          <div className="flex-col items-center justify-between max-w-72 gap-2">
             <Button variant="outline" size="sm" onClick={onCancel}>
               <ChevronLeft className="h-4 w-4 mr-1" />
               Volver
