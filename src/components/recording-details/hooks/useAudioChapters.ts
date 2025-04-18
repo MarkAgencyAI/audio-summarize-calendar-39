@@ -1,4 +1,3 @@
-
 import { useState, useEffect, RefObject } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
@@ -218,6 +217,7 @@ export function useAudioChapters(
       
     } catch (error) {
       console.error('Error saving chapter:', error);
+      const isEditing = currentChapter && chapters.some(ch => ch.id === currentChapter.id);
       const errorMessage = isEditing ? 'Error al actualizar el capítulo' : 'Error al crear el capítulo';
       toast.error(errorMessage);
     }
