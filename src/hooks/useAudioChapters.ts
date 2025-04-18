@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { AudioChapter } from '@/types/audio-chapter';
-import { defaultChapterColors } from '@/types/audio-chapter';
+import { AudioChapter, defaultChapterColors } from '@/types/audio-chapter';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
@@ -22,7 +21,17 @@ export function useAudioChapters(recordingId: string) {
 
         if (error) throw error;
 
-        setChapters(data || []);
+        // Map database fields to our interface fields
+        const mappedChapters: AudioChapter[] = (data || []).map(chapter => ({
+          id: chapter.id,
+          title: chapter.title,
+          startTime: chapter.start_time,
+          endTime: chapter.end_time || undefined,
+          color: chapter.color,
+          recording_id: chapter.recording_id
+        }));
+
+        setChapters(mappedChapters);
       } catch (error) {
         console.error('Error loading chapters:', error);
         toast.error('Error al cargar los capítulos');
@@ -47,9 +56,19 @@ export function useAudioChapters(recordingId: string) {
         recording_id: recordingId
       };
 
+      // Map our interface fields to database fields
+      const dbChapter = {
+        id: newChapter.id,
+        title: newChapter.title,
+        start_time: newChapter.startTime,
+        end_time: newChapter.endTime,
+        color: newChapter.color,
+        recording_id: newChapter.recording_id
+      };
+
       const { error } = await supabase
         .from('audio_chapters')
-        .insert(newChapter);
+        .insert(dbChapter);
 
       if (error) throw error;
 
@@ -66,9 +85,16 @@ export function useAudioChapters(recordingId: string) {
 
   const updateChapter = async (chapterId: string, updates: Partial<AudioChapter>) => {
     try {
+      // Map our interface fields to database fields
+      const dbUpdates: any = {};
+      if (updates.title !== undefined) dbUpdates.title = updates.title;
+      if (updates.startTime !== undefined) dbUpdates.start_time = updates.startTime;
+      if (updates.endTime !== undefined) dbUpdates.end_time = updates.endTime;
+      if (updates.color !== undefined) dbUpdates.color = updates.color;
+
       const { error } = await supabase
         .from('audio_chapters')
-        .update(updates)
+        .update(dbUpdates)
         .eq('id', chapterId);
 
       if (error) throw error;
