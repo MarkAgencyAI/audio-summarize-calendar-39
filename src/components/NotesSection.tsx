@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
     getFolderNotes, 
     updateNote, 
     deleteNote,
+    refreshData,
     isLoading
   } = useRecordings();
   
@@ -34,6 +35,13 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  useEffect(() => {
+    console.log("NotesSection montado - actualizando datos");
+    refreshData().catch(error => {
+      console.error("Error al actualizar datos:", error);
+    });
+  }, []);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
