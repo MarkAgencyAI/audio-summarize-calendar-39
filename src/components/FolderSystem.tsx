@@ -83,6 +83,11 @@ export function FolderSystem() {
     return IconComponent;
   };
 
+  const handleFolderClick = (folderId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/folder/${folderId}`);
+  };
+
   return <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold">Mis materias</h2>
@@ -100,7 +105,11 @@ export function FolderSystem() {
         }) : "";
         const FolderIcon = folder.icon ? getFolderIcon(folder.icon) : Folder;
         
-        return <div key={folder.id} onClick={() => navigate(`/folder/${folder.id}`)} className="group bg-card hover:bg-accent rounded-lg p-4 transition-colors cursor-pointer flex flex-col justify-between h-32 border-2">
+        return <div 
+              key={folder.id} 
+              onClick={(e) => handleFolderClick(folder.id, e)}
+              className="group bg-card hover:bg-accent rounded-lg p-4 transition-colors cursor-pointer flex flex-col justify-between h-32 border-2"
+            >
               <div className="flex justify-between items-start">
                 <div className="w-10 h-10 rounded-md flex items-center justify-center" style={{
               backgroundColor: folder.color

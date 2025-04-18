@@ -13,6 +13,7 @@ import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 import RecordingDetailsPage from "./pages/RecordingDetailsPage";
 import FoldersPage from "./pages/FoldersPage";
+import FolderDetailsPage from "./pages/FolderDetailsPage";
 
 const router = createBrowserRouter([
   {
@@ -46,6 +47,10 @@ const router = createBrowserRouter([
   {
     path: "/folders",
     element: <FoldersPage />
+  },
+  {
+    path: "/folder/:folderId",
+    element: <FolderDetailsPage />
   },
   {
     path: "/recordings/:recordingId",

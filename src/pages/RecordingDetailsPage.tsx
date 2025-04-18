@@ -24,7 +24,25 @@ export default function RecordingDetailsPage() {
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [refreshAttempt, setRefreshAttempt] = useState(0);
+  const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
   const isMobile = useIsMobile();
+  
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (isPageLoading) {
+        setIsPageLoading(false);
+        console.log("Forced loading to complete after timeout");
+      }
+    }, 5000);
+    
+    setLoadingTimeout(timeout);
+    
+    return () => {
+      if (loadingTimeout) {
+        clearTimeout(loadingTimeout);
+      }
+    };
+  }, [isPageLoading]);
   
   useEffect(() => {
     console.log("RecordingDetailsPage - actualizando datos para ID:", recordingId);
@@ -32,10 +50,12 @@ export default function RecordingDetailsPage() {
       try {
         await refreshData();
         console.log("Datos actualizados para página de detalles de grabación");
+        setIsPageLoading(false);
       } catch (error) {
         console.error("Error al actualizar datos:", error);
         toast.error("Error al cargar los datos más recientes");
         setRefreshAttempt(prev => prev + 1);
+        setIsPageLoading(false);
       }
     };
     
@@ -65,14 +85,10 @@ export default function RecordingDetailsPage() {
       }
       return;
     }
-    
-    setIsPageLoading(true);
-    
-    const loadingTimer = setTimeout(() => {
+
+    if (recording) {
       setIsPageLoading(false);
-    }, 800);
-    
-    return () => clearTimeout(loadingTimer);
+    }
   }, [recording, navigate, isLoading, refreshAttempt, refreshData]);
   
   const handleOpenChange = (open: boolean) => {
