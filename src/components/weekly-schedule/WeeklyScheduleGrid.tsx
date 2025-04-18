@@ -303,8 +303,8 @@ export function WeeklyScheduleGrid({
     });
   };
 
-  const getEventsForHourSlot = (hour: number, day: string) => {
-    return events.filter(event => {
+  const hasEventInTimeSlot = (hour: number, day: string) => {
+    return events.some(event => {
       const [startHour, startMinute] = event.date.split(':').map(Number);
       const [endHour, endMinute] = event.endDate.split(':').map(Number);
       
@@ -343,15 +343,17 @@ export function WeeklyScheduleGrid({
           <ScrollArea className="h-[calc(100vh-200px)]">
             <div className="w-full">
               {hours.map(hour => {
+                const hasEvent = hasEventInTimeSlot(hour, selectedDay);
                 const hourEvents = getEventsForHourSlot(hour, selectedDay);
+                
                 return (
                   <div key={hour} className="grid grid-cols-[80px_1fr] border-t border-border">
                     <div className="p-2 text-sm text-muted-foreground text-center">
                       {hour}:00
                     </div>
                     <div 
-                      className="border-l border-border p-2 min-h-[64px] hover:bg-accent/10 transition-colors cursor-pointer relative" 
-                      onClick={() => handleAddEvent(hour)}
+                      className="border-l border-border p-2 min-h-[64px] hover:bg-accent/10 transition-colors relative" 
+                      onClick={() => !hasEvent && handleAddEvent(hour)}
                     >
                       {hourEvents.map(event => {
                         const [eventHour] = event.date.split(':').map(Number);
@@ -393,8 +395,8 @@ export function WeeklyScheduleGrid({
                           </div>
                         );
                       })}
-                      {!hasEventStartingAtHour(hour, selectedDay) && (
-                        <div className="flex items-center justify-center h-full opacity-30 hover:opacity-60">
+                      {!hasEvent && (
+                        <div className="flex items-center justify-center h-full opacity-30 hover:opacity-60 cursor-pointer">
                           <PlusCircle className="h-5 w-5" />
                         </div>
                       )}
@@ -406,7 +408,14 @@ export function WeeklyScheduleGrid({
           </ScrollArea>
         </CardContent>
       </Card>
-      <WeeklyEventDialog open={showDialog} onOpenChange={setShowDialog} event={newEvent} onSave={handleSaveEvent} folders={folders} />
+      <WeeklyEventDialog 
+        open={showDialog} 
+        onOpenChange={setShowDialog} 
+        event={newEvent} 
+        onSave={handleSaveEvent} 
+        folders={folders} 
+        onCheckOverlap={(day, startTime, endTime) => hasOverlappingEvent(day, startTime, endTime)}
+      />
     </div>
   );
 }
