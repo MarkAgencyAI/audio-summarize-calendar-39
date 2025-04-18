@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -26,6 +25,7 @@ export default function RecordingDetailsPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [refreshAttempt, setRefreshAttempt] = useState(0);
   const [loadingTimeout, setLoadingTimeout] = useState<number | null>(null);
+  const [hasLoadedData, setHasLoadedData] = useState(false);
   const isMobile = useIsMobile();
   
   useEffect(() => {
@@ -45,17 +45,22 @@ export default function RecordingDetailsPage() {
     };
   }, [isPageLoading]);
   
+  // Single data fetch effect
   useEffect(() => {
-    console.log("RecordingDetailsPage - actualizando datos para ID:", recordingId);
+    if (!recordingId || hasLoadedData) return;
+
     const loadData = async () => {
       try {
+        console.log("Cargando datos una sola vez para grabación:", recordingId);
         await refreshData();
-        console.log("Datos actualizados para página de detalles de grabación");
+        setHasLoadedData(true);
         setIsPageLoading(false);
       } catch (error) {
-        console.error("Error al actualizar datos:", error);
+        console.error("Error al cargar datos:", error);
         toast.error("Error al cargar los datos más recientes");
-        setRefreshAttempt(prev => prev + 1);
+        if (refreshAttempt < 2) {
+          setRefreshAttempt(prev => prev + 1);
+        }
         setIsPageLoading(false);
       }
     };
@@ -192,6 +197,11 @@ export default function RecordingDetailsPage() {
       </Layout>
     );
   }
+
+  // Reset hasLoadedData when recordingId changes
+  useEffect(() => {
+    setHasLoadedData(false);
+  }, [recordingId]);
   
   return (
     <Layout>

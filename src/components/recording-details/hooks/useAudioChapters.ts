@@ -1,4 +1,3 @@
-
 import { useState, useEffect, RefObject } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
@@ -96,17 +95,102 @@ export function useAudioChapters(
   }, [recording.id, updateRecording]);
   
   const handleAddChapter = (startTime: number, endTime?: number) => {
-    setNewChapterTitle(`Capítulo ${chapters.length + 1}`);
-    setNewChapterColor(chapterColors[chapters.length % chapterColors.length]);
-    setCurrentChapter({
+    console.log("Adding chapter:", { startTime, endTime });
+    const newChapterTitle = `Capítulo ${chapters.length + 1}`;
+    const newChapterColor = chapterColors[chapters.length % chapterColors.length];
+    
+    const newChapter: AudioChapter = {
       id: uuidv4(),
-      title: `Capítulo ${chapters.length + 1}`,
+      title: newChapterTitle,
       startTime: startTime,
       endTime: endTime,
-      color: chapterColors[chapters.length % chapterColors.length],
+      color: newChapterColor,
       recording_id: recording.id
-    });
+    };
+
+    setCurrentChapter(newChapter);
+    setNewChapterTitle(newChapterTitle);
+    setNewChapterColor(newChapterColor);
     setShowChapterDialog(true);
+  };
+
+  const handleSaveChapter = async () => {
+    if (!newChapterTitle.trim()) {
+      toast.error("El título no puede estar vacío");
+      return;
+    }
+    
+    if (!currentChapter) {
+      toast.error("Error al crear el capítulo: falta información");
+      return;
+    }
+    
+    try {
+      const updatedChapter = {
+        ...currentChapter,
+        title: newChapterTitle,
+        color: newChapterColor
+      };
+      
+      console.log("Guardando capítulo:", updatedChapter);
+      
+      const isExistingChapter = chapters.some(ch => ch.id === updatedChapter.id);
+      
+      if (isExistingChapter) {
+        const { error } = await supabase
+          .from('audio_chapters')
+          .update({
+            title: updatedChapter.title,
+            color: updatedChapter.color,
+            start_time: updatedChapter.startTime,
+            end_time: updatedChapter.endTime
+          })
+          .eq('id', updatedChapter.id);
+        
+        if (error) throw error;
+        
+        const updatedChapters = chapters.map(ch => 
+          ch.id === updatedChapter.id ? updatedChapter : ch
+        );
+        
+        setChapters(updatedChapters);
+        updateRecording(recording.id, {
+          chapters: updatedChapters
+        });
+        
+        toast.success("Capítulo actualizado");
+      } else {
+        const { error } = await supabase
+          .from('audio_chapters')
+          .insert({
+            id: updatedChapter.id,
+            title: updatedChapter.title,
+            start_time: updatedChapter.startTime,
+            end_time: updatedChapter.endTime,
+            color: updatedChapter.color,
+            recording_id: updatedChapter.recording_id
+          });
+        
+        if (error) throw error;
+        
+        const updatedChapters = [...chapters, updatedChapter];
+        setChapters(updatedChapters);
+        updateRecording(recording.id, {
+          chapters: updatedChapters
+        });
+        
+        toast.success("Capítulo creado");
+      }
+      
+      setShowChapterDialog(false);
+      
+    } catch (error) {
+      console.error('Error saving chapter:', error);
+      const errorMessage = chapters.some(ch => ch.id === currentChapter.id) 
+        ? 'Error al actualizar el capítulo' 
+        : 'Error al crear el capítulo';
+      toast.error(errorMessage);
+    }
   };
 
   const handleEditChapter = (chapter: AudioChapter) => {
@@ -138,89 +222,6 @@ export function useAudioChapters(
     } catch (error) {
       console.error('Error deleting chapter:', error);
       toast.error('Error al eliminar el capítulo');
-    }
-  };
-
-  const handleSaveChapter = async () => {
-    if (!newChapterTitle.trim()) {
-      toast.error("El título no puede estar vacío");
-      return;
-    }
-    
-    if (!currentChapter) {
-      toast.error("Error al crear el capítulo: falta información");
-      return;
-    }
-    
-    try {
-      const updatedChapter = {
-        ...currentChapter,
-        title: newChapterTitle,
-        color: newChapterColor
-      };
-      
-      console.log("Saving chapter:", updatedChapter);
-      
-      // Check if we're editing an existing chapter or creating a new one
-      const isEditing = chapters.some(ch => ch.id === updatedChapter.id);
-      
-      if (isEditing) {
-        // Update existing chapter
-        const { error } = await supabase
-          .from('audio_chapters')
-          .update({
-            title: updatedChapter.title,
-            color: updatedChapter.color,
-            start_time: updatedChapter.startTime,
-            end_time: updatedChapter.endTime
-          })
-          .eq('id', updatedChapter.id);
-        
-        if (error) throw error;
-        
-        // Update local state
-        const updatedChapters = chapters.map(ch => 
-          ch.id === updatedChapter.id ? updatedChapter : ch
-        );
-        
-        setChapters(updatedChapters);
-        
-        // Update recording context
-        updateRecording(recording.id, {
-          chapters: updatedChapters
-        });
-        
-        toast.success("Capítulo actualizado");
-      } else {
-        // Create new chapter
-        const dbChapter = mapAudioChapterToDB(updatedChapter);
-        
-        const { error } = await supabase
-          .from('audio_chapters')
-          .insert(dbChapter);
-        
-        if (error) throw error;
-        
-        // Update local state
-        const updatedChapters = [...chapters, updatedChapter];
-        setChapters(updatedChapters);
-        
-        // Update recording context
-        updateRecording(recording.id, {
-          chapters: updatedChapters
-        });
-        
-        toast.success("Capítulo creado");
-      }
-      
-      // Close the dialog
-      setShowChapterDialog(false);
-      
-    } catch (error) {
-      console.error('Error saving chapter:', error);
-      const isEditing = currentChapter && chapters.some(ch => ch.id === currentChapter.id);
-      const errorMessage = isEditing ? 'Error al actualizar el capítulo' : 'Error al crear el capítulo';
-      toast.error(errorMessage);
     }
   };
 
