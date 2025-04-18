@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -19,6 +18,7 @@ interface WeeklyEventDialogProps {
   event: WeeklyEventWithTemp & { day: string };
   onSave: (event: WeeklyEventWithTemp & { day: string }) => void;
   folders: FolderRecord[];
+  onCheckOverlap?: (day: string, startTime: string, endTime: string) => boolean;
 }
 
 export function WeeklyEventDialog({
@@ -26,15 +26,33 @@ export function WeeklyEventDialog({
   onOpenChange,
   event,
   onSave,
-  folders
+  folders,
+  onCheckOverlap
 }: WeeklyEventDialogProps) {
   const [localEvent, setLocalEvent] = React.useState(event);
+  const [timeError, setTimeError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setLocalEvent(event);
   }, [event]);
 
+  const handleTimeChange = (field: 'date' | 'endDate', value: string) => {
+    const updatedEvent = { ...localEvent, [field]: value };
+    
+    if (onCheckOverlap && updatedEvent.date && updatedEvent.endDate) {
+      const hasOverlap = onCheckOverlap(updatedEvent.day, updatedEvent.date, updatedEvent.endDate);
+      if (hasOverlap) {
+        setTimeError("Este horario se superpone con otro evento");
+        return;
+      }
+    }
+    
+    setTimeError(null);
+    setLocalEvent(updatedEvent);
+  };
+
   const handleSave = () => {
+    if (timeError) return;
     onSave(localEvent);
   };
 
@@ -91,7 +109,8 @@ export function WeeklyEventDialog({
                 id="startTime"
                 type="time"
                 value={localEvent.date}
-                onChange={(e) => setLocalEvent({ ...localEvent, date: e.target.value })}
+                onChange={(e) => handleTimeChange('date', e.target.value)}
+                className={timeError ? "border-red-500" : ""}
               />
             </div>
             <div className="grid gap-2">
@@ -100,7 +119,8 @@ export function WeeklyEventDialog({
                 id="endTime"
                 type="time"
                 value={localEvent.endDate}
-                onChange={(e) => setLocalEvent({ ...localEvent, endDate: e.target.value })}
+                onChange={(e) => handleTimeChange('endDate', e.target.value)}
+                className={timeError ? "border-red-500" : ""}
               />
             </div>
           </div>
@@ -136,6 +156,9 @@ export function WeeklyEventDialog({
             />
           </div>
         </div>
+        {timeError && (
+          <p className="text-sm text-red-500">{timeError}</p>
+        )}
         <DialogFooter className="flex justify-between sm:justify-end gap-2">
           <Button
             type="button"

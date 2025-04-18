@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { format, addDays, startOfWeek, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
@@ -128,10 +127,39 @@ export function WeeklyScheduleGrid({
     }
   };
 
+  const hasOverlappingEvent = (day: string, startTime: string, endTime: string, excludeEventId?: string) => {
+    return events.some(event => {
+      if (event.tempId === excludeEventId) return false;
+      if (event.day !== day) return false;
+
+      const [newStartHour, newStartMinute] = startTime.split(':').map(Number);
+      const [newEndHour, newEndMinute] = endTime.split(':').map(Number);
+      const [existingStartHour, existingStartMinute] = event.date.split(':').map(Number);
+      const [existingEndHour, existingEndMinute] = event.endDate.split(':').map(Number);
+
+      const newStart = newStartHour * 60 + newStartMinute;
+      const newEnd = newEndHour * 60 + newEndMinute;
+      const existingStart = existingStartHour * 60 + existingStartMinute;
+      const existingEnd = existingEndHour * 60 + existingEndMinute;
+
+      return (
+        (newStart >= existingStart && newStart < existingEnd) ||
+        (newEnd > existingStart && newEnd <= existingEnd) ||
+        (newStart <= existingStart && newEnd >= existingEnd)
+      );
+    });
+  };
+
   const handleAddEvent = (hour: number) => {
-    setSelectedHour(hour);
     const formattedStartTime = `${hour.toString().padStart(2, '0')}:00`;
     const formattedEndTime = `${(hour + 1).toString().padStart(2, '0')}:00`;
+
+    if (hasOverlappingEvent(selectedDay, formattedStartTime, formattedEndTime)) {
+      toast.error("Ya existe un evento en este horario");
+      return;
+    }
+
+    setSelectedHour(hour);
     const newEvent: WeeklyEventWithTemp & {
       day: string;
     } = {
@@ -162,6 +190,11 @@ export function WeeklyScheduleGrid({
   });
 
   const handleSaveEvent = async (event: WeeklyEventWithTemp & { day: string }) => {
+    if (hasOverlappingEvent(event.day, event.date, event.endDate)) {
+      toast.error("El horario se superpone con otro evento existente");
+      return;
+    }
+
     if (!user) {
       toast.error("Debes iniciar sesión para guardar eventos");
       return;
@@ -239,25 +272,19 @@ export function WeeklyScheduleGrid({
     return events.filter(event => event.day === day);
   };
 
-  // Calculate position and height for an event
   const getEventStyles = (event: WeeklyEventWithTemp) => {
     try {
-      // Parse the time values from strings
       const [startHour, startMinute] = event.date.split(':').map(Number);
       const [endHour, endMinute] = event.endDate.split(':').map(Number);
       
-      // Convert to minutes since the start of the day
       const startTimeInMinutes = startHour * 60 + startMinute;
       const endTimeInMinutes = endHour * 60 + endMinute;
       
-      // Calculate duration in minutes
       const durationInMinutes = endTimeInMinutes - startTimeInMinutes;
       
-      // Calculate top position (relative to 7:00 AM which is the first hour in the grid)
       const startFromGridInMinutes = startTimeInMinutes - (7 * 60);
-      const topPosition = (startFromGridInMinutes / 60) * 64; // Each hour cell is 64px
+      const topPosition = (startFromGridInMinutes / 60) * 64;
       
-      // Calculate height (1 hour = 64px)
       const height = (durationInMinutes / 60) * 64;
       
       return {
@@ -269,7 +296,6 @@ export function WeeklyScheduleGrid({
     }
   };
 
-  // Check if a time slot already has an event that starts at exactly that hour
   const hasEventStartingAtHour = (hour: number, day: string) => {
     return events.some(event => {
       const [eventHour] = event.date.split(':').map(Number);
@@ -277,19 +303,16 @@ export function WeeklyScheduleGrid({
     });
   };
 
-  // Function to check if a specific hour slot has any events overlapping with it
   const getEventsForHourSlot = (hour: number, day: string) => {
     return events.filter(event => {
       const [startHour, startMinute] = event.date.split(':').map(Number);
       const [endHour, endMinute] = event.endDate.split(':').map(Number);
       
-      // Convert to minutes for easier comparison
       const slotStart = hour * 60;
       const slotEnd = (hour + 1) * 60;
       const eventStart = startHour * 60 + startMinute;
       const eventEnd = endHour * 60 + endMinute;
       
-      // Check if this event overlaps with the current hour slot
       return event.day === day && 
         ((eventStart < slotEnd && eventEnd > slotStart) || 
          (eventStart === slotStart));
@@ -331,7 +354,6 @@ export function WeeklyScheduleGrid({
                       onClick={() => handleAddEvent(hour)}
                     >
                       {hourEvents.map(event => {
-                        // Only render events that start in this time slot
                         const [eventHour] = event.date.split(':').map(Number);
                         if (eventHour !== hour) return null;
                         
