@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -28,6 +29,10 @@ export default function RecordingDetailsPage() {
   const [hasLoadedData, setHasLoadedData] = useState(false);
   const isMobile = useIsMobile();
   
+  // Fixed: Move recording lookup after all hooks are defined to maintain consistent hook order
+  const recording = recordings.find(r => r.id === recordingId);
+  
+  // Set a timeout to force loading to complete if it takes too long
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (isPageLoading) {
@@ -43,9 +48,9 @@ export default function RecordingDetailsPage() {
         clearTimeout(loadingTimeout);
       }
     };
-  }, [isPageLoading]);
+  }, [isPageLoading, loadingTimeout]);
   
-  // Single data fetch effect
+  // Single data fetch effect - only load data once
   useEffect(() => {
     if (!recordingId || hasLoadedData) return;
 
@@ -66,12 +71,11 @@ export default function RecordingDetailsPage() {
     };
     
     loadData();
-  }, [recordingId]);
+  }, [recordingId, refreshData, refreshAttempt, hasLoadedData]);
   
-  const recording = recordings.find(r => r.id === recordingId);
-  
+  // Handle recording not found - must be outside any conditional
   useEffect(() => {
-    if (!recording && !isLoading) {
+    if (!recording && !isLoading && !isPageLoading) {
       if (refreshAttempt < 2) {
         console.log("Grabación no encontrada, intentando recargar datos");
         const retryLoad = async () => {
@@ -84,18 +88,18 @@ export default function RecordingDetailsPage() {
           }
         };
         retryLoad();
-      } else {
+      } else if (refreshAttempt >= 2) {
         console.log("Grabación no encontrada después de varios intentos, redirigiendo al dashboard");
         toast.error("No se pudo encontrar la grabación solicitada");
         navigate("/dashboard");
       }
-      return;
     }
-
-    if (recording) {
-      setIsPageLoading(false);
-    }
-  }, [recording, navigate, isLoading, refreshAttempt, refreshData]);
+  }, [recording, navigate, isLoading, refreshAttempt, refreshData, isPageLoading]);
+  
+  // Reset hasLoadedData when recordingId changes
+  useEffect(() => {
+    setHasLoadedData(false);
+  }, [recordingId]);
   
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
@@ -104,29 +108,30 @@ export default function RecordingDetailsPage() {
     }
   };
   
+  // Preload audio if recording exists
   useEffect(() => {
-    if (recording) {
-      const preloadAudio = async () => {
-        try {
-          const audioBlob = await loadAudioFromStorage(recording.id);
-          if (!audioBlob && recording.audioUrl) {
-            const response = await fetch(recording.audioUrl);
-            if (response.ok) {
-              setIsAudioLoaded(true);
-            } else {
-              toast.error("No se pudo cargar el audio");
-            }
-          } else if (audioBlob) {
+    if (!recording) return;
+    
+    const preloadAudio = async () => {
+      try {
+        const audioBlob = await loadAudioFromStorage(recording.id);
+        if (!audioBlob && recording.audioUrl) {
+          const response = await fetch(recording.audioUrl);
+          if (response.ok) {
             setIsAudioLoaded(true);
+          } else {
+            toast.error("No se pudo cargar el audio");
           }
-        } catch (error) {
-          console.error("Error preloading audio:", error);
-          toast.error("Error al cargar el audio");
+        } else if (audioBlob) {
+          setIsAudioLoaded(true);
         }
-      };
-      
-      preloadAudio();
-    }
+      } catch (error) {
+        console.error("Error preloading audio:", error);
+        toast.error("Error al cargar el audio");
+      }
+    };
+    
+    preloadAudio();
   }, [recording]);
   
   const handleUnderstoodChange = (understood: boolean) => {
@@ -181,10 +186,7 @@ export default function RecordingDetailsPage() {
     }
   };
   
-  const hasMissingData = recording && 
-    (!recording.output || recording.output.trim() === "" || 
-     !recording.webhookData);
-  
+  // Loading state
   if (isPageLoading || isLoading || !recording) {
     return (
       <Layout>
@@ -197,11 +199,10 @@ export default function RecordingDetailsPage() {
       </Layout>
     );
   }
-
-  // Reset hasLoadedData when recordingId changes
-  useEffect(() => {
-    setHasLoadedData(false);
-  }, [recordingId]);
+  
+  const hasMissingData = recording && 
+    (!recording.output || recording.output.trim() === "" || 
+     !recording.webhookData);
   
   return (
     <Layout>
