@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ export default function WeeklySchedulePage() {
   // Get existing events from the calendar
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   
-  useState(() => {
+  useEffect(() => {
     const loadEvents = async () => {
       setIsLoading(true);
       try {

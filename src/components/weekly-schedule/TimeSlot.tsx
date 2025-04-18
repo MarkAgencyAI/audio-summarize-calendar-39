@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
@@ -20,11 +21,15 @@ export function TimeSlot({ event, onClick, onDelete, getFolderName, rowHeight = 
   const getEventHeight = () => {
     if (!event || !event.endDate) return rowHeight;
     
-    const startTime = parseISO(event.date);
-    const endTime = parseISO(event.endDate);
-    const durationInMinutes = differenceInMinutes(endTime, startTime);
-    const hourHeight = rowHeight;
-    return (durationInMinutes / 60) * hourHeight;
+    try {
+      const startTime = parseISO(event.date);
+      const endTime = parseISO(event.endDate);
+      const durationInMinutes = differenceInMinutes(endTime, startTime);
+      const hourHeight = rowHeight;
+      return (durationInMinutes / 60) * hourHeight;
+    } catch (e) {
+      return rowHeight;
+    }
   };
 
   return (
