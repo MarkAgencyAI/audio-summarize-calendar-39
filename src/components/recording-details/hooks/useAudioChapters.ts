@@ -218,7 +218,8 @@ export function useAudioChapters(
       
     } catch (error) {
       console.error('Error saving chapter:', error);
-      toast.error(isEditing ? 'Error al actualizar el capítulo' : 'Error al crear el capítulo');
+      const errorMessage = isEditing ? 'Error al actualizar el capítulo' : 'Error al crear el capítulo';
+      toast.error(errorMessage);
     }
   };
 
