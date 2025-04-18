@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { FileText, Plus, BookOpen, PenLine, Image, Upload, Loader } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
 import { NoteItem } from "@/components/NoteItem";
@@ -21,6 +22,7 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
     updateNote, 
     deleteNote,
     refreshData,
+    folders,
     isLoading
   } = useRecordings();
   
@@ -30,16 +32,14 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
   const [noteImage, setNoteImage] = useState<File | null>(null);
   const [noteImagePreview, setNoteImagePreview] = useState<string | null>(null);
   const [editingNote, setEditingNote] = useState<any>(null);
-  const [currentFolder, setCurrentFolder] = useState(folderId || "");
+  const [selectedFolderId, setSelectedFolderId] = useState(folderId || "");
   const [isSaving, setIsSaving] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
     console.log("NotesSection montado - actualizando datos");
-    refreshData().catch(error => {
-      console.error("Error al actualizar datos:", error);
-    });
+    refreshData();
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,10 +59,15 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
   const triggerFileInput = () => {
     fileInputRef.current?.click();
   };
-  
+
   const handleCreateNote = async () => {
     if (!noteTitle.trim()) {
       toast.error("El título no puede estar vacío");
+      return;
+    }
+
+    if (!selectedFolderId) {
+      toast.error("Por favor selecciona una carpeta");
       return;
     }
     
@@ -71,7 +76,6 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
     try {
       let imageUrl = "";
       
-      // If there's an image, convert it to base64
       if (noteImage) {
         const reader = new FileReader();
         imageUrl = await new Promise((resolve, reject) => {
@@ -81,16 +85,14 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
         });
       }
       
-      // Add the note with all content
       await addNote({
         title: noteTitle,
         content: noteContent,
-        folderId: currentFolder,
+        folderId: selectedFolderId,
         imageUrl: imageUrl,
         updatedAt: new Date().toISOString()
       });
       
-      // Reset the form
       resetForm();
       setShowNoteDialog(false);
       toast.success("Apunte creado correctamente");
@@ -115,12 +117,18 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
     setNoteTitle(note.title);
     setNoteContent(note.content);
     setNoteImagePreview(note.imageUrl);
+    setSelectedFolderId(note.folderId);
     setShowNoteDialog(true);
   };
-  
+
   const handleUpdateNote = async () => {
     if (!editingNote || !noteTitle.trim()) {
       toast.error("El título no puede estar vacío");
+      return;
+    }
+
+    if (!selectedFolderId) {
+      toast.error("Por favor selecciona una carpeta");
       return;
     }
     
@@ -129,7 +137,6 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
     try {
       let imageUrl = editingNote.imageUrl;
       
-      // If there's a new image, update it
       if (noteImage) {
         const reader = new FileReader();
         imageUrl = await new Promise((resolve, reject) => {
@@ -142,6 +149,7 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
       await updateNote(editingNote.id, {
         title: noteTitle,
         content: noteContent,
+        folderId: selectedFolderId,
         imageUrl: imageUrl,
         updatedAt: new Date().toISOString()
       });
@@ -156,7 +164,7 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
       setIsSaving(false);
     }
   };
-  
+
   const handleDeleteNote = async (noteId: string) => {
     try {
       await deleteNote(noteId);
@@ -176,7 +184,7 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
   };
   
   const renderNotes = () => {
-    const folderNotes = getFolderNotes(currentFolder);
+    const folderNotes = getFolderNotes(selectedFolderId);
     
     if (isLoading) {
       return (
@@ -248,6 +256,25 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
             <DialogTitle>{editingNote ? "Editar apunte" : "Nuevo apunte"}</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="folder">Carpeta</Label>
+              <Select 
+                value={selectedFolderId} 
+                onValueChange={setSelectedFolderId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona una carpeta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {folders.map((folder) => (
+                    <SelectItem key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="title">Título</Label>
               <Input 
@@ -328,7 +355,7 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
             </Button>
             <Button 
               onClick={editingNote ? handleUpdateNote : handleCreateNote} 
-              disabled={!noteTitle.trim() || isSaving}
+              disabled={!noteTitle.trim() || !selectedFolderId || isSaving}
             >
               {isSaving ? (
                 <>
