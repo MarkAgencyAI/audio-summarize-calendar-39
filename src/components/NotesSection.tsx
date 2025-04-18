@@ -1,12 +1,14 @@
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Plus, BookOpen, PenLine } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { FileText, Plus, BookOpen, PenLine, Image, Upload, Loader } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
 import { NoteItem } from "@/components/NoteItem";
+import { toast } from "sonner";
 
 interface NotesSectionProps {
   folderId?: string;
@@ -18,24 +20,87 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
     addNote, 
     getFolderNotes, 
     updateNote, 
-    deleteNote 
+    deleteNote,
+    isLoading
   } = useRecordings();
   
-  const [showNewNoteDialog, setShowNewNoteDialog] = useState(false);
-  const [newNoteTitle, setNewNoteTitle] = useState("");
+  const [showNoteDialog, setShowNoteDialog] = useState(false);
+  const [noteTitle, setNoteTitle] = useState("");
+  const [noteContent, setNoteContent] = useState("");
+  const [noteImage, setNoteImage] = useState<File | null>(null);
+  const [noteImagePreview, setNoteImagePreview] = useState<string | null>(null);
   const [editingNote, setEditingNote] = useState<any>(null);
   const [currentFolder, setCurrentFolder] = useState(folderId || "");
+  const [isSaving, setIsSaving] = useState(false);
   
-  const handleCreateNote = () => {
-    addNote({
-      title: newNoteTitle,
-      content: '',
-      folderId: currentFolder,
-      imageUrl: '',
-      updatedAt: new Date().toISOString()
-    });
-    setShowNewNoteDialog(false);
-    setNewNoteTitle('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setNoteImage(file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setNoteImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+  
+  const handleCreateNote = async () => {
+    if (!noteTitle.trim()) {
+      toast.error("El título no puede estar vacío");
+      return;
+    }
+    
+    setIsSaving(true);
+    
+    try {
+      let imageUrl = "";
+      
+      // If there's an image, convert it to base64
+      if (noteImage) {
+        const reader = new FileReader();
+        imageUrl = await new Promise((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(noteImage);
+        });
+      }
+      
+      // Add the note
+      await addNote({
+        title: noteTitle,
+        content: noteContent,
+        folderId: currentFolder,
+        imageUrl: imageUrl,
+        updatedAt: new Date().toISOString()
+      });
+      
+      // Reset the form
+      resetForm();
+      setShowNoteDialog(false);
+      toast.success("Apunte creado correctamente");
+    } catch (error) {
+      console.error("Error al crear el apunte:", error);
+      toast.error("Error al crear el apunte");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  const resetForm = () => {
+    setNoteTitle("");
+    setNoteContent("");
+    setNoteImage(null);
+    setNoteImagePreview(null);
+    setEditingNote(null);
   };
   
   const handleEditNote = (note: any) => {
@@ -46,8 +111,24 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
     deleteNote(noteId);
   };
   
+  const removeImage = () => {
+    setNoteImage(null);
+    setNoteImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+  
   const renderNotes = () => {
     const folderNotes = getFolderNotes(currentFolder);
+    
+    if (isLoading) {
+      return (
+        <div className="flex justify-center py-8">
+          <Loader className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      );
+    }
     
     if (folderNotes.length === 0) {
       return (
@@ -57,7 +138,7 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
             Crea tu primer apunte para esta grabación
           </p>
-          <Button onClick={() => setShowNewNoteDialog(true)} variant="default">
+          <Button onClick={() => setShowNoteDialog(true)} variant="default">
             <PenLine className="h-4 w-4 mr-2" />
             Crear apunte
           </Button>
@@ -94,7 +175,7 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
           </div>
           <h2 className="text-lg font-medium text-slate-800 dark:text-slate-200">{sectionTitle}</h2>
         </div>
-        <Button onClick={() => setShowNewNoteDialog(true)} size="sm">
+        <Button onClick={() => setShowNoteDialog(true)} size="sm">
           <Plus className="h-4 w-4 mr-2" />
           Nuevo apunte
         </Button>
@@ -102,27 +183,103 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
       
       {renderNotes()}
       
-      <Dialog open={showNewNoteDialog} onOpenChange={setShowNewNoteDialog}>
-        <DialogContent>
+      <Dialog open={showNoteDialog} onOpenChange={(open) => {
+        setShowNoteDialog(open);
+        if (!open) resetForm();
+      }}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Nuevo apunte</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="title">Título</Label>
-            <Input 
-              id="title"
-              value={newNoteTitle}
-              onChange={(e) => setNewNoteTitle(e.target.value)}
-              placeholder="Título del apunte"
-              className="mt-2"
-            />
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Título</Label>
+              <Input 
+                id="title"
+                value={noteTitle}
+                onChange={(e) => setNoteTitle(e.target.value)}
+                placeholder="Título del apunte"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="content">Contenido</Label>
+              <Textarea 
+                id="content"
+                value={noteContent}
+                onChange={(e) => setNoteContent(e.target.value)}
+                placeholder="Escribe el contenido de tu apunte"
+                rows={4}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="flex items-center justify-between">
+                <span>Imagen (opcional)</span>
+                {noteImagePreview && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={removeImage}
+                    className="h-8 text-red-500 hover:text-red-600"
+                  >
+                    Eliminar
+                  </Button>
+                )}
+              </Label>
+              
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleFileChange}
+              />
+              
+              {!noteImagePreview ? (
+                <div 
+                  className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-md p-4 text-center cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                  onClick={triggerFileInput}
+                >
+                  <Image className="h-8 w-8 mx-auto mb-2 text-slate-400" />
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Haz clic para subir una imagen
+                  </p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                    Formatos: JPG, PNG, GIF
+                  </p>
+                </div>
+              ) : (
+                <div className="relative">
+                  <img 
+                    src={noteImagePreview} 
+                    alt="Vista previa" 
+                    className="w-full rounded-md max-h-[200px] object-contain border border-slate-200 dark:border-slate-700"
+                  />
+                  <p className="text-xs text-center text-slate-500 mt-1">
+                    Haz clic en "Eliminar" si deseas cambiar la imagen
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewNoteDialog(false)}>
+            <Button variant="outline" onClick={() => {
+              setShowNoteDialog(false);
+              resetForm();
+            }}>
               Cancelar
             </Button>
-            <Button onClick={handleCreateNote} disabled={!newNoteTitle.trim()}>
-              Crear
+            <Button 
+              onClick={handleCreateNote} 
+              disabled={!noteTitle.trim() || isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <Loader className="h-4 w-4 mr-2 animate-spin" />
+                  Guardando...
+                </>
+              ) : 'Crear'}
             </Button>
           </DialogFooter>
         </DialogContent>
