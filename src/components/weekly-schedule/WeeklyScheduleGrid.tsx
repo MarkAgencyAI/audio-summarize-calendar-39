@@ -13,7 +13,6 @@ import { loadFromStorage, saveToStorage } from "@/lib/storage";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-// Updated type definition to include day property
 export interface WeeklyEventWithTemp extends Omit<CalendarEvent, "id"> {
   tempId: string;
   day?: string;
@@ -42,7 +41,6 @@ export function WeeklyScheduleGrid({
   const touchStartX = useRef<number>(0);
   const touchEndX = useRef<number>(0);
 
-  // Generate hours from 7am to 9pm
   const hours = Array.from({
     length: 15
   }, (_, i) => i + 7);
@@ -83,10 +81,8 @@ export function WeeklyScheduleGrid({
     if (Math.abs(swipeDistance) > swipeThreshold) {
       const currentIndex = days.findIndex(d => d.value === selectedDay);
       if (swipeDistance > 0 && currentIndex > 0) {
-        // Swipe right - previous day
         setSelectedDay(days[currentIndex - 1].value);
       } else if (swipeDistance < 0 && currentIndex < days.length - 1) {
-        // Swipe left - next day
         setSelectedDay(days[currentIndex + 1].value);
       }
     }
@@ -110,7 +106,6 @@ export function WeeklyScheduleGrid({
       endDate: formattedEndTime,
       day: selectedDay,
       type: "class",
-      // Explicitly typed as one of the allowed values
       folderId: "",
       tempId: uuidv4()
     };
@@ -126,7 +121,6 @@ export function WeeklyScheduleGrid({
     endDate: "",
     day: selectedDay,
     type: "class",
-    // Explicitly typed as one of the allowed values
     folderId: "",
     tempId: uuidv4()
   });
@@ -143,7 +137,6 @@ export function WeeklyScheduleGrid({
       tempId: uuidv4(),
       repeat: {
         frequency: "weekly" as const,
-        // Explicitly typed as one of the allowed values
         interval: 1
       }
     };
@@ -201,9 +194,8 @@ export function WeeklyScheduleGrid({
               </SelectContent>
             </Select>
 
-            <Button onClick={handleSaveSchedule} size="sm" className="w-10 ">
-              <Save className="h-4 w-4 mr-2" />
-              Guardar
+            <Button onClick={handleSaveSchedule} size="sm" className="w-10">
+              <Save className="h-4 w-4" />
             </Button>
           </div>
         </CardHeader>
