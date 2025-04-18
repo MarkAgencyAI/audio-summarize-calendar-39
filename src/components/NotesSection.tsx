@@ -74,8 +74,8 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
         });
       }
       
-      // Add the note
-      await addNote({
+      // Add the note with all content
+      const result = await addNote({
         title: noteTitle,
         content: noteContent,
         folderId: currentFolder,
@@ -83,10 +83,12 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
         updatedAt: new Date().toISOString()
       });
       
-      // Reset the form
-      resetForm();
-      setShowNoteDialog(false);
-      toast.success("Apunte creado correctamente");
+      if (result) {
+        // Reset the form
+        resetForm();
+        setShowNoteDialog(false);
+        toast.success("Apunte creado correctamente");
+      }
     } catch (error) {
       console.error("Error al crear el apunte:", error);
       toast.error("Error al crear el apunte");
@@ -103,12 +105,61 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
     setEditingNote(null);
   };
   
-  const handleEditNote = (note: any) => {
+  const handleEditNote = async (note: any) => {
     setEditingNote(note);
+    setNoteTitle(note.title);
+    setNoteContent(note.content);
+    setNoteImagePreview(note.imageUrl);
+    setShowNoteDialog(true);
   };
   
-  const handleDeleteNote = (noteId: string) => {
-    deleteNote(noteId);
+  const handleUpdateNote = async () => {
+    if (!editingNote || !noteTitle.trim()) {
+      toast.error("El título no puede estar vacío");
+      return;
+    }
+    
+    setIsSaving(true);
+    
+    try {
+      let imageUrl = editingNote.imageUrl;
+      
+      // If there's a new image, update it
+      if (noteImage) {
+        const reader = new FileReader();
+        imageUrl = await new Promise((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(noteImage);
+        });
+      }
+      
+      await updateNote(editingNote.id, {
+        title: noteTitle,
+        content: noteContent,
+        imageUrl: imageUrl,
+        updatedAt: new Date().toISOString()
+      });
+      
+      resetForm();
+      setShowNoteDialog(false);
+      toast.success("Apunte actualizado correctamente");
+    } catch (error) {
+      console.error("Error al actualizar el apunte:", error);
+      toast.error("Error al actualizar el apunte");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      await deleteNote(noteId);
+      toast.success("Apunte eliminado correctamente");
+    } catch (error) {
+      console.error("Error al eliminar el apunte:", error);
+      toast.error("Error al eliminar el apunte");
+    }
   };
   
   const removeImage = () => {
@@ -189,7 +240,7 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
       }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Nuevo apunte</DialogTitle>
+            <DialogTitle>{editingNote ? "Editar apunte" : "Nuevo apunte"}</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
             <div className="space-y-2">
@@ -271,15 +322,15 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
               Cancelar
             </Button>
             <Button 
-              onClick={handleCreateNote} 
+              onClick={editingNote ? handleUpdateNote : handleCreateNote} 
               disabled={!noteTitle.trim() || isSaving}
             >
               {isSaving ? (
                 <>
                   <Loader className="h-4 w-4 mr-2 animate-spin" />
-                  Guardando...
+                  {editingNote ? "Actualizando..." : "Guardando..."}
                 </>
-              ) : 'Crear'}
+              ) : editingNote ? "Actualizar" : "Crear"}
             </Button>
           </DialogFooter>
         </DialogContent>
