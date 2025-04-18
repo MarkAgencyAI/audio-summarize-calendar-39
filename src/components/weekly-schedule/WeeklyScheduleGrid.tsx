@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useRef } from "react";
-import { format, addDays, startOfWeek } from "date-fns";
+import { format, addDays, startOfWeek, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { v4 as uuidv4 } from "uuid";
 import { Button } from "@/components/ui/button";
@@ -76,7 +77,8 @@ export function WeeklyScheduleGrid({
       try {
         const { data: weeklyEvents, error } = await supabase
           .from('weekly_schedule_events')
-          .select('*');
+          .select('*')
+          .eq('user_id', user.id);
 
         if (error) throw error;
 
@@ -237,6 +239,63 @@ export function WeeklyScheduleGrid({
     return events.filter(event => event.day === day);
   };
 
+  // Calculate position and height for an event
+  const getEventStyles = (event: WeeklyEventWithTemp) => {
+    try {
+      // Parse the time values from strings
+      const [startHour, startMinute] = event.date.split(':').map(Number);
+      const [endHour, endMinute] = event.endDate.split(':').map(Number);
+      
+      // Convert to minutes since the start of the day
+      const startTimeInMinutes = startHour * 60 + startMinute;
+      const endTimeInMinutes = endHour * 60 + endMinute;
+      
+      // Calculate duration in minutes
+      const durationInMinutes = endTimeInMinutes - startTimeInMinutes;
+      
+      // Calculate top position (relative to 7:00 AM which is the first hour in the grid)
+      const startFromGridInMinutes = startTimeInMinutes - (7 * 60);
+      const topPosition = (startFromGridInMinutes / 60) * 64; // Each hour cell is 64px
+      
+      // Calculate height (1 hour = 64px)
+      const height = (durationInMinutes / 60) * 64;
+      
+      return {
+        top: `${topPosition}px`,
+        height: `${height}px`,
+      };
+    } catch (e) {
+      return { top: '0px', height: '64px' };
+    }
+  };
+
+  // Check if a time slot already has an event that starts at exactly that hour
+  const hasEventStartingAtHour = (hour: number, day: string) => {
+    return events.some(event => {
+      const [eventHour] = event.date.split(':').map(Number);
+      return eventHour === hour && event.day === day;
+    });
+  };
+
+  // Function to check if a specific hour slot has any events overlapping with it
+  const getEventsForHourSlot = (hour: number, day: string) => {
+    return events.filter(event => {
+      const [startHour, startMinute] = event.date.split(':').map(Number);
+      const [endHour, endMinute] = event.endDate.split(':').map(Number);
+      
+      // Convert to minutes for easier comparison
+      const slotStart = hour * 60;
+      const slotEnd = (hour + 1) * 60;
+      const eventStart = startHour * 60 + startMinute;
+      const eventEnd = endHour * 60 + endMinute;
+      
+      // Check if this event overlaps with the current hour slot
+      return event.day === day && 
+        ((eventStart < slotEnd && eventEnd > slotStart) || 
+         (eventStart === slotStart));
+    });
+  };
+
   return (
     <div className="space-y-4 w-full max-w-[100vw] px-2">
       <Card className="overflow-hidden border border-border w-full max-w-4xl mx-auto" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
@@ -261,40 +320,65 @@ export function WeeklyScheduleGrid({
           <ScrollArea className="h-[calc(100vh-200px)]">
             <div className="w-full">
               {hours.map(hour => {
-                const dayEvents = getEventsForDay(selectedDay).filter(event => {
-                  const [eventHour] = event.date.split(":").map(Number);
-                  return eventHour === hour;
-                });
-                return <div key={hour} className="grid grid-cols-[80px_1fr] border-t border-border">
-                  <div className="p-2 text-sm text-muted-foreground text-center">
-                    {hour}:00
-                  </div>
-                  <div className="border-l border-border p-2 min-h-[64px] hover:bg-accent/10 transition-colors cursor-pointer relative" onClick={() => events.length === 0 && handleAddEvent(hour)}>
-                    {dayEvents.map(event => <div key={event.tempId} className="absolute inset-1 rounded-sm p-2" style={{
-                      backgroundColor: `${event.type === "class" ? "#4CAF50" : "#2196F3"}15`,
-                      borderLeft: `3px solid ${event.type === "class" ? "#4CAF50" : "#2196F3"}`
-                    }}>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium text-sm">{event.title}</p>
-                          {event.folderId && <p className="text-xs opacity-80">{getFolderName(event.folderId)}</p>}
-                          <p className="text-xs text-muted-foreground">
-                            {event.date} - {event.endDate}
-                          </p>
+                const hourEvents = getEventsForHourSlot(hour, selectedDay);
+                return (
+                  <div key={hour} className="grid grid-cols-[80px_1fr] border-t border-border">
+                    <div className="p-2 text-sm text-muted-foreground text-center">
+                      {hour}:00
+                    </div>
+                    <div 
+                      className="border-l border-border p-2 min-h-[64px] hover:bg-accent/10 transition-colors cursor-pointer relative" 
+                      onClick={() => handleAddEvent(hour)}
+                    >
+                      {hourEvents.map(event => {
+                        // Only render events that start in this time slot
+                        const [eventHour] = event.date.split(':').map(Number);
+                        if (eventHour !== hour) return null;
+                        
+                        const styles = getEventStyles(event);
+                        
+                        return (
+                          <div 
+                            key={event.tempId} 
+                            className="absolute left-0 right-0 mx-2 rounded-sm p-2 z-10"
+                            style={{
+                              backgroundColor: `${event.type === "class" ? "#4CAF50" : "#2196F3"}15`,
+                              borderLeft: `3px solid ${event.type === "class" ? "#4CAF50" : "#2196F3"}`,
+                              top: styles.top,
+                              height: styles.height,
+                            }}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className="overflow-hidden">
+                                <p className="font-medium text-sm truncate">{event.title}</p>
+                                {event.folderId && <p className="text-xs opacity-80 truncate">{getFolderName(event.folderId)}</p>}
+                                <p className="text-xs text-muted-foreground">
+                                  {event.date} - {event.endDate}
+                                </p>
+                              </div>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 shrink-0"
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  handleDeleteEvent(event.tempId);
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {!hasEventStartingAtHour(hour, selectedDay) && (
+                        <div className="flex items-center justify-center h-full opacity-30 hover:opacity-60">
+                          <PlusCircle className="h-5 w-5" />
                         </div>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={e => {
-                          e.stopPropagation();
-                          handleDeleteEvent(event.tempId);
-                        }}>
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>)}
-                    {events.length === 0 && <div className="flex items-center justify-center h-full opacity-30 group-hover:opacity-100">
-                      <PlusCircle className="h-5 w-5" />
-                    </div>}
+                      )}
+                    </div>
                   </div>
-                </div>;
+                );
               })}
             </div>
           </ScrollArea>
