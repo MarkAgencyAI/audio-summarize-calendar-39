@@ -11,6 +11,7 @@ export interface AudioChapter {
   startTime: number; // en segundos
   endTime?: number; // en segundos (opcional)
   color: string;
+  recording_id: string; // Added to match the database schema
 }
 
 export interface TextHighlight {
@@ -19,6 +20,7 @@ export interface TextHighlight {
   color: string;
   startPosition: number;
   endPosition: number;
+  recording_id: string; // Added to match the database schema
 }
 
 export interface SuggestedEvent {
