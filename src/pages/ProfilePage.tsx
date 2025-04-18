@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -8,11 +7,13 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const { user, profile, logout } = useAuth();
-  
+  const {
+    user,
+    profile,
+    logout
+  } = useAuth();
   const [profileData, setProfileData] = useState({
     name: "",
     email: "",
@@ -31,24 +32,19 @@ export default function ProfilePage() {
       });
     }
   }, [user, profile, navigate]);
-  
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
-  
   const handleSaveProfile = async () => {
     if (!user || !profile) return;
-    
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          name: profileData.name,
-          career: profileData.career
-        })
-        .eq('id', user.id);
-        
+      const {
+        error
+      } = await supabase.from('profiles').update({
+        name: profileData.name,
+        career: profileData.career
+      }).eq('id', user.id);
       if (error) throw error;
       toast.success("Perfil actualizado");
     } catch (error) {
@@ -56,9 +52,7 @@ export default function ProfilePage() {
       toast.error("Error al actualizar el perfil");
     }
   };
-  
-  return (
-    <Layout>
+  return <Layout>
       <div className="space-y-6 w-full max-w-full">
         <h1 className="text-2xl md:text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">
           Perfil
@@ -69,56 +63,36 @@ export default function ProfilePage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Nombre</Label>
-                <Input 
-                  id="name" 
-                  value={profileData.name} 
-                  onChange={e => setProfileData({
-                    ...profileData,
-                    name: e.target.value
-                  })} 
-                />
+                <Input id="name" value={profileData.name} onChange={e => setProfileData({
+                ...profileData,
+                name: e.target.value
+              })} />
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="email">Correo electrónico</Label>
-                <Input 
-                  id="email" 
-                  value={profileData.email} 
-                  readOnly 
-                />
+                <Input id="email" value={profileData.email} readOnly />
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="career">Carrera</Label>
-                <Input 
-                  id="career" 
-                  value={profileData.career} 
-                  onChange={e => setProfileData({
-                    ...profileData,
-                    career: e.target.value
-                  })} 
-                />
+                <Input id="career" value={profileData.career} onChange={e => setProfileData({
+                ...profileData,
+                career: e.target.value
+              })} />
               </div>
             </div>
             
             <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
-              <Button 
-                variant="outline" 
-                onClick={handleLogout}
-                className="w-full sm:w-auto"
-              >
+              <Button variant="outline" onClick={handleLogout} className="w-full sm:w-auto">
                 Cerrar sesión
               </Button>
-              <Button 
-                onClick={handleSaveProfile} 
-                className="text-slate-50 w-full sm:w-auto"
-              >
+              <Button onClick={handleSaveProfile} className="text-black w-full sm:w-auto">
                 Guardar cambios
               </Button>
             </div>
           </div>
         </div>
       </div>
-    </Layout>
-  );
+    </Layout>;
 }
