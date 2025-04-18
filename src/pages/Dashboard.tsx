@@ -57,9 +57,9 @@ function Transcriptions() {
     }
   }).sort((a, b) => {
     if (sortBy === "newest") {
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      return new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime();
     } else if (sortBy === "oldest") {
-      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      return new Date(a.createdAt || a.date).getTime() - new Date(b.createdAt || b.date).getTime();
     } else {
       return (a.name || "").localeCompare(b.name || "");
     }
