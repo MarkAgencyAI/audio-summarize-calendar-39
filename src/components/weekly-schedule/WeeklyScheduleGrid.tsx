@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { format, addDays, startOfWeek, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
@@ -6,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { WeeklyEventDialog } from "./WeeklyEventDialog";
 import { CalendarEvent } from "@/components/Calendar";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, Save, X, PlusCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, X, PlusCircle, Calendar as CalendarIcon } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
 import { toast } from "sonner";
 import { loadFromStorage, saveToStorage } from "@/lib/storage";
@@ -14,6 +15,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MobileTimeSlot } from "./MobileTimeSlot";
 import { DesktopTimeSlot } from "./DesktopTimeSlot";
+import { DailyView } from "./DailyView";
 
 export interface WeeklyEventWithTemp extends Omit<CalendarEvent, "id"> {
   tempId: string;
@@ -41,6 +43,8 @@ export function WeeklyScheduleGrid({
   const [events, setEvents] = useState<WeeklyEventWithTemp[]>([]);
   const [weekStart, setWeekStart] = useState<Date>(startOfWeek(date, { weekStartsOn: 1 }));
   const [showDialog, setShowDialog] = useState(false);
+  const [viewMode, setViewMode] = useState<'week' | 'day'>('week');
+  const [dayIndex, setDayIndex] = useState<number>(0);
 
   // Generate week days from weekStart (Monday to Sunday)
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -170,6 +174,12 @@ export function WeeklyScheduleGrid({
     toast.success("Evento agregado al cronograma");
   };
 
+  const handleAddEventFromDailyView = (newEvent: WeeklyEventWithTemp) => {
+    const updatedEvents = [...events, newEvent];
+    setEvents(updatedEvents);
+    saveToStorage("weeklyScheduleEvents", updatedEvents);
+  };
+
   const handleSaveSchedule = () => {
     if (events.length === 0) {
       toast.error("No hay eventos en el cronograma");
@@ -203,6 +213,28 @@ export function WeeklyScheduleGrid({
     });
   };
 
+  const handleSwitchToDayView = (dayIndex: number) => {
+    setDayIndex(dayIndex);
+    setViewMode('day');
+  };
+
+  const handleBackToWeekView = () => {
+    setViewMode('week');
+  };
+
+  if (viewMode === 'day') {
+    return (
+      <DailyView 
+        initialDate={weekStart}
+        events={events}
+        onAddEvent={handleAddEventFromDailyView}
+        onDeleteEvent={handleDeleteEvent}
+        folders={folders}
+        onBack={handleBackToWeekView}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4 w-full max-w-[100vw] px-2">
       <Card className="overflow-hidden border border-border w-full">
@@ -226,10 +258,11 @@ export function WeeklyScheduleGrid({
               <div className="h-10 flex items-center justify-center text-center font-medium text-muted-foreground">
                 Hora
               </div>
-              {weekDays.map((day) => (
+              {weekDays.map((day, index) => (
                 <div 
                   key={day.toString()} 
-                  className="h-10 flex flex-col items-center justify-center text-xs border-l border-border min-w-[40px]"
+                  className="h-10 flex flex-col items-center justify-center text-xs border-l border-border min-w-[40px] cursor-pointer hover:bg-accent/10"
+                  onClick={() => handleSwitchToDayView(index)}
                 >
                   <span className="font-medium capitalize">
                     {format(day, "E", { locale: es })}
