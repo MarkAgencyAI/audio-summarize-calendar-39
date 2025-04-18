@@ -167,6 +167,8 @@ export function useAudioChapters(
                 }
               : chapter
           );
+          
+          console.log("Updated chapter in database:", currentChapter.id);
         } catch (error) {
           console.error('Error updating chapter:', error);
           toast.error('Error al actualizar el capítulo');
@@ -184,6 +186,7 @@ export function useAudioChapters(
           // Convert to DB format for insert
           const dbChapter = mapAudioChapterToDB(newChapter);
           
+          // Ensure we're saving to the database
           const { error } = await supabase
             .from('audio_chapters')
             .insert(dbChapter);
@@ -191,6 +194,7 @@ export function useAudioChapters(
           if (error) throw error;
           
           updatedChapters = [...chapters, newChapter];
+          console.log("Added new chapter to database:", newChapter.id);
         } catch (error) {
           console.error('Error creating chapter:', error);
           toast.error('Error al crear el capítulo');
@@ -211,6 +215,7 @@ export function useAudioChapters(
         // Convert to DB format for insert
         const dbChapter = mapAudioChapterToDB(newChapter);
         
+        // Save to database
         const { error } = await supabase
           .from('audio_chapters')
           .insert(dbChapter);
@@ -220,7 +225,7 @@ export function useAudioChapters(
         if (chapters.length > 0) {
           const lastChapter = chapters[chapters.length - 1];
           
-          // Update end time of previous chapter
+          // Update end time of previous chapter in DB
           await supabase
             .from('audio_chapters')
             .update({ end_time: 0 })
@@ -235,6 +240,8 @@ export function useAudioChapters(
         } else {
           updatedChapters = [newChapter];
         }
+        
+        console.log("Created chapter in database:", newChapter.id);
       } catch (error) {
         console.error('Error creating chapter:', error);
         toast.error('Error al crear el capítulo');
@@ -246,6 +253,11 @@ export function useAudioChapters(
     updatedChapters.sort((a, b) => a.startTime - b.startTime);
     setChapters(updatedChapters);
     setShowChapterDialog(false);
+    
+    // Update the recording's chapters in context
+    updateRecording(recording.id, {
+      chapters: updatedChapters
+    });
     
     toast.success(currentChapter && chapters.some(ch => ch.id === currentChapter.id) 
       ? "Capítulo actualizado" 

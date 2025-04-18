@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { TranscriptionTabProps } from "../types";
 import { FileText, Search, Copy, Highlighter, Settings2, X } from "lucide-react";
@@ -9,6 +10,7 @@ import { Slider } from "@/components/ui/slider";
 import { useHighlighting } from "../hooks/useHighlighting";
 import { HighlightMenu } from "../HighlightMenu";
 import { v4 as uuidv4 } from "uuid";
+import { TextHighlight } from "@/context/RecordingsContext";
 
 export function TranscriptionTab({
   data,

@@ -3,6 +3,7 @@ import { TextHighlight } from "@/context/RecordingsContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UseHighlightingProps {
   highlights: TextHighlight[];
@@ -65,7 +66,7 @@ export function useHighlighting({
     setSelectionRange(null);
   }, []);
   
-  const applyHighlight = useCallback((color: string) => {
+  const applyHighlight = useCallback(async (color: string) => {
     if (!selectionRange || !selectedText) {
       return;
     }
@@ -77,6 +78,7 @@ export function useHighlighting({
     );
     
     if (existingHighlight) {
+      await removeHighlightFromDB(existingHighlight.id);
       onRemoveHighlight(existingHighlight.id);
     }
     
@@ -87,6 +89,21 @@ export function useHighlighting({
       endPosition: selectionRange.end,
       recording_id: recordingId
     });
+    
+    try {
+      const { error } = await supabase.from('text_highlights').insert({
+        text: selectedText,
+        color: color,
+        start_position: selectionRange.start,
+        end_position: selectionRange.end,
+        recording_id: recordingId
+      });
+      
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error saving highlight to database:", error);
+      toast.error("Error al guardar el resaltado");
+    }
     
     closeHighlightMenu();
     window.getSelection()?.removeAllRanges();
@@ -101,7 +118,20 @@ export function useHighlighting({
     }
   }, [selectedText, closeHighlightMenu]);
   
-  const removeHighlightAtSelection = useCallback(() => {
+  const removeHighlightFromDB = async (highlightId: string) => {
+    try {
+      const { error } = await supabase
+        .from('text_highlights')
+        .delete()
+        .eq('id', highlightId);
+        
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error removing highlight from database:", error);
+    }
+  };
+  
+  const removeHighlightAtSelection = useCallback(async () => {
     if (!selectionRange) {
       return;
     }
@@ -113,9 +143,10 @@ export function useHighlighting({
     );
     
     if (overlappingHighlights.length > 0) {
-      overlappingHighlights.forEach(h => {
-        onRemoveHighlight(h.id);
-      });
+      for (const highlight of overlappingHighlights) {
+        await removeHighlightFromDB(highlight.id);
+        onRemoveHighlight(highlight.id);
+      }
       
       toast.success("Resaltado eliminado");
     }
