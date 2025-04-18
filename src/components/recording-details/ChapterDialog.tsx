@@ -44,8 +44,12 @@ export function ChapterDialog({
   const isEditMode = currentChapter && chapters.some(ch => ch.id === currentChapter.id);
 
   const handleSaveClick = () => {
+    console.log("Guardando capítulo...");
     // Call the onSave function to save the chapter
     onSave();
+    
+    // Close the dialog after saving
+    onOpenChange(false);
   };
 
   return (

@@ -5,6 +5,26 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
+// Map database fields (snake_case) to our interface fields (camelCase)
+const mapDbToAudioChapter = (chapter: any): AudioChapter => ({
+  id: chapter.id,
+  title: chapter.title,
+  startTime: chapter.start_time,
+  endTime: chapter.end_time || undefined,
+  color: chapter.color,
+  recording_id: chapter.recording_id
+});
+
+// Map our interface fields (camelCase) to database fields (snake_case)
+const mapAudioChapterToDb = (chapter: AudioChapter): any => ({
+  id: chapter.id,
+  title: chapter.title,
+  start_time: chapter.startTime,
+  end_time: chapter.endTime,
+  color: chapter.color,
+  recording_id: chapter.recording_id
+});
+
 export function useAudioChapters(recordingId: string) {
   const [chapters, setChapters] = useState<AudioChapter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,14 +42,7 @@ export function useAudioChapters(recordingId: string) {
         if (error) throw error;
 
         // Map database fields to our interface fields
-        const mappedChapters: AudioChapter[] = (data || []).map(chapter => ({
-          id: chapter.id,
-          title: chapter.title,
-          startTime: chapter.start_time,
-          endTime: chapter.end_time || undefined,
-          color: chapter.color,
-          recording_id: chapter.recording_id
-        }));
+        const mappedChapters: AudioChapter[] = (data || []).map(mapDbToAudioChapter);
 
         setChapters(mappedChapters);
       } catch (error) {
@@ -57,14 +70,7 @@ export function useAudioChapters(recordingId: string) {
       };
 
       // Map our interface fields to database fields
-      const dbChapter = {
-        id: newChapter.id,
-        title: newChapter.title,
-        start_time: newChapter.startTime,
-        end_time: newChapter.endTime,
-        color: newChapter.color,
-        recording_id: newChapter.recording_id
-      };
+      const dbChapter = mapAudioChapterToDb(newChapter);
 
       const { error } = await supabase
         .from('audio_chapters')
