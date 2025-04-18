@@ -1,3 +1,4 @@
+
 import { useState, useEffect, RefObject } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
@@ -134,18 +135,21 @@ export function useAudioChapters(
       
       console.log("Guardando capítulo:", updatedChapter);
       
+      // Map our interface fields to database fields before sending to Supabase
+      const dbChapter = mapAudioChapterToDB(updatedChapter);
       const isExistingChapter = chapters.some(ch => ch.id === updatedChapter.id);
       
       if (isExistingChapter) {
+        // Update existing chapter
         const { error } = await supabase
           .from('audio_chapters')
           .update({
-            title: updatedChapter.title,
-            color: updatedChapter.color,
-            start_time: updatedChapter.startTime,
-            end_time: updatedChapter.endTime
+            title: dbChapter.title,
+            color: dbChapter.color,
+            start_time: dbChapter.start_time,
+            end_time: dbChapter.end_time
           })
-          .eq('id', updatedChapter.id);
+          .eq('id', dbChapter.id);
         
         if (error) throw error;
         
@@ -160,15 +164,16 @@ export function useAudioChapters(
         
         toast.success("Capítulo actualizado");
       } else {
+        // Insert new chapter
         const { error } = await supabase
           .from('audio_chapters')
           .insert({
-            id: updatedChapter.id,
-            title: updatedChapter.title,
-            start_time: updatedChapter.startTime,
-            end_time: updatedChapter.endTime,
-            color: updatedChapter.color,
-            recording_id: updatedChapter.recording_id
+            id: dbChapter.id,
+            title: dbChapter.title,
+            start_time: dbChapter.start_time,
+            end_time: dbChapter.end_time,
+            color: dbChapter.color,
+            recording_id: dbChapter.recording_id
           });
         
         if (error) throw error;

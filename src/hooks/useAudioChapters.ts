@@ -104,9 +104,11 @@ export function useAudioChapters(recordingId: string) {
       ));
       
       toast.success('Capítulo actualizado');
+      return true;
     } catch (error) {
       console.error('Error updating chapter:', error);
       toast.error('Error al actualizar el capítulo');
+      return false;
     }
   };
 
@@ -121,9 +123,11 @@ export function useAudioChapters(recordingId: string) {
 
       setChapters(prev => prev.filter(ch => ch.id !== chapterId));
       toast.success('Capítulo eliminado');
+      return true;
     } catch (error) {
       console.error('Error deleting chapter:', error);
       toast.error('Error al eliminar el capítulo');
+      return false;
     }
   };
 

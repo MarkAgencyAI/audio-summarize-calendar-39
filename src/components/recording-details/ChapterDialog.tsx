@@ -43,6 +43,11 @@ export function ChapterDialog({
 
   const isEditMode = currentChapter && chapters.some(ch => ch.id === currentChapter.id);
 
+  const handleSaveClick = () => {
+    // Call the onSave function to save the chapter
+    onSave();
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm rounded-lg dark:bg-slate-900 dark:border-slate-800">
@@ -130,7 +135,7 @@ export function ChapterDialog({
             Cancelar
           </Button>
           <Button 
-            onClick={onSave}
+            onClick={handleSaveClick}
             className="bg-blue-500 hover:bg-blue-600 text-white dark:bg-blue-600 dark:hover:bg-blue-700"
           >
             {isEditMode ? "Actualizar" : "Guardar"}
