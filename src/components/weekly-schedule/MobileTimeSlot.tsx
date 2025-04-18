@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { eventTypeColors } from "@/components/Calendar";
 import { WeeklyEventWithTemp } from "./WeeklyScheduleGrid";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface MobileTimeSlotProps {
   event: WeeklyEventWithTemp | undefined;
@@ -37,17 +38,24 @@ export function MobileTimeSlot({ event, onClick, onDelete, getFolderName }: Mobi
                 </p>
               )}
             </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-3 w-3 opacity-50 hover:opacity-100 p-0 m-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(event.tempId);
-              }}
-            >
-              <Trash2 className="h-2 w-2" style={{ color: eventTypeColors[event.type] }} />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-4 w-4 opacity-50 hover:opacity-100 p-0 m-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(event.tempId);
+                    }}
+                  >
+                    <Trash2 className="h-3 w-3" style={{ color: eventTypeColors[event.type] }} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Eliminar evento</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
       ) : null}

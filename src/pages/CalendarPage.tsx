@@ -356,9 +356,21 @@ export default function CalendarPage() {
 
   return <Layout>
       <div className="space-y-4 sm:space-y-6 w-full">
-        <h1 className="text-2xl md:text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">
-          Calendario
-        </h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl md:text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">
+            Calendario
+          </h1>
+          
+          <Button 
+            variant="outline" 
+            onClick={() => navigate("/weekly-schedule")}
+            className="flex items-center gap-1"
+          >
+            <Calendar className="h-4 w-4" />
+            <span className="hidden sm:inline">Cronograma Semanal</span>
+            <span className="sm:hidden">Cronograma</span>
+          </Button>
+        </div>
         
         <div className="glassmorphism rounded-xl p-3 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40 w-full overflow-hidden">
           <div className="w-full overflow-x-auto">

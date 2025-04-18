@@ -1,109 +1,120 @@
 
-import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import React from "react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { FolderRecord } from "@/context/RecordingsContext";
 import { WeeklyEventWithTemp } from "./WeeklyScheduleGrid";
-import { Folder } from "@/context/RecordingsContext";
 
 interface WeeklyEventDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   event: WeeklyEventWithTemp & { day: string };
   onSave: (event: WeeklyEventWithTemp & { day: string }) => void;
-  folders: Folder[];
+  folders: FolderRecord[];
 }
 
-export function WeeklyEventDialog({ 
-  open, 
-  onOpenChange, 
-  event, 
+export function WeeklyEventDialog({
+  open,
+  onOpenChange,
+  event,
   onSave,
-  folders 
+  folders
 }: WeeklyEventDialogProps) {
-  const [editedEvent, setEditedEvent] = useState<WeeklyEventWithTemp & { day: string }>(event);
-  
-  // Update the local state when the incoming event changes
-  useEffect(() => {
-    setEditedEvent(event);
-  }, [event, open]);
+  const [localEvent, setLocalEvent] = React.useState(event);
+
+  React.useEffect(() => {
+    setLocalEvent(event);
+  }, [event]);
 
   const handleSave = () => {
-    if (!editedEvent.title.trim()) {
-      toast.error("El título es obligatorio");
-      return;
-    }
-    
-    // Validate time format
-    const startTimeParts = editedEvent.date.split(":").map(Number);
-    const endTimeParts = editedEvent.endDate.split(":").map(Number);
-    
-    if (startTimeParts.length !== 2 || endTimeParts.length !== 2) {
-      toast.error("Formato de hora inválido");
-      return;
-    }
-    
-    const [startHours, startMinutes] = startTimeParts;
-    const [endHours, endMinutes] = endTimeParts;
-    
-    if (
-      isNaN(startHours) || isNaN(startMinutes) || 
-      isNaN(endHours) || isNaN(endMinutes)
-    ) {
-      toast.error("Hora inválida");
-      return;
-    }
-    
-    // Check if end time is after start time
-    if (endHours < startHours || (endHours === startHours && endMinutes <= startMinutes)) {
-      toast.error("La hora de finalización debe ser posterior a la hora de inicio");
-      return;
-    }
-    
-    onSave(editedEvent);
-    onOpenChange(false); // Close dialog after saving
+    onSave(localEvent);
   };
+
+  const days = [
+    { value: "lunes", label: "Lunes" },
+    { value: "martes", label: "Martes" },
+    { value: "miércoles", label: "Miércoles" },
+    { value: "jueves", label: "Jueves" },
+    { value: "viernes", label: "Viernes" },
+    { value: "sábado", label: "Sábado" },
+    { value: "domingo", label: "Domingo" },
+  ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-[450px]">
+      <DialogContent className="sm:max-w-[425px] max-w-[95vw]">
         <DialogHeader>
-          <DialogTitle>Agregar evento al cronograma</DialogTitle>
+          <DialogTitle>Evento del cronograma</DialogTitle>
         </DialogHeader>
-        
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
+        <div className="grid gap-4 py-2">
+          <div className="grid gap-2">
             <Label htmlFor="title">Título</Label>
-            <Input 
-              id="title" 
-              value={editedEvent.title} 
-              onChange={e => setEditedEvent({
-                ...editedEvent,
-                title: e.target.value
-              })} 
+            <Input
+              id="title"
+              value={localEvent.title}
+              onChange={(e) => setLocalEvent({ ...localEvent, title: e.target.value })}
               placeholder="Ej: Clase de Matemáticas"
             />
           </div>
-          
-          <div className="space-y-2">
+
+          <div className="grid gap-2">
+            <Label htmlFor="day">Día</Label>
+            <Select
+              value={localEvent.day}
+              onValueChange={(value) => setLocalEvent({ ...localEvent, day: value })}
+            >
+              <SelectTrigger id="day">
+                <SelectValue placeholder="Selecciona un día" />
+              </SelectTrigger>
+              <SelectContent>
+                {days.map((day) => (
+                  <SelectItem key={day.value} value={day.value}>
+                    {day.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="startTime">Hora inicio</Label>
+              <Input
+                id="startTime"
+                type="time"
+                value={localEvent.date}
+                onChange={(e) => setLocalEvent({ ...localEvent, date: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="endTime">Hora fin</Label>
+              <Input
+                id="endTime"
+                type="time"
+                value={localEvent.endDate}
+                onChange={(e) => setLocalEvent({ ...localEvent, endDate: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-2">
             <Label htmlFor="folder">Materia</Label>
             <Select
-              value={editedEvent.folderId || "none"}
-              onValueChange={(value) => setEditedEvent({
-                ...editedEvent,
-                folderId: value === "none" ? "" : value
-              })}
+              value={localEvent.folderId || "_empty"}
+              onValueChange={(value) => setLocalEvent({ ...localEvent, folderId: value === "_empty" ? "" : value })}
             >
               <SelectTrigger id="folder">
                 <SelectValue placeholder="Selecciona una materia" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Sin materia</SelectItem>
-                {folders.map(folder => (
+                <SelectItem value="_empty">Sin materia</SelectItem>
+                {folders.map((folder) => (
                   <SelectItem key={folder.id} value={folder.id}>
                     {folder.name}
                   </SelectItem>
@@ -111,83 +122,32 @@ export function WeeklyEventDialog({
               </SelectContent>
             </Select>
           </div>
-          
-          <div className="space-y-2">
+
+          <div className="grid gap-2">
             <Label htmlFor="description">Descripción (opcional)</Label>
-            <Textarea 
-              id="description" 
-              value={editedEvent.description} 
-              onChange={e => setEditedEvent({
-                ...editedEvent,
-                description: e.target.value
-              })} 
+            <Textarea
+              id="description"
+              value={localEvent.description || ""}
+              onChange={(e) => setLocalEvent({ ...localEvent, description: e.target.value })}
+              placeholder="Agrega una descripción"
+              className="min-h-[80px]"
             />
           </div>
-          
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="startTime">Hora de inicio</Label>
-              <Input 
-                id="startTime" 
-                type="time" 
-                value={editedEvent.date} 
-                onChange={e => {
-                  setEditedEvent({
-                    ...editedEvent,
-                    date: e.target.value
-                  });
-                }} 
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="endTime">Hora de finalización</Label>
-              <Input 
-                id="endTime" 
-                type="time" 
-                value={editedEvent.endDate} 
-                onChange={e => {
-                  setEditedEvent({
-                    ...editedEvent,
-                    endDate: e.target.value
-                  });
-                }} 
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="type">Tipo</Label>
-            <Select 
-              value={editedEvent.type} 
-              onValueChange={(value: "exam" | "assignment" | "study" | "class" | "meeting" | "other") => 
-                setEditedEvent({
-                  ...editedEvent,
-                  type: value
-                })
-              }
-            >
-              <SelectTrigger id="type">
-                <SelectValue placeholder="Selecciona un tipo de evento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="class">Clase</SelectItem>
-                <SelectItem value="exam">Examen</SelectItem>
-                <SelectItem value="assignment">Tarea</SelectItem>
-                <SelectItem value="study">Estudio</SelectItem>
-                <SelectItem value="meeting">Reunión</SelectItem>
-                <SelectItem value="other">Otro</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </div>
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="flex justify-between sm:justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
             Cancelar
           </Button>
-          <Button onClick={handleSave}>
-            Agregar al cronograma
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={!localEvent.title || !localEvent.day || !localEvent.date || !localEvent.endDate}
+          >
+            Guardar
           </Button>
         </DialogFooter>
       </DialogContent>
