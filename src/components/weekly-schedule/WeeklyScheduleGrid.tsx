@@ -12,7 +12,6 @@ import { toast } from "sonner";
 import { loadFromStorage, saveToStorage } from "@/lib/storage";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
 export interface WeeklyEventWithTemp extends Omit<CalendarEvent, "id"> {
   tempId: string;
   day?: string;
@@ -40,7 +39,6 @@ export function WeeklyScheduleGrid({
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
   const touchStartX = useRef<number>(0);
   const touchEndX = useRef<number>(0);
-
   const hours = Array.from({
     length: 15
   }, (_, i) => i + 7);
@@ -178,10 +176,7 @@ export function WeeklyScheduleGrid({
       <Card className="overflow-hidden border border-border w-full max-w-4xl mx-auto" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
         <CardHeader className="p-3">
           <div className="flex items-center justify-between max-w-72 gap-2">
-            <Button variant="outline" size="sm" onClick={onCancel}>
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Volver
-            </Button>
+            
             
             <Select value={selectedDay} onValueChange={handleDayChange}>
               <SelectTrigger className="w-[180px]">
