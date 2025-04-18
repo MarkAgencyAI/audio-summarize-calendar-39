@@ -330,6 +330,56 @@ export type Database = {
           },
         ]
       }
+      weekly_schedule_events: {
+        Row: {
+          created_at: string
+          day: string
+          description: string | null
+          end_time: string
+          folder_id: string | null
+          id: string
+          start_time: string
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          description?: string | null
+          end_time: string
+          folder_id?: string | null
+          id?: string
+          start_time: string
+          title: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          description?: string | null
+          end_time?: string
+          folder_id?: string | null
+          id?: string
+          start_time?: string
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_schedule_events_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

@@ -5,17 +5,20 @@ import { v4 as uuidv4 } from "uuid";
 import { Button } from "@/components/ui/button";
 import { WeeklyEventDialog } from "./WeeklyEventDialog";
 import { CalendarEvent } from "@/components/Calendar";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, Save, X, PlusCircle } from "lucide-react";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Save, X, PlusCircle } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
 import { toast } from "sonner";
-import { loadFromStorage, saveToStorage } from "@/lib/storage";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+
 export interface WeeklyEventWithTemp extends Omit<CalendarEvent, "id"> {
   tempId: string;
   day?: string;
 }
+
 interface WeeklyScheduleGridProps {
   date: Date;
   onSave: (events: Omit<CalendarEvent, "id">[]) => void;
@@ -23,6 +26,7 @@ interface WeeklyScheduleGridProps {
   hasExistingSchedule: boolean;
   existingEvents: CalendarEvent[];
 }
+
 export function WeeklyScheduleGrid({
   date,
   onSave,
@@ -30,15 +34,15 @@ export function WeeklyScheduleGrid({
   hasExistingSchedule,
   existingEvents
 }: WeeklyScheduleGridProps) {
-  const {
-    folders
-  } = useRecordings();
+  const { folders } = useRecordings();
+  const { user } = useAuth();
   const [events, setEvents] = useState<WeeklyEventWithTemp[]>([]);
   const [showDialog, setShowDialog] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string>("lunes");
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
   const touchStartX = useRef<number>(0);
   const touchEndX = useRef<number>(0);
+
   const hours = Array.from({
     length: 15
   }, (_, i) => i + 7);
@@ -64,15 +68,51 @@ export function WeeklyScheduleGrid({
     value: "domingo",
     label: "Domingo"
   }];
+
+  useEffect(() => {
+    const loadEvents = async () => {
+      if (!user) return;
+
+      try {
+        const { data: weeklyEvents, error } = await supabase
+          .from('weekly_schedule_events')
+          .select('*');
+
+        if (error) throw error;
+
+        const formattedEvents = weeklyEvents.map(event => ({
+          tempId: event.id,
+          title: event.title,
+          description: event.description || "",
+          date: event.start_time,
+          endDate: event.end_time,
+          type: event.type as "class" | "meeting",
+          folderId: event.folder_id || "",
+          day: event.day
+        }));
+
+        setEvents(formattedEvents);
+      } catch (error) {
+        console.error("Error loading weekly events:", error);
+        toast.error("Error al cargar los eventos del cronograma");
+      }
+    };
+
+    loadEvents();
+  }, [user]);
+
   const handleDayChange = (value: string) => {
     setSelectedDay(value);
   };
+
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
   };
+
   const handleTouchMove = (e: React.TouchEvent) => {
     touchEndX.current = e.touches[0].clientX;
   };
+
   const handleTouchEnd = () => {
     const swipeThreshold = 50;
     const swipeDistance = touchEndX.current - touchStartX.current;
@@ -85,12 +125,7 @@ export function WeeklyScheduleGrid({
       }
     }
   };
-  useEffect(() => {
-    const savedEvents = loadFromStorage<WeeklyEventWithTemp[]>("weeklyScheduleEvents");
-    if (savedEvents && savedEvents.length > 0) {
-      setEvents(savedEvents);
-    }
-  }, []);
+
   const handleAddEvent = (hour: number) => {
     setSelectedHour(hour);
     const formattedStartTime = `${hour.toString().padStart(2, '0')}:00`;
@@ -110,6 +145,7 @@ export function WeeklyScheduleGrid({
     setNewEvent(newEvent);
     setShowDialog(true);
   };
+
   const [newEvent, setNewEvent] = useState<WeeklyEventWithTemp & {
     day: string;
   }>({
@@ -122,62 +158,90 @@ export function WeeklyScheduleGrid({
     folderId: "",
     tempId: uuidv4()
   });
-  const handleSaveEvent = (event: WeeklyEventWithTemp & {
-    day: string;
-  }) => {
-    const {
-      day,
-      ...eventWithoutDay
-    } = event;
-    const updatedEvent: WeeklyEventWithTemp = {
-      ...eventWithoutDay,
-      day,
-      tempId: uuidv4(),
-      repeat: {
-        frequency: "weekly" as const,
-        interval: 1
-      }
-    };
-    const updatedEvents = [...events, updatedEvent];
-    setEvents(updatedEvents);
-    saveToStorage("weeklyScheduleEvents", updatedEvents);
-    setShowDialog(false);
-    toast.success("Evento agregado al cronograma");
+
+  const handleSaveEvent = async (event: WeeklyEventWithTemp & { day: string }) => {
+    if (!user) {
+      toast.error("Debes iniciar sesión para guardar eventos");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('weekly_schedule_events')
+        .insert({
+          title: event.title,
+          description: event.description,
+          day: event.day,
+          start_time: event.date,
+          end_time: event.endDate,
+          folder_id: event.folderId || null,
+          type: event.type,
+          user_id: user.id
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newEvent: WeeklyEventWithTemp = {
+        ...event,
+        tempId: data.id
+      };
+
+      setEvents(prev => [...prev, newEvent]);
+      setShowDialog(false);
+      toast.success("Evento agregado al cronograma");
+    } catch (error) {
+      console.error("Error saving event:", error);
+      toast.error("Error al guardar el evento");
+    }
   };
-  const handleDeleteEvent = (tempId: string) => {
-    const updatedEvents = events.filter(event => event.tempId !== tempId);
-    setEvents(updatedEvents);
-    saveToStorage("weeklyScheduleEvents", updatedEvents);
-    toast.success("Evento eliminado del cronograma");
+
+  const handleDeleteEvent = async (tempId: string) => {
+    try {
+      const { error } = await supabase
+        .from('weekly_schedule_events')
+        .delete()
+        .eq('id', tempId);
+
+      if (error) throw error;
+
+      setEvents(prev => prev.filter(event => event.tempId !== tempId));
+      toast.success("Evento eliminado del cronograma");
+    } catch (error) {
+      console.error("Error deleting event:", error);
+      toast.error("Error al eliminar el evento");
+    }
   };
+
   const handleSaveSchedule = () => {
     if (events.length === 0) {
       toast.error("No hay eventos en el cronograma");
       return;
     }
-    const calendarEvents = events.map(({
-      tempId,
-      day,
-      ...event
-    }) => ({
+
+    const calendarEvents = events.map(({ tempId, day, ...event }) => ({
       ...event,
       type: event.type || "class"
     }));
+    
     onSave(calendarEvents);
   };
+
   const getFolderName = (folderId: string) => {
     const folder = folders.find(f => f.id === folderId);
     return folder ? folder.name : "Sin materia";
   };
+
   const getEventsForDay = (day: string) => {
     return events.filter(event => event.day === day);
   };
-  return <div className="space-y-4 w-full max-w-[100vw] px-2">
+
+  return (
+    <div className="space-y-4 w-full max-w-[100vw] px-2">
       <Card className="overflow-hidden border border-border w-full max-w-4xl mx-auto" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
         <CardHeader className="p-3">
           <div className="flex items-center justify-between max-w-72 gap-2">
-            
-            
             <Select value={selectedDay} onValueChange={handleDayChange}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Seleccionar día" />
@@ -188,57 +252,55 @@ export function WeeklyScheduleGrid({
                   </SelectItem>)}
               </SelectContent>
             </Select>
-
             <Button onClick={handleSaveSchedule} size="sm" className="w-10">
               <Save className="h-4 w-4" />
             </Button>
           </div>
         </CardHeader>
-        
         <CardContent className="p-0">
           <ScrollArea className="h-[calc(100vh-200px)]">
             <div className="w-full">
               {hours.map(hour => {
-              const dayEvents = getEventsForDay(selectedDay).filter(event => {
-                const [eventHour] = event.date.split(":").map(Number);
-                return eventHour === hour;
-              });
-              return <div key={hour} className="grid grid-cols-[80px_1fr] border-t border-border">
-                    <div className="p-2 text-sm text-muted-foreground text-center">
-                      {hour}:00
-                    </div>
-                    <div className="border-l border-border p-2 min-h-[64px] hover:bg-accent/10 transition-colors cursor-pointer relative" onClick={() => events.length === 0 && handleAddEvent(hour)}>
-                      {dayEvents.map(event => <div key={event.tempId} className="absolute inset-1 rounded-sm p-2" style={{
-                    backgroundColor: `${event.type === "class" ? "#4CAF50" : "#2196F3"}15`,
-                    borderLeft: `3px solid ${event.type === "class" ? "#4CAF50" : "#2196F3"}`
-                  }}>
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-medium text-sm">{event.title}</p>
-                              {event.folderId && <p className="text-xs opacity-80">{getFolderName(event.folderId)}</p>}
-                              <p className="text-xs text-muted-foreground">
-                                {event.date} - {event.endDate}
-                              </p>
-                            </div>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={e => {
-                        e.stopPropagation();
-                        handleDeleteEvent(event.tempId);
-                      }}>
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>)}
-                      {events.length === 0 && <div className="flex items-center justify-center h-full opacity-30 group-hover:opacity-100">
-                          <PlusCircle className="h-5 w-5" />
-                        </div>}
-                    </div>
-                  </div>;
-            })}
+                const dayEvents = getEventsForDay(selectedDay).filter(event => {
+                  const [eventHour] = event.date.split(":").map(Number);
+                  return eventHour === hour;
+                });
+                return <div key={hour} className="grid grid-cols-[80px_1fr] border-t border-border">
+                  <div className="p-2 text-sm text-muted-foreground text-center">
+                    {hour}:00
+                  </div>
+                  <div className="border-l border-border p-2 min-h-[64px] hover:bg-accent/10 transition-colors cursor-pointer relative" onClick={() => events.length === 0 && handleAddEvent(hour)}>
+                    {dayEvents.map(event => <div key={event.tempId} className="absolute inset-1 rounded-sm p-2" style={{
+                      backgroundColor: `${event.type === "class" ? "#4CAF50" : "#2196F3"}15`,
+                      borderLeft: `3px solid ${event.type === "class" ? "#4CAF50" : "#2196F3"}`
+                    }}>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium text-sm">{event.title}</p>
+                          {event.folderId && <p className="text-xs opacity-80">{getFolderName(event.folderId)}</p>}
+                          <p className="text-xs text-muted-foreground">
+                            {event.date} - {event.endDate}
+                          </p>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={e => {
+                          e.stopPropagation();
+                          handleDeleteEvent(event.tempId);
+                        }}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>)}
+                    {events.length === 0 && <div className="flex items-center justify-center h-full opacity-30 group-hover:opacity-100">
+                      <PlusCircle className="h-5 w-5" />
+                    </div>}
+                  </div>
+                </div>;
+              })}
             </div>
           </ScrollArea>
         </CardContent>
       </Card>
-
       <WeeklyEventDialog open={showDialog} onOpenChange={setShowDialog} event={newEvent} onSave={handleSaveEvent} folders={folders} />
-    </div>;
+    </div>
+  );
 }
