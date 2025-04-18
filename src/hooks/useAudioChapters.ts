@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { AudioChapter, defaultChapterColors } from '@/types/audio-chapter';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,7 +15,7 @@ const mapDbToAudioChapter = (chapter: any): AudioChapter => ({
 });
 
 // Map our interface fields (camelCase) to database fields (snake_case)
-const mapAudioChapterToDb = (chapter: AudioChapter): any => ({
+const mapAudioChapterToDb = (chapter: AudioChapter) => ({
   id: chapter.id,
   title: chapter.title,
   start_time: chapter.startTime,
@@ -25,26 +24,39 @@ const mapAudioChapterToDb = (chapter: AudioChapter): any => ({
   recording_id: chapter.recording_id
 });
 
-export function useAudioChapters(recordingId: string) {
+export function useAudioChapters(recording: Recording, updateRecording: (id: string, data: Partial<Recording>) => void, audioPlayerRef: RefObject<AudioPlayerHandle>) {
   const [chapters, setChapters] = useState<AudioChapter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showChapterDialog, setShowChapterDialog] = useState(false);
+  const [currentChapter, setCurrentChapter] = useState<AudioChapter | null>(null);
+  const [newChapterTitle, setNewChapterTitle] = useState('');
+  const [newChapterColor, setNewChapterColor] = useState('');
+  const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
 
   // Load chapters from database
   useEffect(() => {
     const loadChapters = async () => {
       try {
+        console.log("Loading chapters for recording ID:", recording.id);
         const { data, error } = await supabase
           .from('audio_chapters')
           .select('*')
-          .eq('recording_id', recordingId)
+          .eq('recording_id', recording.id)
           .order('start_time', { ascending: true });
 
         if (error) throw error;
 
         // Map database fields to our interface fields
-        const mappedChapters: AudioChapter[] = (data || []).map(mapDbToAudioChapter);
-
+        const mappedChapters = (data || []).map(mapDbToAudioChapter);
+        console.log("Loaded chapters:", mappedChapters);
+        
         setChapters(mappedChapters);
+        
+        // Update recording context with the loaded chapters
+        updateRecording(recording.id, {
+          chapters: mappedChapters
+        });
+
       } catch (error) {
         console.error('Error loading chapters:', error);
         toast.error('Error al cargar los capítulos');
@@ -53,20 +65,20 @@ export function useAudioChapters(recordingId: string) {
       }
     };
 
-    if (recordingId) {
+    if (recording.id) {
       loadChapters();
     }
-  }, [recordingId]);
+  }, [recording.id]);
 
-  const createChapter = async (startTime: number, endTime: number, title?: string) => {
+  const handleAddChapter = async (startTime: number, endTime?: number) => {
     try {
       const newChapter: AudioChapter = {
         id: uuidv4(),
-        title: title || `Capítulo ${chapters.length + 1}`,
+        title: `Capítulo ${chapters.length + 1}`,
         startTime,
         endTime,
         color: defaultChapterColors[chapters.length % defaultChapterColors.length],
-        recording_id: recordingId
+        recording_id: recording.id
       };
 
       // Map our interface fields to database fields
@@ -79,8 +91,13 @@ export function useAudioChapters(recordingId: string) {
       if (error) throw error;
 
       setChapters(prev => [...prev, newChapter]);
-      toast.success('Capítulo creado correctamente');
       
+      // Update recording context with the new chapter
+      updateRecording(recording.id, {
+        chapters: [...chapters, newChapter]
+      });
+      
+      toast.success('Capítulo creado correctamente');
       return newChapter;
     } catch (error) {
       console.error('Error creating chapter:', error);
@@ -89,36 +106,91 @@ export function useAudioChapters(recordingId: string) {
     }
   };
 
-  const updateChapter = async (chapterId: string, updates: Partial<AudioChapter>) => {
+  const handleSaveChapter = async () => {
+    if (!newChapterTitle.trim()) {
+      toast.error("El título no puede estar vacío");
+      return;
+    }
+    
+    if (!currentChapter) {
+      toast.error("Error al crear el capítulo: falta información");
+      return;
+    }
+    
     try {
-      // Map our interface fields to database fields
-      const dbUpdates: any = {};
-      if (updates.title !== undefined) dbUpdates.title = updates.title;
-      if (updates.startTime !== undefined) dbUpdates.start_time = updates.startTime;
-      if (updates.endTime !== undefined) dbUpdates.end_time = updates.endTime;
-      if (updates.color !== undefined) dbUpdates.color = updates.color;
-
-      const { error } = await supabase
-        .from('audio_chapters')
-        .update(dbUpdates)
-        .eq('id', chapterId);
-
-      if (error) throw error;
-
-      setChapters(prev => prev.map(ch => 
-        ch.id === chapterId ? { ...ch, ...updates } : ch
-      ));
+      const updatedChapter: AudioChapter = {
+        ...currentChapter,
+        title: newChapterTitle,
+        color: newChapterColor
+      };
       
-      toast.success('Capítulo actualizado');
-      return true;
+      console.log("Guardando capítulo:", updatedChapter);
+      
+      // Map our interface fields to database fields before sending to Supabase
+      const dbChapter = mapAudioChapterToDb(updatedChapter);
+      const isExistingChapter = chapters.some(ch => ch.id === updatedChapter.id);
+      
+      if (isExistingChapter) {
+        // Update existing chapter
+        const { error } = await supabase
+          .from('audio_chapters')
+          .update({
+            title: dbChapter.title,
+            color: dbChapter.color,
+            start_time: dbChapter.start_time,
+            end_time: dbChapter.end_time
+          })
+          .eq('id', dbChapter.id);
+        
+        if (error) throw error;
+        
+        const updatedChapters = chapters.map(ch => 
+          ch.id === updatedChapter.id ? updatedChapter : ch
+        );
+        
+        setChapters(updatedChapters);
+        updateRecording(recording.id, {
+          chapters: updatedChapters
+        });
+        
+        toast.success("Capítulo actualizado");
+      } else {
+        // Insert new chapter
+        const { error } = await supabase
+          .from('audio_chapters')
+          .insert(dbChapter);
+        
+        if (error) throw error;
+        
+        const updatedChapters = [...chapters, updatedChapter];
+        setChapters(updatedChapters);
+        updateRecording(recording.id, {
+          chapters: updatedChapters
+        });
+        
+        toast.success("Capítulo creado");
+      }
+      
+      setShowChapterDialog(false);
+      
     } catch (error) {
-      console.error('Error updating chapter:', error);
-      toast.error('Error al actualizar el capítulo');
-      return false;
+      console.error('Error saving chapter:', error);
+      const errorMessage = chapters.some(ch => ch.id === currentChapter.id) 
+        ? 'Error al actualizar el capítulo' 
+        : 'Error al crear el capítulo';
+      toast.error(errorMessage);
     }
   };
 
-  const deleteChapter = async (chapterId: string) => {
+  const handleEditChapter = async (chapterId: string) => {
+    const chapter = chapters.find(ch => ch.id === chapterId);
+    if (chapter) {
+      setCurrentChapter(chapter);
+      setShowChapterDialog(true);
+    }
+  };
+
+  const handleDeleteChapter = async (chapterId: string) => {
     try {
       const { error } = await supabase
         .from('audio_chapters')
@@ -137,11 +209,27 @@ export function useAudioChapters(recordingId: string) {
     }
   };
 
+  const handleChapterClick = (chapterId: string) => {
+    setActiveChapterId(chapterId);
+  };
+
   return {
     chapters,
     isLoading,
-    createChapter,
-    updateChapter,
-    deleteChapter
+    showChapterDialog,
+    setShowChapterDialog,
+    currentChapter,
+    setCurrentChapter,
+    newChapterTitle,
+    setNewChapterTitle,
+    newChapterColor,
+    setNewChapterColor,
+    activeChapterId,
+    setActiveChapterId,
+    handleAddChapter,
+    handleEditChapter,
+    handleDeleteChapter,
+    handleSaveChapter,
+    handleChapterClick
   };
 }
