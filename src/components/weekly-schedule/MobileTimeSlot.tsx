@@ -16,7 +16,7 @@ interface MobileTimeSlotProps {
 export function MobileTimeSlot({ event, onClick, onDelete, getFolderName }: MobileTimeSlotProps) {
   return (
     <div 
-      className="h-14 border-l border-b border-border p-0.5 cursor-pointer transition-colors hover:bg-accent/20 relative"
+      className="h-14 border-l border-b border-border p-0.5 cursor-pointer transition-colors hover:bg-accent/20 relative min-w-[40px]"
       onClick={() => !event && onClick()}
     >
       {event ? (
@@ -29,7 +29,7 @@ export function MobileTimeSlot({ event, onClick, onDelete, getFolderName }: Mobi
         >
           <div className="flex justify-between items-start p-0.5 h-full">
             <div className="min-w-0 flex-1 overflow-hidden">
-              <p className="font-medium text-[9px] truncate" style={{ color: eventTypeColors[event.type] }}>
+              <p className="font-medium text-[8px] truncate" style={{ color: eventTypeColors[event.type] }}>
                 {event.title}
               </p>
               {event.folderId && (

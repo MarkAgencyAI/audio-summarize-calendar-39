@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format, addDays, startOfWeek, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
@@ -205,108 +204,67 @@ export function WeeklyScheduleGrid({
   };
 
   return (
-    <div className="space-y-4">
-      <Card className="overflow-hidden border border-border">
-        <CardHeader className="p-3 md:p-4">
+    <div className="space-y-4 w-full max-w-[100vw] px-2">
+      <Card className="overflow-hidden border border-border w-full">
+        <CardHeader className="p-2">
           <div className="flex items-center justify-between">
-            <Button variant="outline" size="sm" onClick={handlePrevWeek} className="h-7 w-7 md:h-8 md:w-8 p-0">
+            <Button variant="outline" size="sm" onClick={handlePrevWeek} className="h-7 w-7 p-0">
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <CardTitle className="text-sm md:text-base font-medium">
+            <CardTitle className="text-sm font-medium">
               Cronograma semanal
             </CardTitle>
-            <Button variant="outline" size="sm" onClick={handleNextWeek} className="h-7 w-7 md:h-8 md:w-8 p-0">
+            <Button variant="outline" size="sm" onClick={handleNextWeek} className="h-7 w-7 p-0">
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </CardHeader>
         
         <CardContent className="p-0">
-          {isMobile ? (
-            <div className="flex flex-col">
-              <div className="grid grid-cols-[60px_repeat(7,minmax(60px,1fr))] sticky top-0 z-10 bg-background border-b text-xs">
-                <div className="h-10 flex items-center justify-center text-center font-medium text-muted-foreground">
-                  Hora
+          <div className="flex flex-col">
+            <div className="grid grid-cols-[50px_repeat(7,1fr)] sticky top-0 z-10 bg-background border-b text-xs">
+              <div className="h-10 flex items-center justify-center text-center font-medium text-muted-foreground">
+                Hora
+              </div>
+              {weekDays.map((day) => (
+                <div 
+                  key={day.toString()} 
+                  className="h-10 flex flex-col items-center justify-center text-xs border-l border-border min-w-[40px]"
+                >
+                  <span className="font-medium capitalize">
+                    {format(day, "E", { locale: es })}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {format(day, "d")}
+                  </span>
                 </div>
-                {weekDays.map((day) => (
-                  <div 
-                    key={day.toString()} 
-                    className="h-10 flex flex-col items-center justify-center text-xs border-l border-border"
-                  >
-                    <span className="font-medium capitalize">
-                      {format(day, "E", { locale: es })}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      {format(day, "d")}
-                    </span>
+              ))}
+            </div>
+            
+            <ScrollArea className="h-[calc(100vh-250px)]">
+              <div className="min-w-full">
+                {hours.map(hour => (
+                  <div key={hour} className="grid grid-cols-[50px_repeat(7,1fr)]">
+                    <div className="h-14 flex items-center justify-center text-xs text-muted-foreground border-b border-border">
+                      {hour}:00
+                    </div>
+                    {weekDays.map(day => (
+                      <MobileTimeSlot
+                        key={`${day.toString()}-${hour}`}
+                        event={getEventForTimeSlot(day, hour)}
+                        onClick={() => handleAddEvent(day, hour)}
+                        onDelete={handleDeleteEvent}
+                        getFolderName={getFolderName}
+                      />
+                    ))}
                   </div>
                 ))}
               </div>
-              
-              <ScrollArea className="h-[calc(100vh-250px)]">
-                <div className="min-w-[500px]">
-                  {hours.map(hour => (
-                    <div key={hour} className="grid grid-cols-[60px_repeat(7,minmax(60px,1fr))]">
-                      <div className="h-14 flex items-center justify-center text-xs text-muted-foreground border-b border-border">
-                        {hour}:00
-                      </div>
-                      {weekDays.map(day => (
-                        <MobileTimeSlot
-                          key={`${day.toString()}-${hour}`}
-                          event={getEventForTimeSlot(day, hour)}
-                          onClick={() => handleAddEvent(day, hour)}
-                          onDelete={handleDeleteEvent}
-                          getFolderName={getFolderName}
-                        />
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
-          ) : (
-            <ScrollArea className="h-[calc(100vh-220px)]">
-              <div className="min-w-[700px]">
-                <div className="grid grid-cols-[80px_repeat(7,1fr)]">
-                  <div className="sticky top-0 z-10 bg-background border-b">
-                    <div className="h-12" />
-                  </div>
-                  {weekDays.map(day => (
-                    <div key={day.toString()} className="sticky top-0 z-10 bg-background border-b px-1">
-                      <div className="h-12 flex flex-col items-center justify-center">
-                        <span className="text-sm font-medium capitalize">
-                          {format(day, "EEE", { locale: es })}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {format(day, "d")}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-
-                  {hours.map(hour => (
-                    <React.Fragment key={hour}>
-                      <div className="sticky left-0 bg-background border-r h-20 flex items-center justify-center text-sm text-muted-foreground">
-                        {hour}:00
-                      </div>
-                      {weekDays.map(day => (
-                        <DesktopTimeSlot
-                          key={`${day.toString()}-${hour}`}
-                          event={getEventForTimeSlot(day, hour)}
-                          onClick={() => handleAddEvent(day, hour)}
-                          onDelete={handleDeleteEvent}
-                          getFolderName={getFolderName}
-                        />
-                      ))}
-                    </React.Fragment>
-                  ))}
-                </div>
-              </div>
             </ScrollArea>
-          )}
+          </div>
         </CardContent>
         
-        <CardFooter className="flex justify-between p-3 md:p-4 border-t">
+        <CardFooter className="flex justify-between p-2 border-t">
           <Button variant="outline" onClick={onCancel} size="sm" className="h-8">
             <X className="h-4 w-4 mr-2" />
             Cancelar
@@ -318,7 +276,7 @@ export function WeeklyScheduleGrid({
         </CardFooter>
       </Card>
       
-      <div className="fixed bottom-6 right-6 md:hidden">
+      <div className="fixed bottom-6 right-6">
         <Button 
           onClick={() => {
             const now = new Date();
