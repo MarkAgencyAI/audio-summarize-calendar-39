@@ -28,7 +28,7 @@ const mapDBToAudioChapter = (chapter: AudioChapterDB): AudioChapter => ({
 });
 
 // Convert from app format (camelCase) to DB format (snake_case)
-const mapAudioChapterToDB = (chapter: AudioChapter): AudioChapterDB => ({
+const mapAudioChapterToDB = (chapter: AudioChapter): Omit<AudioChapterDB, 'created_at'> => ({
   id: chapter.id,
   title: chapter.title,
   start_time: chapter.startTime,
@@ -62,6 +62,7 @@ export function useAudioChapters(
   useEffect(() => {
     const loadChapters = async () => {
       try {
+        console.log("Loading chapters for recording ID:", recording.id);
         const { data, error } = await supabase
           .from('audio_chapters')
           .select('*')
@@ -77,6 +78,11 @@ export function useAudioChapters(
           const mappedChapters = data.map(mapDBToAudioChapter);
           setChapters(mappedChapters);
           console.log("Loaded chapters from database:", mappedChapters);
+          
+          // Also update the recording context with these chapters
+          updateRecording(recording.id, {
+            chapters: mappedChapters
+          });
         }
       } catch (error) {
         console.error('Error loading chapters:', error);
@@ -87,7 +93,7 @@ export function useAudioChapters(
     if (recording.id) {
       loadChapters();
     }
-  }, [recording.id]);
+  }, [recording.id, updateRecording]);
   
   const handleAddChapter = (startTime: number, endTime?: number) => {
     setNewChapterTitle(`Capítulo ${chapters.length + 1}`);
@@ -112,6 +118,7 @@ export function useAudioChapters(
 
   const handleDeleteChapter = async (id: string) => {
     try {
+      console.log("Deleting chapter with ID:", id);
       const { error } = await supabase
         .from('audio_chapters')
         .delete()
@@ -121,6 +128,11 @@ export function useAudioChapters(
       
       const updatedChapters = chapters.filter(chapter => chapter.id !== id);
       setChapters(updatedChapters);
+      
+      // Update the recording context with the updated chapters
+      updateRecording(recording.id, {
+        chapters: updatedChapters
+      });
       
       toast.success("Capítulo eliminado");
     } catch (error) {
@@ -135,133 +147,79 @@ export function useAudioChapters(
       return;
     }
     
-    let updatedChapters: AudioChapter[];
+    if (!currentChapter) {
+      toast.error("Error al crear el capítulo: falta información");
+      return;
+    }
     
-    if (currentChapter) {
-      if (chapters.some(ch => ch.id === currentChapter.id)) {
-        // Editing existing chapter
-        try {
-          // Convert to DB format for update
-          const dbChapter = {
-            title: newChapterTitle,
-            color: newChapterColor,
-            start_time: currentChapter.startTime,
-            end_time: currentChapter.endTime
-          };
-          
-          const { error } = await supabase
-            .from('audio_chapters')
-            .update(dbChapter)
-            .eq('id', currentChapter.id);
-          
-          if (error) throw error;
-          
-          updatedChapters = chapters.map(chapter => 
-            chapter.id === currentChapter.id 
-              ? { 
-                  ...chapter, 
-                  title: newChapterTitle, 
-                  color: newChapterColor,
-                  startTime: currentChapter.startTime,
-                  endTime: currentChapter.endTime
-                }
-              : chapter
-          );
-          
-          console.log("Updated chapter in database:", currentChapter.id);
-        } catch (error) {
-          console.error('Error updating chapter:', error);
-          toast.error('Error al actualizar el capítulo');
-          return;
-        }
-      } else {
-        // Adding new chapter
-        const newChapter: AudioChapter = {
-          ...currentChapter,
-          title: newChapterTitle,
-          color: newChapterColor
-        };
-        
-        try {
-          // Convert to DB format for insert
-          const dbChapter = mapAudioChapterToDB(newChapter);
-          
-          // Ensure we're saving to the database
-          const { error } = await supabase
-            .from('audio_chapters')
-            .insert(dbChapter);
-          
-          if (error) throw error;
-          
-          updatedChapters = [...chapters, newChapter];
-          console.log("Added new chapter to database:", newChapter.id);
-        } catch (error) {
-          console.error('Error creating chapter:', error);
-          toast.error('Error al crear el capítulo');
-          return;
-        }
-      }
-    } else {
-      // Legacy handling for button click (not fragment selection)
-      const newChapter: AudioChapter = {
-        id: uuidv4(),
+    try {
+      const updatedChapter = {
+        ...currentChapter,
         title: newChapterTitle,
-        startTime: 0,
-        color: newChapterColor,
-        recording_id: recording.id
+        color: newChapterColor
       };
       
-      try {
-        // Convert to DB format for insert
-        const dbChapter = mapAudioChapterToDB(newChapter);
+      console.log("Saving chapter:", updatedChapter);
+      
+      // Check if we're editing an existing chapter or creating a new one
+      const isEditing = chapters.some(ch => ch.id === updatedChapter.id);
+      
+      if (isEditing) {
+        // Update existing chapter
+        const { error } = await supabase
+          .from('audio_chapters')
+          .update({
+            title: updatedChapter.title,
+            color: updatedChapter.color,
+            start_time: updatedChapter.startTime,
+            end_time: updatedChapter.endTime
+          })
+          .eq('id', updatedChapter.id);
         
-        // Save to database
+        if (error) throw error;
+        
+        // Update local state
+        const updatedChapters = chapters.map(ch => 
+          ch.id === updatedChapter.id ? updatedChapter : ch
+        );
+        
+        setChapters(updatedChapters);
+        
+        // Update recording context
+        updateRecording(recording.id, {
+          chapters: updatedChapters
+        });
+        
+        toast.success("Capítulo actualizado");
+      } else {
+        // Create new chapter
+        const dbChapter = mapAudioChapterToDB(updatedChapter);
+        
         const { error } = await supabase
           .from('audio_chapters')
           .insert(dbChapter);
         
         if (error) throw error;
         
-        if (chapters.length > 0) {
-          const lastChapter = chapters[chapters.length - 1];
-          
-          // Update end time of previous chapter in DB
-          await supabase
-            .from('audio_chapters')
-            .update({ end_time: 0 })
-            .eq('id', lastChapter.id);
-            
-          updatedChapters = [...chapters];
-          updatedChapters[chapters.length - 1] = {
-            ...lastChapter,
-            endTime: 0
-          };
-          updatedChapters.push(newChapter);
-        } else {
-          updatedChapters = [newChapter];
-        }
+        // Update local state
+        const updatedChapters = [...chapters, updatedChapter];
+        setChapters(updatedChapters);
         
-        console.log("Created chapter in database:", newChapter.id);
-      } catch (error) {
-        console.error('Error creating chapter:', error);
-        toast.error('Error al crear el capítulo');
-        return;
+        // Update recording context
+        updateRecording(recording.id, {
+          chapters: updatedChapters
+        });
+        
+        toast.success("Capítulo creado");
       }
+      
+      // Close the dialog
+      setShowChapterDialog(false);
+      
+    } catch (error) {
+      console.error('Error saving chapter:', error);
+      toast.error(isEditing ? 'Error al actualizar el capítulo' : 'Error al crear el capítulo');
     }
-    
-    // Sort chapters by start time
-    updatedChapters.sort((a, b) => a.startTime - b.startTime);
-    setChapters(updatedChapters);
-    setShowChapterDialog(false);
-    
-    // Update the recording's chapters in context
-    updateRecording(recording.id, {
-      chapters: updatedChapters
-    });
-    
-    toast.success(currentChapter && chapters.some(ch => ch.id === currentChapter.id) 
-      ? "Capítulo actualizado" 
-      : "Capítulo creado");
   };
 
   const handleChapterClick = (chapter: AudioChapter) => {

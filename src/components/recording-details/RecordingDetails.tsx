@@ -162,6 +162,7 @@ export function RecordingDetails({
   };
 
   const handleAddChapterFromPlayer = (startTime: number, endTime?: number) => {
+    console.log("Adding chapter from player:", { startTime, endTime });
     handleAddChapter(startTime, endTime);
     toast.success("Fragmento seleccionado para crear capítulo");
     setIsSelectionMode(false);
