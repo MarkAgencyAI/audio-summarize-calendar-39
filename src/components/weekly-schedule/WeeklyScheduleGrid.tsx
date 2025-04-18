@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { format, addDays, startOfWeek, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
@@ -316,6 +317,23 @@ export function WeeklyScheduleGrid({
       return event.day === day && 
         ((eventStart < slotEnd && eventEnd > slotStart) || 
          (eventStart === slotStart));
+    });
+  };
+
+  // Add the missing getEventsForHourSlot function
+  const getEventsForHourSlot = (hour: number, day: string) => {
+    return events.filter(event => {
+      const [startHour, startMinute] = event.date.split(':').map(Number);
+      const [endHour, endMinute] = event.endDate.split(':').map(Number);
+      
+      const slotStart = hour * 60;
+      const slotEnd = (hour + 1) * 60;
+      const eventStart = startHour * 60 + startMinute;
+      const eventEnd = endHour * 60 + endMinute;
+      
+      return event.day === day && 
+             ((eventStart < slotEnd && eventEnd > slotStart) || 
+             (eventStart === slotStart));
     });
   };
 
