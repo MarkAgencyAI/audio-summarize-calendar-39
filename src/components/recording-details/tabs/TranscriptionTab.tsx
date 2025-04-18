@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { TranscriptionTabProps } from "../types";
 import { FileText, Search, Copy, Highlighter, Settings2, X } from "lucide-react";
@@ -272,14 +271,4 @@ export function TranscriptionTab({
       )}
     </div>
   );
-}
-
-// Local TextHighlight interface
-interface TextHighlight {
-  id: string;
-  text: string;
-  color: string;
-  startPosition: number;
-  endPosition: number;
-  recording_id: string;
 }
