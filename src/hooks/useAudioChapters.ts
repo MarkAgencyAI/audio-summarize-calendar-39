@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, RefObject } from 'react';
 import { AudioChapter, defaultChapterColors } from '@/types/audio-chapter';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
+import { Recording } from '@/context/RecordingsContext';
+import { AudioPlayerHandle } from '@/components/recording-details/types';
 
 // Map database fields (snake_case) to our interface fields (camelCase)
 const mapDbToAudioChapter = (chapter: any): AudioChapter => ({
