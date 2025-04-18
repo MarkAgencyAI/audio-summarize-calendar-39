@@ -77,7 +77,7 @@ function Transcriptions() {
             <Input type="search" placeholder="Buscar transcripciones..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mt-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-9 gap-1 px-3">
