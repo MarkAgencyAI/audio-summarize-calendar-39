@@ -13,8 +13,10 @@ import { toast } from "sonner";
 import { loadFromStorage, saveToStorage } from "@/lib/storage";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+// Updated type definition to include day property
 export interface WeeklyEventWithTemp extends Omit<CalendarEvent, "id"> {
   tempId: string;
+  day?: string;
 }
 
 interface WeeklyScheduleGridProps {
@@ -64,13 +66,13 @@ export function WeeklyScheduleGrid({
     const formattedStartTime = `${hour.toString().padStart(2, '0')}:00`;
     const formattedEndTime = `${(hour + 1).toString().padStart(2, '0')}:00`;
     
-    const newEvent = {
+    const newEvent: WeeklyEventWithTemp & { day: string } = {
       title: "",
       description: "",
       date: formattedStartTime,
       endDate: formattedEndTime,
       day: selectedDay,
-      type: "class",
+      type: "class", // Explicitly typed as one of the allowed values
       folderId: "",
       tempId: uuidv4()
     };
@@ -85,21 +87,25 @@ export function WeeklyScheduleGrid({
     date: "",
     endDate: "",
     day: selectedDay,
-    type: "class",
+    type: "class", // Explicitly typed as one of the allowed values
     folderId: "",
     tempId: uuidv4()
   });
 
   const handleSaveEvent = (event: WeeklyEventWithTemp & { day: string }) => {
-    const updatedEvents = [...events, {
-      ...event,
+    const { day, ...eventWithoutDay } = event;
+    
+    const updatedEvent: WeeklyEventWithTemp = {
+      ...eventWithoutDay,
+      day,
       tempId: uuidv4(),
       repeat: {
-        frequency: "weekly",
+        frequency: "weekly" as const, // Explicitly typed as one of the allowed values
         interval: 1
       }
-    }];
+    };
     
+    const updatedEvents = [...events, updatedEvent];
     setEvents(updatedEvents);
     saveToStorage("weeklyScheduleEvents", updatedEvents);
     setShowDialog(false);
@@ -119,7 +125,7 @@ export function WeeklyScheduleGrid({
       return;
     }
     
-    const calendarEvents = events.map(({ tempId, ...event }) => ({
+    const calendarEvents = events.map(({ tempId, day, ...event }) => ({
       ...event,
       type: event.type || "class"
     }));
@@ -171,7 +177,7 @@ export function WeeklyScheduleGrid({
           <ScrollArea className="h-[calc(100vh-200px)]">
             <div className="w-full">
               {hours.map(hour => {
-                const events = getEventsForDay(selectedDay).filter(event => {
+                const dayEvents = getEventsForDay(selectedDay).filter(event => {
                   const [eventHour] = event.date.split(":").map(Number);
                   return eventHour === hour;
                 });
@@ -188,7 +194,7 @@ export function WeeklyScheduleGrid({
                       className="border-l border-border p-2 min-h-[64px] hover:bg-accent/10 transition-colors cursor-pointer relative"
                       onClick={() => events.length === 0 && handleAddEvent(hour)}
                     >
-                      {events.map(event => (
+                      {dayEvents.map(event => (
                         <div
                           key={event.tempId}
                           className="absolute inset-1 rounded-sm p-2"
