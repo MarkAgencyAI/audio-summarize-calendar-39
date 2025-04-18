@@ -28,6 +28,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
+import { ArrowUpDown } from "lucide-react";
 
 function Transcriptions() {
   const {
@@ -38,6 +39,7 @@ function Transcriptions() {
   } = useRecordings();
   const [searchQuery, setSearchQuery] = useState("");
   const [understandingFilter, setUnderstandingFilter] = useState<"all" | "understood" | "not-understood">("all");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "alphabetical">("newest");
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -52,6 +54,14 @@ function Transcriptions() {
       return matchesSearch && recording.understood === true;
     } else {
       return matchesSearch && recording.understood !== true;
+    }
+  }).sort((a, b) => {
+    if (sortBy === "newest") {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    } else if (sortBy === "oldest") {
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    } else {
+      return (a.name || "").localeCompare(b.name || "");
     }
   });
   
@@ -85,6 +95,45 @@ function Transcriptions() {
           </div>
           
           <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 gap-1 px-3">
+                  <ArrowUpDown className="h-4 w-4" />
+                  <span className="hidden sm:inline">Ordenar</span>
+                  <Badge className="ml-1 h-5 px-1 bg-primary/20 text-primary" variant="outline">
+                    {sortBy === "newest" ? "Más reciente" : 
+                     sortBy === "oldest" ? "Más antigua" : "Alfabético"}
+                  </Badge>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem 
+                  className="flex items-center gap-2 cursor-pointer" 
+                  onClick={() => setSortBy("newest")}>
+                  <div className="w-4 h-4 flex items-center justify-center">
+                    {sortBy === "newest" && <Check className="h-4 w-4" />}
+                  </div>
+                  <span>Más reciente</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="flex items-center gap-2 cursor-pointer" 
+                  onClick={() => setSortBy("oldest")}>
+                  <div className="w-4 h-4 flex items-center justify-center">
+                    {sortBy === "oldest" && <Check className="h-4 w-4" />}
+                  </div>
+                  <span>Más antigua</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="flex items-center gap-2 cursor-pointer" 
+                  onClick={() => setSortBy("alphabetical")}>
+                  <div className="w-4 h-4 flex items-center justify-center">
+                    {sortBy === "alphabetical" && <Check className="h-4 w-4" />}
+                  </div>
+                  <span>Alfabético</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-9 gap-1 px-3">
